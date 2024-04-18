@@ -8,7 +8,9 @@
 #if !defined( NET_APIH )
 #define NET_APIH
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 #if !defined ( NETADRH )

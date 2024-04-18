@@ -19,52 +19,54 @@
 // This header file included by engine files and DLL files.
 // Most came from server.h
 
-// edict->flags
-#define	FL_FLY					(1<<0)	// Changes the SV_Movestep() behavior to not need to be on ground
-#define	FL_SWIM					(1<<1)	// Changes the SV_Movestep() behavior to not need to be on ground (but stay in water)
-#define	FL_CONVEYOR				(1<<2)
-#define	FL_CLIENT				(1<<3)
-#define	FL_INWATER				(1<<4)
-#define	FL_MONSTER				(1<<5)
-#define	FL_GODMODE				(1<<6)
-#define	FL_NOTARGET				(1<<7)
-#define	FL_SKIPLOCALHOST		(1<<8)	// Don't send entity to local host, it's predicting this entity itself
-#define	FL_ONGROUND				(1<<9)	// At rest / on the ground
-#define	FL_PARTIALGROUND		(1<<10)	// not all corners are valid
-#define	FL_WATERJUMP			(1<<11)	// player jumping out of water
-#define FL_FROZEN				(1<<12) // Player is frozen for 3rd person camera
-#define FL_FAKECLIENT			(1<<13)	// JAC: fake client, simulated server side; don't send network messages to them
-#define FL_DUCKING				(1<<14)	// Player flag -- Player is fully crouched
-#define FL_FLOAT				(1<<15)	// Apply floating force to this entity when in water
+// entvars_s::flags
+// WARNING: Those which are marked with ENGINE: are used and/or changed by the engine and may affect lots of other things!
+#define	FL_FLY					(1<<0)	// ENGINE: Changes the SV_Movestep() behavior to not need to be on ground
+#define	FL_SWIM					(1<<1)	// ENGINE: Changes the SV_Movestep() behavior to not need to be on ground (but stay in water)
+#define	FL_CONVEYOR				(1<<2)	// ENGINE: This is a conveyor which adds its velocity to other entities
+#define	FL_CLIENT				(1<<3)	// ENGINE: A player, network client
+#define	FL_INWATER				(1<<4)	// ENGINE: In CONTENTS_WATER, when this flag changes, pl_wade sound is played.
+#define	FL_MONSTER				(1<<5)	// ENGINE: A monster, used by movement, PVS code, etc.
+#define	FL_GODMODE				(1<<6)	// ENGINE: Does not take any damage, cheat.
+#define	FL_NOTARGET				(1<<7)	// ENGINE: Is not visible for monsters, cheat.
+#define	FL_SKIPLOCALHOST		(1<<8)	// ENGINE:? Don't send entity to local host, it's predicting this entity itself
+#define	FL_ONGROUND				(1<<9)	// ENGINE: At rest / on the ground
+#define	FL_PARTIALGROUND		(1<<10)	// ENGINE: not all corners are valid
+#define	FL_WATERJUMP			(1<<11)	// ENGINE: player jumping out of water
+#define FL_FROZEN				(1<<12) // ENGINE: Player is frozen for 3rd person camera
+#define FL_FAKECLIENT			(1<<13)	// ENGINE: JAC: fake client, simulated server side; don't send network messages to them
+#define FL_DUCKING				(1<<14)	// ENGINE: Player flag -- Player is fully crouched
+#define FL_FLOAT				(1<<15)	// ENGINE: Apply floating force to this entity when in water
 #define FL_GRAPHED				(1<<16) // worldgraph has this ent listed as something that blocks a connection
-
-// UNDONE: Do we need these?
-#define FL_IMMUNE_WATER			(1<<17)
-#define	FL_IMMUNE_SLIME			(1<<18)
-#define FL_IMMUNE_LAVA			(1<<19)
-
-#define FL_PROXY				(1<<20)	// This is a spectator proxy
-#define FL_ALWAYSTHINK			(1<<21)	// Brush model flag -- call think every frame regardless of nextthink - ltime (for constantly changing velocity/path)
-#define FL_BASEVELOCITY			(1<<22)	// Base velocity has been applied this frame (used to convert base velocity into momentum)
-#define FL_MONSTERCLIP			(1<<23)	// Only collide in with monsters who have FL_MONSTERCLIP set
+#define FL_IMMUNE_WATER			(1<<17) // ENGINE: Whoever left these three flags in the engine is a lazy bum
+#define FL_IMMUNE_SLIME			(1<<18) // ENGINE: Because of these pev->dmg gets corrupted!
+#define FL_IMMUNE_LAVA			(1<<19) // ENGINE: And to prevent that, try to always set these ON!
+#define FL_PROXY				(1<<20)	// ENGINE: This is a spectator proxy
+#define FL_ALWAYSTHINK			(1<<21)	// ENGINE: Brush model flag -- call think every frame regardless of nextthink - ltime (for constantly changing velocity/path)
+#define FL_BASEVELOCITY			(1<<22)	// ENGINE: Base velocity has been applied this frame (used to convert base velocity into momentum)
+#define FL_MONSTERCLIP			(1<<23)	// ENGINE: Only collide in with monsters who have FL_MONSTERCLIP set
 #define FL_ONTRAIN				(1<<24) // Player is _controlling_ a train, so movement commands should be ignored on client during prediction.
-#define FL_WORLDBRUSH			(1<<25)	// Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something)
-#define FL_SPECTATOR            (1<<26) // This client is a spectator, don't run touch functions, etc.
-#define FL_CUSTOMENTITY			(1<<29)	// This is a custom entity
-#define FL_KILLME				(1<<30)	// This entity is marked for death -- This allows the engine to kill ents at the appropriate time
-#define FL_DORMANT				(1<<31)	// Entity is dormant, no updates to client
+#define FL_WORLDBRUSH			(1<<25)	// ENGINE: Not moveable/removeable brush entity (really part of the world, but represented as an entity for transparency or something), blocks all tracelines.
+#define FL_SPECTATOR			(1<<26) // ENGINE: This client is a spectator, don't run touch functions, etc.
+#define FL_DRAW_ALWAYS			(1<<27) // XDM: Draw entity even when it is not in PVS XDM3038c: had to change this value because of engine conflicts
+#define FL_HIGHLIGHT			(1<<28) // XDM: Clients use this for highlighting XDM3038c: same here
+#define FL_CUSTOMENTITY			(1<<29)	// ENGINE: This is a custom entity
+#define FL_KILLME				(1<<30)	// ENGINE: This entity is marked for death -- This allows the engine to kill ents at the appropriate time
+#define FL_DORMANT				(1<<31)	// ENGINE: Entity is dormant, no updates to client
 
+// Engine edict_s::spawnflags
+#define SF_NOTINDEATHMATCH		(1<<11)// 0x0800 // 2048	// Do not spawn when deathmatch and loading entities from a file
 
-// Goes into globalvars_t.trace_flags
+// Goes into globalvars_t::trace_flags
 #define FTRACE_SIMPLEBOX		(1<<0)	// Traceline with a simple box
+//#define FTRACE_IGNORE_GLASS		(1<<1)	// traceline will be ignored entities with rendermode != kRenderNormal
 
-
-// walkmove modes
+// pfnWalkMove modes
 #define	WALKMOVE_NORMAL		0 // normal walkmove
 #define WALKMOVE_WORLDONLY	1 // doesn't hit ANY entities, no matter what the solid type
 #define WALKMOVE_CHECKONLY	2 // move, but don't touch triggers
 
-// edict->movetype values
+// entvars_s::movetype values
 #define	MOVETYPE_NONE			0		// never moves
 //#define	MOVETYPE_ANGLENOCLIP	1
 //#define	MOVETYPE_ANGLECLIP		2
@@ -80,27 +82,28 @@
 #define MOVETYPE_FOLLOW			12		// track movement of aiment
 #define	MOVETYPE_PUSHSTEP		13		// BSP model that needs physics/world collisions (uses nearest hull for world collision)
 
-// edict->solid values
+// entvars_s::solid values
 // NOTE: Some movetypes will cause collisions independent of SOLID_NOT/SOLID_TRIGGER when the entity moves
 // SOLID only effects OTHER entities colliding with this one when they move - UGH!
 #define	SOLID_NOT				0		// no interaction with other objects
-#define	SOLID_TRIGGER			1		// touch on edge, but not blocking
-#define	SOLID_BBOX				2		// touch on edge, block
-#define	SOLID_SLIDEBOX			3		// touch on edge, but not an onground
-#define	SOLID_BSP				4		// bsp clip, touch on edge, block
+#define	SOLID_TRIGGER			1		// touch on edge, but not blocking. WARNING: use for brush models and don't let triggers intersect!
+#define	SOLID_BBOX				2		// touch on edge, block. WARNING: requires model or will crash on TraceLine!
+#define	SOLID_SLIDEBOX			3		// touch on edge, but not an onground WARNING: requires model!
+#define	SOLID_BSP				4		// bsp clip, touch on edge, block WARNING! Can ONLY be used with MOVETYPE_PUSH[STEP] 
 
-// edict->deadflag values
-#define	DEAD_NO					0 // alive
-#define	DEAD_DYING				1 // playing death animation or still falling off of a ledge waiting to hit ground
-#define	DEAD_DEAD				2 // dead. lying still.
+// entvars_s::deadflag
+#define	DEAD_NO					0		// alive
+#define	DEAD_DYING				1		// playing death animation or still falling off of a ledge waiting to hit ground
+#define	DEAD_DEAD				2		// dead. lying still.
 #define DEAD_RESPAWNABLE		3
 #define DEAD_DISCARDBODY		4
 
+// entvars_s::takedamage
 #define	DAMAGE_NO				0
 #define	DAMAGE_YES				1
 #define	DAMAGE_AIM				2
 
-// entity effects
+// entvars_s::effects
 #define	EF_BRIGHTFIELD			1	// swirling cloud of particles
 #define	EF_MUZZLEFLASH 			2	// single frame ELIGHT on entity attachment 0
 #define	EF_BRIGHTLIGHT 			4	// DLIGHT centered at entity origin
@@ -109,14 +112,20 @@
 #define EF_NOINTERP				32	// don't interpolate the next frame
 #define EF_LIGHT				64	// rocket flare glow sprite
 #define EF_NODRAW				128	// don't draw entity
-#define EF_NIGHTVISION			256 // player nightvision
+#define EF_NIGHTVISION			256 // player nightvision // HL20130901
 #define EF_SNIPERLASER			512 // sniper laser effect
 #define EF_FIBERCAMERA			1024// fiber camera
 
+#define EF_MERGE_VISIBILITY		(1<<29)	// this entity allowed to merge vis (e.g. env_sky or portal camera)
 
-// entity flags
+// entity_state_s::eflags
 #define EFLAG_SLERP				1	// do studio interpolation of this entity
-		
+#define EFLAG_DRAW_ALWAYS		2	// XDM: same as FL_DRAW_ALWAYS
+#define EFLAG_HIGHLIGHT			4	// XDM3035c: probably a hack...
+#define EFLAG_ADDTOMAP			8	// XDM3038: explicit
+#define EFLAG_GAMEGOAL			16	// XDM3038: special
+
+// svc_temp_entity
 //
 // temp entity events
 //
@@ -295,8 +304,12 @@
 // byte,byte,byte (color)
 // byte (brightness)
 
-#define TE_GLOWSPRITE		23		
-// coord, coord, coord (pos) short (model index) byte (scale / 10)
+#define TE_GLOWSPRITE		23
+// coord, coord, coord (pos)
+// short (model index)
+// byte (life /10)
+// byte (scale / 10)
+// byte (fade time / 10)
 
 #define TE_BEAMRING			24		// connect a beam ring to two entities
 // short (start entity) 
@@ -566,7 +579,57 @@
 // byte ( length * 10 )
 
 
+// CRenderSystem base flags
+#define RENDERSYSTEM_FLAG_RANDOMFRAME			(1<< 0)// 0x00000001 // 1    // random frame sequence
+#define RENDERSYSTEM_FLAG_CLIPREMOVE			(1<< 1)// 0x00000002 // 2    // remove upon touching architecture (currently requires ADDPHYSICS)
+#define RENDERSYSTEM_FLAG_NOCLIP				(1<< 2)// 0x00000004 // 4    // persist inside architecture
+#define RENDERSYSTEM_FLAG_LOOPFRAMES			(1<< 3)// 0x00000008 // 8    // don't remove after displaying last frame (when no life time set)
+#define RENDERSYSTEM_FLAG_ADDPHYSICS			(1<< 4)// 0x00000010 // 16   // interact with world (bounce upon collisions, etc.)
+#define RENDERSYSTEM_FLAG_DRAWALWAYS			(1<< 5)// 0x00000020 // 32   // ignore visibility checks (draw behind walls, outside visible area)
+#define RENDERSYSTEM_FLAG_HARDSHUTDOWN			(1<< 6)// 0x00000040 // 64   // don't wait/fade, remove instantly
+#define RENDERSYSTEM_FLAG_SIMULTANEOUS			(1<< 7)// 0x00000080 // 128  // emit all particles at start
+#define RENDERSYSTEM_FLAG_ADDGRAVITY			(1<< 8)// 0x00000100 // 256  // add world gravity to system acceleration
+#define RENDERSYSTEM_FLAG_ZROTATION				(1<< 9)// 0x00000200 // 512  // rotate around Z axis only (when parallel to viewport)
+#define RENDERSYSTEM_FLAG_NODRAW				(1<<10)// 0x00000400 // 1024 // don't draw (but still update normally)
+#define RENDERSYSTEM_FLAG_12					(1<<11)// 0x00000800 // 2048 // 
+#define RENDERSYSTEM_FLAG_STARTRANDOMFRAME		(1<<12)// 0x00001000 // 4096 // start at random frame, continue according to other settings
+#define RENDERSYSTEM_FLAG_UPDATEOUTSIDEPVS		(1<<13)// 0x00002000 // 8192 // update even when system or emitter is outside PVS
+#define RENDERSYSTEM_FLAG_15					(1<<14)// 0x00004000 // 16384//
+#define RENDERSYSTEM_FLAG_16					(1<<15)// 0x00008000 // 32768//
 
+// CRenderSystem follow flags, ICNF == "if cannot follow"
+#define RENDERSYSTEM_FFLAG_ICNF_KEEPSEARCHING	0// default: keep searching
+#define RENDERSYSTEM_FFLAG_ICNF_REMOVE			(1<< 0)// 0x00000001 // 1    // remove if can not find entity
+#define RENDERSYSTEM_FFLAG_ICNF_STAYANDFORGET	(1<< 1)// 0x00000002 // 2    // stop copying origin and just stay at last coordinates
+#define RENDERSYSTEM_FFLAG_ICNF_NODRAW			(1<< 2)// 0x00000004 // 4    // hide if can not find entity
+#define RENDERSYSTEM_FFLAG_CLIPREMOVE			(1<< 3)// 0x00000008 // 8    // remove upon touching architecture (even if entity still exists)
+#define RENDERSYSTEM_FFLAG_USEOFFSET			(1<< 4)// 0x00000010 // 16   // system origin = entity origin + offset
+#define RENDERSYSTEM_FFLAG_NOANGLES				(1<< 5)// 0x00000020 // 32   // don't copy angles
+#define RENDERSYSTEM_FFLAG_DONTFOLLOW			(1<< 6)// 0x00000040 // 64   // don't copy origin even if entity is found
+#define RENDERSYSTEM_FFLAG_DIRECTTOTARGET		(1<< 7)// 0x00000080 // 128  // PSMOVTYPE_TOWARDSPOINT: entity is our destination
+
+// ParticleSystem particle start type
+enum particlesystem_start_types_e
+{
+	PSSTARTTYPE_POINT = 0,
+	PSSTARTTYPE_SPHERE,
+	PSSTARTTYPE_BOX,
+	PSSTARTTYPE_LINE,
+	PSSTARTTYPE_ENTITYBBOX,
+	PSSTARTTYPE_CYLINDER
+};
+
+// ParticleSystem particle move type
+enum particlesystem_move_types_e
+{
+	PSMOVTYPE_DIRECTED = 0,
+	PSMOVTYPE_OUTWARDS,// explosion
+	PSMOVTYPE_INWARDS,// implosion
+	PSMOVTYPE_RANDOM,
+	PSMOVTYPE_TOWARDSPOINT
+};
+
+// network message destination
 #define	MSG_BROADCAST		0		// unreliable to all
 #define	MSG_ONE				1		// reliable to one (msg_entity)
 #define	MSG_ALL				2		// reliable to all
@@ -585,64 +648,63 @@
 #define	CONTENTS_SLIME		-4
 #define	CONTENTS_LAVA		-5
 #define	CONTENTS_SKY		-6
-/* These additional contents constants are defined in bspfile.h
-#define	CONTENTS_ORIGIN		-7		// removed at csg time
-#define	CONTENTS_CLIP		-8		// changed to contents_solid
-#define	CONTENTS_CURRENT_0		-9
-#define	CONTENTS_CURRENT_90		-10
-#define	CONTENTS_CURRENT_180	-11
-#define	CONTENTS_CURRENT_270	-12
-#define	CONTENTS_CURRENT_UP		-13
-#define	CONTENTS_CURRENT_DOWN	-14
-
-#define CONTENTS_TRANSLUCENT	-15
-*/
+// These additional contents constants are defined in bspfile.h
+#define	CONTENTS_ORIGIN				-7		// removed at csg time
+#define	CONTENTS_CLIP				-8		// changed to contents_solid
+#define	CONTENTS_CURRENT_0			-9// START: only available as "true contents"
+#define	CONTENTS_CURRENT_90			-10
+#define	CONTENTS_CURRENT_180		-11
+#define	CONTENTS_CURRENT_270		-12
+#define	CONTENTS_CURRENT_UP			-13
+#define	CONTENTS_CURRENT_DOWN		-14// END: only available as "true contents"
+#define CONTENTS_TRANSLUCENT		-15
 #define	CONTENTS_LADDER				-16
+#define	CONTENTS_FLYFIELD			-17
+#define	CONTENTS_GRAVITY_FLYFIELD	-18
+#define	CONTENTS_FOG				-19
+#define CONTENTS_SPECIAL1			-20 //SHL: used by particle systems
+#define CONTENTS_SPECIAL2			-21
+#define CONTENTS_SPECIAL3			-22
 
-#define	CONTENT_FLYFIELD			-17
-#define	CONTENT_GRAVITY_FLYFIELD	-18
-#define	CONTENT_FOG					-19
-
-#define CONTENT_EMPTY	-1
-#define CONTENT_SOLID	-2
-#define	CONTENT_WATER	-3
-#define CONTENT_SLIME	-4
-#define CONTENT_LAVA	-5
-#define CONTENT_SKY		-6
+// entvars_s::waterlevel
+enum waterlevel_e
+{
+	WATERLEVEL_NONE = 0,
+	WATERLEVEL_FEET,
+	WATERLEVEL_WAIST,
+	WATERLEVEL_HEAD
+};
 
 // channels
-#define CHAN_AUTO			0
-#define CHAN_WEAPON			1
-#define	CHAN_VOICE			2
-#define CHAN_ITEM			3
-#define	CHAN_BODY			4
-#define CHAN_STREAM			5			// allocate stream channel from the static or dynamic area
-#define CHAN_STATIC			6			// allocate channel from the static area 
+#define CHAN_AUTO				0
+#define CHAN_WEAPON				1
+#define	CHAN_VOICE				2
+#define CHAN_ITEM				3
+#define	CHAN_BODY				4
+#define CHAN_STREAM				5		// allocate stream channel from the static or dynamic area
+#define CHAN_STATIC				6		// allocate channel from the static area 
 #define CHAN_NETWORKVOICE_BASE	7		// voice data coming across the network
 #define CHAN_NETWORKVOICE_END	500		// network voice data reserves slots (CHAN_NETWORKVOICE_BASE through CHAN_NETWORKVOICE_END).
-#define CHAN_BOT			501			// channel used for bot chatter.
+#define CHAN_BOT				501		// channel used for bot chatter.
 
 // attenuation values
-#define ATTN_NONE		0
-#define	ATTN_NORM		(float)0.8
-#define ATTN_IDLE		(float)2
-#define ATTN_STATIC		(float)1.25 
+#define ATTN_NONE		0.0f// everywhere
+#define	ATTN_NORM		0.8f// large radius
+#define ATTN_STATIC		1.25f// medium radius
+#define ATTN_IDLE		2.0f// small radius
 
 // pitch values
 #define	PITCH_NORM		100			// non-pitch shifted
 #define PITCH_LOW		95			// other values are possible - 0-255, where 255 is very high
 #define PITCH_HIGH		120
+#define PITCH_MIN		1
+#define PITCH_MAX		255
 
 // volume values
 #define VOL_NORM		1.0
 
 // plats
 #define	PLAT_LOW_TRIGGER	1
-
-// Trains
-#define	SF_TRAIN_WAIT_RETRIGGER	1
-#define SF_TRAIN_START_ON		4		// Train is initially moving
-#define SF_TRAIN_PASSABLE		8		// Train is not solid -- used to make water trains
 
 // buttons
 #ifndef IN_BUTTONS_H
@@ -662,6 +724,18 @@
 #define BREAK_CONCRETE	0x40
 #define BREAK_2			0x80
 
+// XDM3037: R_RocketTrail() FTENT_SMOKETRAIL
+enum RocketTrail_e
+{
+	teTrailThickRocket = 0,
+	teTrailThickSmoke,
+	teTrailThickBlood,
+	teTrailDoubleTrail1,
+	teTrailThickBloodLess,
+	teTrailDoubleTrail2,
+	teTrailThinRocket
+};
+
 // Colliding temp entity sounds
 
 #define BOUNCE_GLASS	BREAK_GLASS
@@ -678,7 +752,17 @@
 #define TE_BOUNCE_SHELL		1
 #define TE_BOUNCE_SHOTSHELL	2
 
-// Rendering constants
+
+// Palette colors
+#define	BLOOD_COLOR_RED			(byte)247//(104,0,0)
+#define	BLOOD_COLOR_YELLOW		(byte)192//(255,255,0)
+#define	BLOOD_COLOR_GREEN		(byte)216//(0,255,0)
+#define	BLOOD_COLOR_BLUE		(byte)208//(0,0,255)
+
+
+#define DEFAULT_GRAVITY		800
+
+// entvars_s::rendermode
 enum 
 {	
 	kRenderNormal,			// src
@@ -687,36 +771,41 @@ enum
 	kRenderGlow,			// src*a+dest -- No Z buffer checks
 	kRenderTransAlpha,		// src*srca+dest*(1-srca)
 	kRenderTransAdd,		// src*a+dest
+//	kRenderWorldGlow,
 };
 
+// entvars_s::renderfx
 enum 
 {	
-	kRenderFxNone = 0, 
-	kRenderFxPulseSlow, 
-	kRenderFxPulseFast, 
-	kRenderFxPulseSlowWide, 
-	kRenderFxPulseFastWide, 
-	kRenderFxFadeSlow, 
-	kRenderFxFadeFast, 
-	kRenderFxSolidSlow, 
-	kRenderFxSolidFast, 	   
-	kRenderFxStrobeSlow, 
-	kRenderFxStrobeFast, 
-	kRenderFxStrobeFaster, 
-	kRenderFxFlickerSlow, 
+	kRenderFxNone = 0,
+	kRenderFxPulseSlow,
+	kRenderFxPulseFast,
+	kRenderFxPulseSlowWide,
+	kRenderFxPulseFastWide,
+	kRenderFxFadeSlow,
+	kRenderFxFadeFast,
+	kRenderFxSolidSlow,
+	kRenderFxSolidFast,
+	kRenderFxStrobeSlow,
+	kRenderFxStrobeFast,// 10
+	kRenderFxStrobeFaster,
+	kRenderFxFlickerSlow,
 	kRenderFxFlickerFast,
-	kRenderFxNoDissipation,
+	kRenderFxNoDissipation,		// Don't scale up when the viewer goes farther away
 	kRenderFxDistort,			// Distort/scale/translate flicker
 	kRenderFxHologram,			// kRenderFxDistort + distance fade
 	kRenderFxDeadPlayer,		// kRenderAmt is the player index
 	kRenderFxExplode,			// Scale up really big!
 	kRenderFxGlowShell,			// Glowing Shell
-	kRenderFxClampMinScale,		// Keep this sprite from getting very small (SPRITES only!)
-	kRenderFxLightMultiplier,   //CTM !!!CZERO added to tell the studiorender that the value in iuser2 is a lightmultiplier
+	kRenderFxClampMinScale,		// 20 Keep this sprite from getting very small (SPRITES only!)
+//too late	kRenderFxLightMultiplier,//CTM !!!CZERO added to tell the studiorender that the value in iuser2 is a lightmultiplier
+	kRenderFxFullBright,		// XDM: face flag STUDIO_NF_FULLBRIGHT
+//	kRenderFxFlatShade,			// XDM: face flag STUDIO_NF_FLATSHADE
+	kRenderFxDisintegrate,		// XDM: client-side disintegration effect
 };
 
 
-typedef unsigned int	func_t;
+//typedef unsigned int	func_t;
 typedef unsigned int	string_t;
 
 typedef unsigned char 		byte;
@@ -741,7 +830,7 @@ typedef struct
 {
 	unsigned r, g, b, a;
 } colorVec;
-
+/*
 #ifdef _WIN32
 #pragma pack(push,2)
 #endif
@@ -754,6 +843,7 @@ typedef struct
 #ifdef _WIN32
 #pragma pack(pop)
 #endif
+*/
 typedef struct link_s
 {
 	struct link_s	*prev, *next;
@@ -780,4 +870,3 @@ typedef struct
 } trace_t;
 
 #endif
-

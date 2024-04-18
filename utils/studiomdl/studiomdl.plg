@@ -1,0 +1,44 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: studiomdl - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\Users\xawari\AppData\Local\Temp\RSP74F.tmp" with contents
+[
+/nologo /MTd /W3 /Gm /GX /ZI /Od /I "../../common" /I "../../dlls" /I "../../engine" /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /FR".\Debug/" /Fp".\Debug/studiomdl.pch" /YX /Fo".\Debug/" /Fd".\Debug/" /FD /c 
+"D:\dev\src\XHL\SourceCode\utils\studiomdl\studiomdl.c"
+]
+Creating command line "cl.exe @C:\Users\xawari\AppData\Local\Temp\RSP74F.tmp" 
+Creating temporary file "C:\Users\xawari\AppData\Local\Temp\RSP750.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib /nologo /subsystem:console /incremental:yes /pdb:".\Debug/studiomdl.pdb" /debug /machine:I386 /out:".\Debug/studiomdl.exe" 
+.\Debug\cmdlib.obj
+.\Debug\lbmlib.obj
+.\Debug\mathlib.obj
+.\Debug\scriplib.obj
+.\Debug\studiomdl.obj
+.\Debug\trilib.obj
+.\Debug\tristrip.obj
+.\Debug\write.obj
+.\Debug\studiomdl.res
+]
+Creating command line "link.exe @C:\Users\xawari\AppData\Local\Temp\RSP750.tmp"
+<h3>Output Window</h3>
+Compiling...
+studiomdl.c
+Linking...
+.\Debug/studiomdl.exe : warning LNK4084: total image size 278753280 exceeds max (268435456); image may not run
+Creating command line "bscmake.exe /nologo /o".\Debug/studiomdl.bsc"  .\Debug\cmdlib.sbr .\Debug\lbmlib.sbr .\Debug\mathlib.sbr .\Debug\scriplib.sbr .\Debug\studiomdl.sbr .\Debug\trilib.sbr .\Debug\tristrip.sbr .\Debug\write.sbr"
+Creating browse info file...
+<h3>Output Window</h3>
+
+
+
+<h3>Results</h3>
+studiomdl.exe - 0 error(s), 1 warning(s)
+</pre>
+</body>
+</html>

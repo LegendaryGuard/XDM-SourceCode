@@ -1,0 +1,279 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#define APSTUDIO_HIDDEN_SYMBOLS
+#include "windows.h"
+#undef APSTUDIO_HIDDEN_SYMBOLS
+#include "resource.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Neutral resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(1251)
+#endif //_WIN32
+
+#ifndef _MAC
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,1,0,0
+ PRODUCTVERSION 1,1,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x29L
+#else
+ FILEFLAGS 0x28L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "Comments", "Half-Life\0"
+            VALUE "CompanyName", "~X~\0"
+            VALUE "FileDescription", "Sprite viewer\0"
+            VALUE "FileVersion", "1, 1, 0, 0\0"
+            VALUE "InternalName", "SprView\0"
+            VALUE "LegalCopyright", "Mach III\0"
+            VALUE "LegalTrademarks", "Mach III\0"
+            VALUE "OriginalFilename", "SprView.exe\0"
+            VALUE "PrivateBuild", "X\0"
+            VALUE "ProductName", "Sprite viewer\0"
+            VALUE "ProductVersion", "1, 1, 0, 0\0"
+            VALUE "SpecialBuild", "X\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END
+
+#endif    // !_MAC
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_LAMBDA_N            ICON    DISCARDABLE     "lambda_n.ico"
+IDI_LAMBDA_S            ICON    DISCARDABLE     "lambda_s.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDC_SPRITEVIEWER MENU DISCARDABLE 
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open\t<Ctrl+O>",             IDM_OPEN
+        MENUITEM "&Export bitmap\t<Ctrl+S>",    IDM_SAVEIMAGE
+        MENUITEM "Export &sequence\t<Ctrl+Shift+S>", IDM_SAVESEQUENCE
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit\t<Esc>",                IDM_EXIT
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "Zoom in\t+",                  IDM_ZOOMIN
+        MENUITEM "Zoom out\t-",                 IDM_ZOOMOUT
+        MENUITEM SEPARATOR
+        MENUITEM "&Frame\t<Space>",             IDM_STEP
+        MENUITEM "Play &Once\t<Ctrl+Space>",    IDM_PLAYONCE
+        MENUITEM "&Loop frames\t<Enter>",       65535
+        MENUITEM "Sprite F&PS\t<Ctrl+P>",       IDM_SPEED
+        MENUITEM SEPARATOR
+        MENUITEM "Sprite &Information\t<Ctrl+I>", IDM_INFO
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About ...",                  IDM_ABOUT
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDC_SPRITEVIEWER ACCELERATORS MOVEABLE PURE 
+BEGIN
+    "-",            IDM_ZOOMOUT,            ASCII,  NOINVERT
+    "/",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
+    "=",            IDM_ZOOMIN,             ASCII,  NOINVERT
+    "?",            IDM_ABOUT,              ASCII,  ALT, NOINVERT
+    "I",            IDM_INFO,               VIRTKEY, CONTROL, NOINVERT
+    "O",            IDM_OPEN,               VIRTKEY, CONTROL, NOINVERT
+    "P",            IDM_SPEED,              VIRTKEY, CONTROL, NOINVERT
+    "S",            IDM_SAVEIMAGE,          VIRTKEY, CONTROL, NOINVERT
+    "S",            IDM_SAVESEQUENCE,       VIRTKEY, SHIFT, CONTROL, 
+                                                    NOINVERT
+    VK_DOWN,        IDM_STEP,               VIRTKEY, NOINVERT
+    VK_ESCAPE,      IDM_EXIT,               VIRTKEY, NOINVERT
+    VK_F1,          IDM_ABOUT,              VIRTKEY, NOINVERT
+    VK_RETURN,      IDM_CYCLE,              VIRTKEY, NOINVERT
+    VK_RIGHT,       IDM_STEP,               VIRTKEY, NOINVERT
+    VK_SPACE,       IDM_STEP,               VIRTKEY, NOINVERT
+    VK_SPACE,       IDM_PLAYONCE,           VIRTKEY, CONTROL, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOG DISCARDABLE  22, 17, 170, 48
+STYLE DS_MODALFRAME | WS_CAPTION | WS_SYSMENU
+CAPTION "Half-Life Sprite Viewer"
+FONT 10, "Arial"
+BEGIN
+    ICON            IDI_LAMBDA_N,IDI_LAMBDA_N,7,8,20,20,SS_CENTERIMAGE | 
+                    SS_REALSIZEIMAGE
+    CTEXT           "MACH III Copyright (C) 2000-2001\n Modified by ~X~",
+                    IDC_STATIC,33,5,120,21
+    DEFPUSHBUTTON   "OK",IDOK,61,29,48,14,BS_FLAT | WS_GROUP
+END
+
+IDD_SPEED DIALOG DISCARDABLE  0, 0, 108, 50
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Display speed"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,29,33,48,14,BS_FLAT
+    RTEXT           "FPS:",IDC_STATIC,35,12,18,8
+    EDITTEXT        IDC_SPEED,59,11,35,14,ES_NUMBER | NOT WS_BORDER
+    ICON            IDI_LAMBDA_N,IDI_LAMBDA_N,7,7,21,20,SS_CENTERIMAGE | 
+                    SS_REALSIZEIMAGE
+END
+
+IDD_INFO DIALOG DISCARDABLE  0, 0, 274, 110
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Sprite Information"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,7,91,260,16,BS_FLAT
+    RTEXT           "Sprite name:",IDC_STATIC,24,8,46,8
+    RTEXT           "Bounding radius:",IDC_STATIC,11,64,59,8
+    RTEXT           "Maximum size:",IDC_STATIC,20,22,50,8
+    RTEXT           "Total frames:",IDC_STATIC,26,36,44,8
+    LTEXT           "<Sprite name>",IDT_SPRITENAME,76,8,160,8
+    LTEXT           "<Bounding radius>",IDT_RADIUS,76,64,160,8
+    LTEXT           "<Maximum size, ""X x Y"">",IDT_SIZE,76,22,160,8
+    LTEXT           "<Total frames>",IDT_TOTALFRAMES,76,36,160,8
+    RTEXT           "Transparency mode:",IDC_STATIC,5,50,65,8
+    LTEXT           "<Type>",IDT_TEXTURETYPE,76,50,160,8
+    RTEXT           "Sprite type",IDC_STATIC,11,79,59,8
+    LTEXT           "<Sprite type>",IDT_TYPE,76,79,160,8
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_SPEED, DIALOG
+    BEGIN
+        LEFTMARGIN, 1
+        RIGHTMARGIN, 107
+        TOPMARGIN, 1
+        BOTTOMMARGIN, 48
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE DISCARDABLE 
+BEGIN
+    IDS_APP_TITLE           "Half-Life Sprite Viewer"
+    IDC_SPRITEVIEWER        "SpriteViewer"
+END
+
+#endif    // Neutral resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#define APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""windows.h""\r\n"
+    "#undef APSTUDIO_HIDDEN_SYMBOLS\r\n"
+    "#include ""resource.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+

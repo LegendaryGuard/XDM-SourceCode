@@ -1,0 +1,244 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>XBM</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>3.0.3.7</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IntDir>R:\COMPILER/xbm/$(Configuration)/intermediate\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <IncludePath>$(WindowsSdkDir)include;$(VCInstallDir)include</IncludePath>
+    <ExecutablePath>$(MSBuildToolsPath32);$(VCInstallDir)bin;$(VSInstallDir);$(VSInstallDir)Common7\ide;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\Tools\bin;$(WindowsSdkDir)bin;$(SystemRoot)\SysWow64;$(PATH)</ExecutablePath>
+    <SourcePath>$(VCInstallDir)crt\src</SourcePath>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IntDir>R:\COMPILER/xbm/$(Configuration)/intermediate\</IntDir>
+    <GenerateManifest>false</GenerateManifest>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <IncludePath>$(WindowsSdkDir)include;$(VCInstallDir)include</IncludePath>
+    <ExecutablePath>$(MSBuildToolsPath32);$(VCInstallDir)bin;$(VSInstallDir);$(VSInstallDir)Common7\ide;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\Tools\bin;$(WindowsSdkDir)bin;$(SystemRoot)\SysWow64;$(PATH)</ExecutablePath>
+    <SourcePath>$(VCInstallDir)crt\src</SourcePath>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>MaxSpeed</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level4</WarningLevel>
+      <AdditionalIncludeDirectories>.;$(IncludePath);..\dlls;..\engine;..\common;..\pm_shared;..\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;PROXY_GAME_DLL;SVDLL_NEWFUNCTIONS;NOSQB;SV_NO_PITCH_CORRECTION;USE_EXCEPTIONS;USE_WEAPONBITS;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName)_vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnablePREfast>true</EnablePREfast>
+      <ExceptionHandling>Async</ExceptionHandling>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\release\XBM.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\release\XBM.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <LinkDLL>true</LinkDLL>
+      <SubSystem>Windows</SubSystem>
+      <ModuleDefinitionFile>.\XBM.def</ModuleDefinitionFile>
+      <ImportLibrary>.\release\XBM.lib</ImportLibrary>
+      <Version>3.3</Version>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <CustomBuildStep>
+      <Command>copy $(TargetPath) %HLROOT%\XDM\dlls\</Command>
+      <Message>Copying to dlls</Message>
+      <Outputs>%HLROOT%\XDM\dlls\$(TargetName);%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>Disabled</Optimization>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <WarningLevel>Level4</WarningLevel>
+      <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalIncludeDirectories>.;$(IncludePath);..\dlls;..\engine;..\common;..\pm_shared;..\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;PROXY_GAME_DLL;SVDLL_NEWFUNCTIONS;NOSQB;SV_NO_PITCH_CORRECTION;USE_EXCEPTIONS;USE_WEAPONBITS;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName)_vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <EnablePREfast>true</EnablePREfast>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\debug\XBM.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\debug\XBM.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <LinkDLL>true</LinkDLL>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <ImportLibrary>.\debug\XBM.lib</ImportLibrary>
+      <Version>3.3</Version>
+      <ModuleDefinitionFile>.\XBM.def</ModuleDefinitionFile>
+      <OptimizeReferences>false</OptimizeReferences>
+    </Link>
+    <CustomBuildStep>
+      <Command>copy $(TargetPath) %HLROOT%\XDM\dlls\</Command>
+      <Message>Copying to dlls</Message>
+      <Outputs>%HLROOT%\XDM\dlls\$(TargetName);%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\common\util_common.cpp" />
+    <ClCompile Include="..\common\util_vector.cpp" />
+    <ClCompile Include="..\common\vector.cpp" />
+    <ClCompile Include="bot.cpp" />
+    <ClCompile Include="bot_chat.cpp" />
+    <ClCompile Include="bot_client.cpp" />
+    <ClCompile Include="bot_combat.cpp" />
+    <ClCompile Include="bot_commands.cpp" />
+    <ClCompile Include="bot_logo.cpp" />
+    <ClCompile Include="bot_navigate.cpp" />
+    <ClCompile Include="dll.cpp" />
+    <ClCompile Include="engine.cpp" />
+    <ClCompile Include="h_export.cpp" />
+    <ClCompile Include="linkfunc.cpp" />
+    <ClCompile Include="namefunc.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="waypoint.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\protocol.h" />
+    <ClInclude Include="..\common\util_common.h" />
+    <ClInclude Include="..\dlls\basemonster.h" />
+    <ClInclude Include="..\dlls\cbase.h" />
+    <ClInclude Include="..\dlls\extdll.h" />
+    <ClInclude Include="..\dlls\monsterevent.h" />
+    <ClInclude Include="..\dlls\saverestore.h" />
+    <ClInclude Include="..\dlls\schedule.h" />
+    <ClInclude Include="..\dlls\vector.h" />
+    <ClInclude Include="..\common\activity.h" />
+    <ClInclude Include="..\common\cdll_dll.h" />
+    <ClInclude Include="..\common\const.h" />
+    <ClInclude Include="..\common\crc.h" />
+    <ClInclude Include="..\common\cvardef.h" />
+    <ClInclude Include="..\common\damage.h" />
+    <ClInclude Include="..\common\entity_state.h" />
+    <ClInclude Include="..\common\event_flags.h" />
+    <ClInclude Include="..\common\gamedefs.h" />
+    <ClInclude Include="..\common\in_buttons.h" />
+    <ClInclude Include="..\common\platform.h" />
+    <ClInclude Include="..\common\Sequence.h" />
+    <ClInclude Include="..\dlls\sound.h" />
+    <ClInclude Include="..\common\studio_event.h" />
+    <ClInclude Include="..\common\usercmd.h" />
+    <ClInclude Include="..\common\vector.h" />
+    <ClInclude Include="..\common\weapondef.h" />
+    <ClInclude Include="..\common\weaponinfo.h" />
+    <ClInclude Include="..\engine\archtypes.h" />
+    <ClInclude Include="..\engine\custom.h" />
+    <ClInclude Include="..\engine\edict.h" />
+    <ClInclude Include="..\engine\eiface.h" />
+    <ClInclude Include="..\engine\progdefs.h" />
+    <ClInclude Include="..\engine\Sequence.h" />
+    <ClInclude Include="..\engine\studio.h" />
+    <ClInclude Include="..\pm_shared\pm_info.h" />
+    <ClInclude Include="..\pm_shared\pm_materials.h" />
+    <ClInclude Include="..\pm_shared\pm_shared.h" />
+    <ClInclude Include="..\public\archtypes.h" />
+    <ClInclude Include="..\public\steam\steamtypes.h" />
+    <ClInclude Include="..\common\basetsd.h" />
+    <ClInclude Include="bot.h" />
+    <ClInclude Include="bot_client.h" />
+    <ClInclude Include="bot_cvar.h" />
+    <ClInclude Include="bot_func.h" />
+    <ClInclude Include="bot_weapons.h" />
+    <ClInclude Include="engine.h" />
+    <ClInclude Include="enginecallback.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="waypoint.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="XBM.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

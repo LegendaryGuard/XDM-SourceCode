@@ -1,355 +1,188 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-*   Use, distribution, and modification of this source code and/or resulting
-*   object code is restricted to non-commercial enhancements to products from
-*   Valve LLC.  All other use, distribution, or modification is prohibited
-*   without written permission from Valve LLC.
-*
-****/
-//
-// hud.cpp
-//
-// implementation of CHud class
-//
-
 #include "hud.h"
 #include "cl_util.h"
-#include <string.h>
-#include <stdio.h>
 #include "parsemsg.h"
 #include "hud_servers.h"
-#include "vgui_int.h"
-#include "vgui_TeamFortressViewport.h"
+#include "vgui_Viewport.h"
+#include "musicplayer.h"
+#include "RenderManager.h"// XDM
+#include "cl_fx.h"
+#include "bsputil.h"
+#include "pm_defs.h"
+#include "pm_shared.h"
 
-#include "demo.h"
-#include "demo_api.h"
-#include "vgui_ScorePanel.h"
+// Supposed-to-be-obsolete code, changed significantly
 
-hud_player_info_t	 g_PlayerInfoList[MAX_PLAYERS+1];	   // player info from the engine
-extra_player_info_t  g_PlayerExtraInfo[MAX_PLAYERS+1];   // additional player info sent directly to the client dll
-
-class CHLVoiceStatusHelper : public IVoiceStatusHelper
+//-----------------------------------------------------------------------------
+// CHud constructor
+// Prepare default values here
+//-----------------------------------------------------------------------------
+CHud::CHud(): m_iSpriteCount(0), m_pHudList(NULL)
 {
-public:
-	virtual void GetPlayerTextColor(int entindex, int color[3])
-	{
-		color[0] = color[1] = color[2] = 255;
+	DBG_HUD_PRINTF("CHud::CHud()\n");
+	m_flTime = 0.0f;
+	m_iActive = 0;
+	m_iPaused = 0;
+	m_iIntermission = 0;
+	m_iHardwareMode = 0;
 
-		if( entindex >= 0 && entindex < sizeof(g_PlayerExtraInfo)/sizeof(g_PlayerExtraInfo[0]) )
-		{
-			int iTeam = g_PlayerExtraInfo[entindex].teamnumber;
+	m_iDistortMode = 0;
+	m_fDistortValue = 0;
 
-			if ( iTeam < 0 )
-			{
-				iTeam = 0;
-			}
+	m_iFogMode = 0;
+	m_iSkyMode = 0;
+	m_iCameraMode = 0;
+	m_vecSkyPos.Clear();
+	m_flFogStart = 0;
+	m_flFogEnd = 0;
+	//m_vecOrigin.Clear();
+	//m_vecAngles.Clear();
+	m_iKeyBits = 0;
+	m_iWeaponBits = 0;
+	//m_iActiveWeapon = WEAPON_NONE;
 
-			iTeam = iTeam % iNumberOfTeamColors;
+	m_bFrozen = 0;
+	m_iTeamNumber = TEAM_NONE;
+	m_iGameType = 0;
+	m_iGameMode = 0;
+	m_iGameState = 0;
+	m_iGameSkillLevel = 0;
+	m_iGameFlags = 0;
+	m_iRevengeMode = 0;
+	m_fLastScoreAward = 0;
+	m_flShotTime = 0.0f;
+	m_flNextAnnounceTime = 0;// XDM3035
+	m_flNextSuitSoundTime = 0;
+	m_flGameStartTime = 0;
+	m_flIntermissionStartTime = 0;
+	m_flTimeLeft = 0;
+	m_iJoinTime = 0;// XDM3038a
+	m_iTimeLimit = 0;
+	m_iScoreLeft = 0;
+	m_iDeathLimit = 0;
+	m_iTimeLeftLast = 0;
+	m_iScoreLeftLast = 0;
+	m_iScoreLimit = 0;
+	m_iRoundsPlayed = 0;
+	m_iRoundsLimit = 0;
 
-			color[0] = iTeamColors[iTeam][0];
-			color[1] = iTeamColors[iTeam][1];
-			color[2] = iTeamColors[iTeam][2];
-		}
-	}
-
-	virtual void UpdateCursorState()
-	{
-		gViewPort->UpdateCursorState();
-	}
-
-	virtual int	GetAckIconHeight()
-	{
-		return ScreenHeight - gHUD.m_iFontHeight*3 - 6;
-	}
-
-	virtual bool			CanShowSpeakerLabels()
-	{
-		if( gViewPort && gViewPort->m_pScoreBoard )
-			return !gViewPort->m_pScoreBoard->isVisible();
-		else
-			return false;
-	}
-};
-static CHLVoiceStatusHelper g_VoiceStatusHelper;
-
-
-extern client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *psz, int iRes, int iCount);
-
-extern cvar_t *sensitivity;
-cvar_t *cl_lw = NULL;
-
-void ShutdownInput (void);
-
-//DECLARE_MESSAGE(m_Logo, Logo)
-int __MsgFunc_Logo(const char *pszName, int iSize, void *pbuf)
-{
-	return gHUD.MsgFunc_Logo(pszName, iSize, pbuf );
-}
-
-//DECLARE_MESSAGE(m_Logo, Logo)
-int __MsgFunc_ResetHUD(const char *pszName, int iSize, void *pbuf)
-{
-	return gHUD.MsgFunc_ResetHUD(pszName, iSize, pbuf );
-}
-
-int __MsgFunc_InitHUD(const char *pszName, int iSize, void *pbuf)
-{
-	gHUD.MsgFunc_InitHUD( pszName, iSize, pbuf );
-	return 1;
-}
-
-int __MsgFunc_ViewMode(const char *pszName, int iSize, void *pbuf)
-{
-	gHUD.MsgFunc_ViewMode( pszName, iSize, pbuf );
-	return 1;
-}
-
-int __MsgFunc_SetFOV(const char *pszName, int iSize, void *pbuf)
-{
-	return gHUD.MsgFunc_SetFOV( pszName, iSize, pbuf );
-}
-
-int __MsgFunc_Concuss(const char *pszName, int iSize, void *pbuf)
-{
-	return gHUD.MsgFunc_Concuss( pszName, iSize, pbuf );
-}
-
-int __MsgFunc_GameMode(const char *pszName, int iSize, void *pbuf )
-{
-	return gHUD.MsgFunc_GameMode( pszName, iSize, pbuf );
-}
-
-// TFFree Command Menu
-void __CmdFunc_OpenCommandMenu(void)
-{
-	if ( gViewPort )
-	{
-		gViewPort->ShowCommandMenu( gViewPort->m_StandardMenu );
-	}
-}
-
-// TFC "special" command
-void __CmdFunc_InputPlayerSpecial(void)
-{
-	if ( gViewPort )
-	{
-		gViewPort->InputPlayerSpecial();
-	}
-}
-
-void __CmdFunc_CloseCommandMenu(void)
-{
-	if ( gViewPort )
-	{
-		gViewPort->InputSignalHideCommandMenu();
-	}
-}
-
-void __CmdFunc_ForceCloseCommandMenu( void )
-{
-	if ( gViewPort )
-	{
-		gViewPort->HideCommandMenu();
-	}
-}
-
-void __CmdFunc_ToggleServerBrowser( void )
-{
-	if ( gViewPort )
-	{
-		gViewPort->ToggleServerBrowser();
-	}
-}
-
-// TFFree Command Menu Message Handlers
-int __MsgFunc_ValClass(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_ValClass( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_TeamNames(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_TeamNames( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_Feign(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_Feign( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_Detpack(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_Detpack( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_VGUIMenu(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_VGUIMenu( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_MOTD(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_MOTD( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_BuildSt(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_BuildSt( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_RandomPC(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_RandomPC( pszName, iSize, pbuf );
-	return 0;
-}
- 
-int __MsgFunc_ServerName(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_ServerName( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_ScoreInfo(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_ScoreInfo( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_TeamScore(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_TeamScore( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_TeamInfo(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_TeamInfo( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_Spectator(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_Spectator( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_SpecFade(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_SpecFade( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_ResetFade(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_ResetFade( pszName, iSize, pbuf );
-	return 0;
-}
-
-int __MsgFunc_AllowSpec(const char *pszName, int iSize, void *pbuf)
-{
-	if (gViewPort)
-		return gViewPort->MsgFunc_AllowSpec( pszName, iSize, pbuf );
-	return 0;
-}
-
-// This is called every time the DLL is loaded
-void CHud :: Init( void )
-{
-	HOOK_MESSAGE( Logo );
-	HOOK_MESSAGE( ResetHUD );
-	HOOK_MESSAGE( GameMode );
-	HOOK_MESSAGE( InitHUD );
-	HOOK_MESSAGE( ViewMode );
-	HOOK_MESSAGE( SetFOV );
-	HOOK_MESSAGE( Concuss );
-
-	// TFFree CommandMenu
-	HOOK_COMMAND( "+commandmenu", OpenCommandMenu );
-	HOOK_COMMAND( "-commandmenu", CloseCommandMenu );
-	HOOK_COMMAND( "ForceCloseCommandMenu", ForceCloseCommandMenu );
-	HOOK_COMMAND( "special", InputPlayerSpecial );
-	HOOK_COMMAND( "togglebrowser", ToggleServerBrowser );
-
-	HOOK_MESSAGE( ValClass );
-	HOOK_MESSAGE( TeamNames );
-	HOOK_MESSAGE( Feign );
-	HOOK_MESSAGE( Detpack );
-	HOOK_MESSAGE( MOTD );
-	HOOK_MESSAGE( BuildSt );
-	HOOK_MESSAGE( RandomPC );
-	HOOK_MESSAGE( ServerName );
-	HOOK_MESSAGE( ScoreInfo );
-	HOOK_MESSAGE( TeamScore );
-	HOOK_MESSAGE( TeamInfo );
-
-	HOOK_MESSAGE( Spectator );
-	HOOK_MESSAGE( AllowSpec );
-	
-	HOOK_MESSAGE( SpecFade );
-	HOOK_MESSAGE( ResetFade );
-
-	// VGUI Menus
-	HOOK_MESSAGE( VGUIMenu );
-
-	CVAR_CREATE( "hud_classautokill", "1", FCVAR_ARCHIVE | FCVAR_USERINFO );		// controls whether or not to suicide immediately on TF class switch
-	CVAR_CREATE( "hud_takesshots", "0", FCVAR_ARCHIVE );		// controls whether or not to automatically take screenshots at the end of a round
-
-
-	m_iLogo = 0;
-	m_iFOV = 0;
-
-	CVAR_CREATE( "zoom_sensitivity_ratio", "1.2", 0 );
-	default_fov = CVAR_CREATE( "default_fov", "90", 0 );
-	m_pCvarStealMouse = CVAR_CREATE( "hud_capturemouse", "1", FCVAR_ARCHIVE );
-	m_pCvarDraw = CVAR_CREATE( "hud_draw", "1", FCVAR_ARCHIVE );
-	cl_lw = gEngfuncs.pfnGetCvarPointer( "cl_lw" );
-
+	m_pHudList = NULL;
 	m_pSpriteList = NULL;
+	m_iSpriteCount = 0;
+	m_iSpriteCountAllRes = 0;
+	m_flMouseSensitivity = 1.0f;
+	m_rghSprites = NULL;
+	m_rgrcRects = NULL;
+	m_rgszSpriteNames = NULL;
+	m_iszSpriteFrames = NULL;
+}
 
-	// Clear any old HUD list
-	if ( m_pHudList )
+//-----------------------------------------------------------------------------
+// CHud destructor
+// Cleans up memory allocated for m_rg* arrays
+//-----------------------------------------------------------------------------
+CHud::~CHud()
+{
+	DBG_HUD_PRINTF("CHud::~CHud()\n");
+	if (m_rghSprites)
+	{
+		delete [] m_rghSprites;
+		m_rghSprites = NULL;
+	}
+	if (m_rgrcRects)
+	{
+		delete [] m_rgrcRects;
+		m_rgrcRects = NULL;
+	}
+	if (m_rgszSpriteNames)
+	{
+		delete [] m_rgszSpriteNames;
+		m_rgszSpriteNames = NULL;
+	}
+	if (m_iszSpriteFrames)
+	{
+		delete [] m_iszSpriteFrames;// XDM3037a
+		m_iszSpriteFrames = NULL;
+	}
+	if (m_pHudList)
 	{
 		HUDLIST *pList;
-		while ( m_pHudList )
+		while (m_pHudList)
 		{
 			pList = m_pHudList;
 			m_pHudList = m_pHudList->pNext;
-			free( pList );
+			free(pList);
 		}
 		m_pHudList = NULL;
 	}
 
+	ServersShutdown();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: This is called every time the DLL is loaded by HUD_Init()
+//-----------------------------------------------------------------------------
+void CHud::Init(void)
+{
+	DBG_HUD_PRINTF("CHud::Init()\n");
+	memset(m_szMessageAward, 0, sizeof(m_szMessageAward));
+	memset(m_szMessageCombo, 0, sizeof(m_szMessageCombo));
+	memset(m_szMessageTimeLeft, 0, sizeof(m_szMessageTimeLeft));
+	memset(m_szMessageAnnouncement, 0, sizeof(m_szMessageAnnouncement));
+	memset(m_szMessageExtraAnnouncement, 0, sizeof(m_szMessageExtraAnnouncement));
+	memset(&m_MessageAward, 0, sizeof(client_textmessage_t));
+	memset(&m_MessageCombo, 0, sizeof(client_textmessage_t));
+	memset(&m_MessageTimeLeft, 0, sizeof(client_textmessage_t));
+	memset(&m_MessageAnnouncement, 0, sizeof(client_textmessage_t));
+	memset(&m_MessageExtraAnnouncement, 0, sizeof(client_textmessage_t));
+
+	// XDM3036: only HUD-vars here
+	m_pCvarColorMain		= CVAR_CREATE("hud_grn",			"159 159 255",	FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// RGB_GREEN
+	m_pCvarColorRed			= CVAR_CREATE("hud_red",			"255 0 0",		FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// RGB_RED
+	m_pCvarColorBlue		= CVAR_CREATE("hud_blu",			"0 0 255",		FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// RGB_BLUE
+	m_pCvarColorCyan		= CVAR_CREATE("hud_cyn",			"0 255 255",	FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// RGB_CYAN
+	m_pCvarColorYellow		= CVAR_CREATE("hud_yel",			"255 255 0",	FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// RGB_YELLOW
+	m_pCvarStealMouse		= CVAR_CREATE("hud_capturemouse",	"1",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_pCvarDraw				= CVAR_CREATE("hud_draw",			"1",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_pCvarDrawNumbers		= CVAR_CREATE("hud_drawnumbers",	"1",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_pCvarEventIconTime	= CVAR_CREATE("hud_eventicontime",	"0",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// XDM3037a
+	m_pCvarUseTeamColor		= CVAR_CREATE("hud_useteamcolor",	"0",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// XDM
+	m_pCvarUsePlayerColor	= CVAR_CREATE("hud_useplayercolor",	"1",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_pCvarMiniMap			= CVAR_CREATE("hud_minimap",		"0",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_pCvarTakeShots		= CVAR_CREATE("hud_takesshots",		"0",			FCVAR_ARCHIVE | FCVAR_CLIENTDLL);// controls whether or not to automatically take screenshots at the end of a round
+
+	m_flTimeLeft = 0.0f;
+	m_iScoreLeftLast = 0;// XDM3035
+	m_iTimeLeftLast = 0;
+	m_flNextAnnounceTime = 0.0f;// XDM3035
+	DistortionReset();// XDM3038
+	m_bFrozen = 0;
+
+	m_pSpriteList = NULL;
+	m_iFogMode = 0;// XDM3035
+	m_iSkyMode = 0;
+	m_iLogo = 0;
+	m_fFOV = 0;// XDM3037a m_iFOV = DEFAULT_FOV;
+	//m_iCameraMode = 0;
+
+	m_flFogStart = 0.0f;
+	m_flFogEnd = 0.0f;
+
+	// Clear any old HUD list
+	if (m_pHudList)
+	{
+		HUDLIST *pList;
+		while (m_pHudList)
+		{
+			pList = m_pHudList;
+			m_pHudList = m_pHudList->pNext;
+			free(pList);
+		}
+		m_pHudList = NULL;
+	}
 	// In case we get messages before the first update -- time will be valid
 	m_flTime = 1.0;
-
+	// These are self-registering here
+	m_ZoomCrosshair.Init();// XDM: must be first!
 	m_Ammo.Init();
 	m_Health.Init();
 	m_SayText.Init();
@@ -361,116 +194,166 @@ void CHud :: Init( void )
 	m_Message.Init();
 	m_StatusBar.Init();
 	m_DeathNotice.Init();
-	m_AmmoSecondary.Init();
-	m_TextMessage.Init();
+	// XDM3038: OBSOLETE	m_TextMessage.Init();
 	m_StatusIcons.Init();
-	GetClientVoiceMgr()->Init(&g_VoiceStatusHelper, (vgui::Panel**)&gViewPort);
-
-	m_Menu.Init();
-	
+	//m_RocketScreen.Init();// XDM
+	m_GameDisplay.Init();// XDM3038a
+	m_DomDisplay.Init();
+	m_FlagDisplay.Init();
+	m_Timer.Init();// XDM3038c
+#if defined (ENABLE_BENCKMARK)
+	m_Benchmark.Init();
+#endif
 	ServersInit();
-
-	MsgFunc_ResetHUD(0, 0, NULL );
+	Reset(true);// XDM3038c: TESTME: true
 }
 
-// CHud destructor
-// cleans up memory allocated for m_rg* arrays
-CHud :: ~CHud()
-{
-	delete [] m_rghSprites;
-	delete [] m_rgrcRects;
-	delete [] m_rgszSpriteNames;
-
-	if ( m_pHudList )
-	{
-		HUDLIST *pList;
-		while ( m_pHudList )
-		{
-			pList = m_pHudList;
-			m_pHudList = m_pHudList->pNext;
-			free( pList );
-		}
-		m_pHudList = NULL;
-	}
-
-	ServersShutdown();
-}
-
-// GetSpriteIndex()
+//-----------------------------------------------------------------------------
+// Purpose: GetSpriteIndex()
 // searches through the sprite list loaded from hud.txt for a name matching SpriteName
-// returns an index into the gHUD.m_rghSprites[] array
-// returns 0 if sprite not found
-int CHud :: GetSpriteIndex( const char *SpriteName )
+// Input  : *SpriteName - 
+// Output : int index into the gHUD.m_rghSprites[] array, 0 if sprite not found
+//-----------------------------------------------------------------------------
+int CHud::GetSpriteIndex(const char *SpriteName)
+{
+	if (SpriteName && *SpriteName != 0)
+	{
+		// look through the loaded sprite name list for SpriteName
+		for (int i = 0; i < m_iSpriteCount; ++i)
+		{
+			if (strncmp(SpriteName, m_rgszSpriteNames + (i * MAX_SPRITE_NAME_LENGTH), MAX_SPRITE_NAME_LENGTH) == 0)
+				return i;
+		}
+	}
+	DBG_PRINTF("CHud::GetSpriteIndex(\"%s\") failed!\n", SpriteName);
+	return HUDSPRITEINDEX_INVALID; // invalid sprite
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : hSprite - HLSPRITE
+// Output : int - index in HUD array
+//-----------------------------------------------------------------------------
+int CHud::GetSpriteIndex(HLSPRITE hSprite)
 {
 	// look through the loaded sprite name list for SpriteName
-	for ( int i = 0; i < m_iSpriteCount; i++ )
+	for (int i = 0; i < m_iSpriteCount; ++i)
 	{
-		if ( strncmp( SpriteName, m_rgszSpriteNames + (i * MAX_SPRITE_NAME_LENGTH), MAX_SPRITE_NAME_LENGTH ) == 0 )
+		if (m_rghSprites[i] == hSprite)
 			return i;
 	}
-
-	return -1; // invalid sprite
+	DBG_PRINTF("CHud::GetSpriteIndex(%d) failed!\n", hSprite);
+	return HUDSPRITEINDEX_INVALID; // invalid sprite
 }
 
-void CHud :: VidInit( void )
+//-----------------------------------------------------------------------------
+// Purpose: XDM3037a: extra layer of abstraction and protection
+// Input  : index - 
+// Output : int
+//-----------------------------------------------------------------------------
+int CHud::GetSpriteFrame(const int &index)
 {
+	if (index < m_iSpriteCount)
+		return m_iszSpriteFrames[index];
+
+	return 0;// invalid index
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called when the client DLL initializes and whenever the vid_mode is changed (as if HL can switch modes... :-/ )
+//-----------------------------------------------------------------------------
+void CHud::VidInit(void)
+{
+	DBG_HUD_PRINTF("CHud::VidInit()\n");
 	m_scrinfo.iSize = sizeof(m_scrinfo);
 	GetScreenInfo(&m_scrinfo);
-
-	// ----------
-	// Load Sprites
-	// ---------
-//	m_hsprFont = LoadSprite("sprites/%d_font.spr");
-	
-	m_hsprLogo = 0;	
-	m_hsprCursor = 0;
-
 	if (ScreenWidth < 640)
 		m_iRes = 320;
 	else
 		m_iRes = 640;
 
-	// Only load this once
-	if ( !m_pSpriteList )
-	{
-		// we need to load the hud.txt, and all sprites within
-		m_pSpriteList = SPR_GetList("sprites/hud.txt", &m_iSpriteCountAllRes);
+	m_iFogMode = 0;// XDM: clear out the fog!
+	ResetFog();
+	m_hsprLogo = 0;	
 
+	LoadHUDSprites("hud", false);// load main file once
+
+	// assumption: number_1, number_2, etc, are all listed and loaded sequentially
+	const char *pFontSpriteName = "number_0";
+	m_HUD_number_0 = GetSpriteIndex(pFontSpriteName);
+	ASSERT(m_HUD_number_0 != HUDSPRITEINDEX_INVALID);
+	if (m_HUD_number_0 != HUDSPRITEINDEX_INVALID)
+		m_iFontHeight = RectHeight(m_rgrcRects[m_HUD_number_0]);//m_rgrcRects[m_HUD_number_0].bottom - m_rgrcRects[m_HUD_number_0].top;
+	else
+	{
+		m_iFontHeight = 32;// ERROR!!!!
+		conprintf(0, "CHud::VidInit() error: sprite \"%s\" not found in list!\n", pFontSpriteName);
+	}
+
+	HUDLIST *pList = m_pHudList;// XDM3038c
+	while (pList)
+	{
+		if (pList->p)
+			pList->p->VidInit();
+		pList = pList->pNext;
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Add some CHudBase-derived member to a linked list
+// Warning: Memory for each element is allocated by malloc()!
+// Input  : *phudelem - 
+//-----------------------------------------------------------------------------
+bool CHud::LoadHUDSprites(const char *listname, bool additional)
+{
+	DBG_HUD_PRINTF("CHud::LoadHUDSprites(%s)\n", listname);
+	char szFilePath[128];
+	int j = 0;
+	_snprintf(szFilePath, 128, "sprites/%s.txt", listname);
+	szFilePath[127] = '\0';
+	if (m_pSpriteList == NULL)
+	{
+		conprintf(0, "Loading %s\n", szFilePath);
+		// we need to load the hud.txt, and all sprites within
+		m_pSpriteList = SPR_GetList(szFilePath, &m_iSpriteCountAllRes);
 		if (m_pSpriteList)
 		{
 			// count the number of sprites of the appropriate res
 			m_iSpriteCount = 0;
 			client_sprite_t *p = m_pSpriteList;
-			int j;
-			for ( j = 0; j < m_iSpriteCountAllRes; j++ )
+			for (j = 0; j < m_iSpriteCountAllRes; ++j)
 			{
-				if ( p->iRes == m_iRes )
-					m_iSpriteCount++;
-				p++;
+				if (p->iRes == m_iRes)
+					++m_iSpriteCount;
+				++p;
 			}
-
 			// allocated memory for sprite handle arrays
- 			m_rghSprites = new HSPRITE[m_iSpriteCount];
+ 			m_rghSprites = new HLSPRITE[m_iSpriteCount];
 			m_rgrcRects = new wrect_t[m_iSpriteCount];
 			m_rgszSpriteNames = new char[m_iSpriteCount * MAX_SPRITE_NAME_LENGTH];
-
+			m_iszSpriteFrames = new int[m_iSpriteCount];// XDM3037a
 			p = m_pSpriteList;
 			int index = 0;
-			for ( j = 0; j < m_iSpriteCountAllRes; j++ )
+			for (j = 0; j < m_iSpriteCountAllRes; ++j)
 			{
-				if ( p->iRes == m_iRes )
+				if (p->iRes == m_iRes)
 				{
-					char sz[256];
-					sprintf(sz, "sprites/%s.spr", p->szSprite);
-					m_rghSprites[index] = SPR_Load(sz);
+					//char sz[256];
+					_snprintf(szFilePath, 128, "sprites/%s.spr", p->szSprite);
+					szFilePath[127] = '\0';
+					m_rghSprites[index] = SPR_Load(szFilePath);
 					m_rgrcRects[index] = p->rc;
-					strncpy( &m_rgszSpriteNames[index * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH );
-
-					index++;
+					strncpy(&m_rgszSpriteNames[index * MAX_SPRITE_NAME_LENGTH], p->szName, MAX_SPRITE_NAME_LENGTH);
+					m_iszSpriteFrames[index] = 0;// XDM3037a
+					++index;
 				}
-
-				p++;
+				++p;
 			}
+		}
+		else
+		{
+			conprintf(0, "HUD: Unable to load \"%s\"!\n", szFilePath);
+			return false;
 		}
 	}
 	else
@@ -479,198 +362,79 @@ void CHud :: VidInit( void )
 		// we need to make sure all the sprites have been loaded (we've gone through a transition, or loaded a save game)
 		client_sprite_t *p = m_pSpriteList;
 		int index = 0;
-		for ( int j = 0; j < m_iSpriteCountAllRes; j++ )
+		for (j = 0; j < m_iSpriteCountAllRes; ++j)
 		{
-			if ( p->iRes == m_iRes )
+			if (p->iRes == m_iRes)
 			{
 				char sz[256];
-				sprintf( sz, "sprites/%s.spr", p->szSprite );
+				_snprintf(sz, 256, "sprites/%s.spr", p->szSprite);
 				m_rghSprites[index] = SPR_Load(sz);
-				index++;
+				++index;
 			}
-
-			p++;
+			++p;
 		}
 	}
 
-	// assumption: number_1, number_2, etc, are all listed and loaded sequentially
-	m_HUD_number_0 = GetSpriteIndex( "number_0" );
-
-	m_iFontHeight = m_rgrcRects[m_HUD_number_0].bottom - m_rgrcRects[m_HUD_number_0].top;
-
-	m_Ammo.VidInit();
-	m_Health.VidInit();
-	m_Spectator.VidInit();
-	m_Geiger.VidInit();
-	m_Train.VidInit();
-	m_Battery.VidInit();
-	m_Flash.VidInit();
-	m_Message.VidInit();
-	m_StatusBar.VidInit();
-	m_DeathNotice.VidInit();
-	m_SayText.VidInit();
-	m_Menu.VidInit();
-	m_AmmoSecondary.VidInit();
-	m_TextMessage.VidInit();
-	m_StatusIcons.VidInit();
-	GetClientVoiceMgr()->VidInit();
-}
-
-int CHud::MsgFunc_Logo(const char *pszName,  int iSize, void *pbuf)
-{
-	BEGIN_READ( pbuf, iSize );
-
-	// update Train data
-	m_iLogo = READ_BYTE();
-
-	return 1;
-}
-
-float g_lastFOV = 0.0;
-
-/*
-============
-COM_FileBase
-============
-*/
-// Extracts the base name of a file (no path, no extension, assumes '/' as path separator)
-void COM_FileBase ( const char *in, char *out)
-{
-	int len, start, end;
-
-	len = strlen( in );
-	
-	// scan backward for '.'
-	end = len - 1;
-	while ( end && in[end] != '.' && in[end] != '/' && in[end] != '\\' )
-		end--;
-	
-	if ( in[end] != '.' )		// no '.', copy to end
-		end = len-1;
-	else 
-		end--;					// Found ',', copy to left of '.'
-
-
-	// Scan backward for '/'
-	start = len-1;
-	while ( start >= 0 && in[start] != '/' && in[start] != '\\' )
-		start--;
-
-	if ( in[start] != '/' && in[start] != '\\' )
-		start = 0;
-	else 
-		start++;
-
-	// Length of new sting
-	len = end - start + 1;
-
-	// Copy partial string
-	strncpy( out, &in[start], len );
-	// Terminate it
-	out[len] = 0;
-}
-
-/*
-=================
-HUD_IsGame
-
-=================
-*/
-int HUD_IsGame( const char *game )
-{
-	const char *gamedir;
-	char gd[ 1024 ];
-
-	gamedir = gEngfuncs.pfnGetGameDirectory();
-	if ( gamedir && gamedir[0] )
+	// XDM3037a: load sprite frames. NOTE: this file is optional
+	_snprintf(szFilePath, 128, "sprites/%s_frames.txt", listname);
+	FILE *pf = LoadFile(szFilePath, "r");//fopen(szFramesFilePath, "r");
+	if (pf)
 	{
-		COM_FileBase( gamedir, gd );
-		if ( !stricmp( gd, game ) )
-			return 1;
-	}
-	return 0;
-}
+		char szString[128];
+		//char szSprName[96]; reuse szFilePath
+		int iRes, iFrame;
+		conprintf(0, "Loading %s\n", szFilePath);
+		while (fgets(szString, 128, pf) != NULL)
+		{
+			if (!strncmp(szString, "//", 2) || szString[0] == '\n')
+				continue;// skip comments or blank lines
 
-/*
-=====================
-HUD_GetFOV
+			/*char *ch = strchr(szString, '\n');
+			if (ch == NULL)// try windows-style
+				strchr(szString, '\r');
 
-Returns last FOV
-=====================
-*/
-float HUD_GetFOV( void )
-{
-	if ( gEngfuncs.pDemoAPI->IsRecording() )
-	{
-		// Write it
-		int i = 0;
-		unsigned char buf[ 100 ];
+			if (ch)// force all strings to end only with \0
+				*ch = '\0';*/
 
-		// Active
-		*( float * )&buf[ i ] = g_lastFOV;
-		i += sizeof( float );
-
-		Demo_WriteBuffer( TYPE_ZOOM, i, buf );
-	}
-
-	if ( gEngfuncs.pDemoAPI->IsPlayingback() )
-	{
-		g_lastFOV = g_demozoom;
-	}
-	return g_lastFOV;
-}
-
-int CHud::MsgFunc_SetFOV(const char *pszName,  int iSize, void *pbuf)
-{
-	BEGIN_READ( pbuf, iSize );
-
-	int newfov = READ_BYTE();
-	int def_fov = CVAR_GET_FLOAT( "default_fov" );
-
-	//Weapon prediction already takes care of changing the fog. ( g_lastFOV ).
-	if ( cl_lw && cl_lw->value )
-		return 1;
-
-	g_lastFOV = newfov;
-
-	if ( newfov == 0 )
-	{
-		m_iFOV = def_fov;
+			iFrame = 0;
+			if (sscanf(szString, "%95s %d %d", szFilePath, &iRes, &iFrame) == 3)
+			{
+				if (iRes == m_iRes)
+				{
+					j = GetSpriteIndex(szFilePath);
+					if (j != HUDSPRITEINDEX_INVALID)
+						m_iszSpriteFrames[j] = min(iFrame, SPR_Frames(m_rghSprites[j])-1);
+					else
+						conprintf(0, " sprite \"%s\" is not listed!\n", szString);
+				}
+			}
+			else
+				conprintf(0, " bad line: \"%s\"!\n", szString);
+		}
+		fclose(pf);
 	}
 	else
-	{
-		m_iFOV = newfov;
-	}
+		conprintf(0, "HUD: Unable to load \"%s\"!\n", szFilePath);
 
-	// the clients fov is actually set in the client data update section of the hud
-
-	// Set a new sensitivity
-	if ( m_iFOV == def_fov )
-	{  
-		// reset to saved sensitivity
-		m_flMouseSensitivity = 0;
-	}
-	else
-	{  
-		// set a new sensitivity that is proportional to the change from the FOV default
-		m_flMouseSensitivity = sensitivity->value * ((float)newfov / (float)def_fov) * CVAR_GET_FLOAT("zoom_sensitivity_ratio");
-	}
-
-	return 1;
+	return true;
 }
 
-
+//-----------------------------------------------------------------------------
+// Purpose: Add some CHudBase-derived member to a linked list
+// Warning: Memory for each element is allocated by malloc()!
+// Input  : *phudelem - 
+//-----------------------------------------------------------------------------
 void CHud::AddHudElem(CHudBase *phudelem)
 {
-	HUDLIST *pdl, *ptemp;
-
-//phudelem->Think();
-
 	if (!phudelem)
 		return;
 
+	//DBG_HUD_PRINTF("CHud::AddHudElem()\n");
+	//phudelem->Think();
+	HUDLIST *pdl, *ptemp;
+
 	pdl = (HUDLIST *)malloc(sizeof(HUDLIST));
-	if (!pdl)
+	if (pdl == NULL)
 		return;
 
 	memset(pdl, 0, sizeof(HUDLIST));
@@ -690,9 +454,191 @@ void CHud::AddHudElem(CHudBase *phudelem)
 	ptemp->pNext = pdl;
 }
 
-float CHud::GetSensitivity( void )
+//-----------------------------------------------------------------------------
+// Purpose: XDM3037: centralized. Updates sensitivity.
+// Input  : &fFieldOfView - 
+//-----------------------------------------------------------------------------
+void CHud::SetFOV(const float &fFieldOfView)
+{
+	//DBG_HUD_PRINTF("CHud::SetFOV(%g)\n", fFieldOfView);
+	if (fFieldOfView == 0)
+		g_lastFOV = GetUpdatedDefaultFOV();
+	else
+		g_lastFOV = fFieldOfView;
+
+	// XDM3037a:	m_iFOV = (int)g_lastFOV;
+	m_fFOV = g_lastFOV;
+	m_flMouseSensitivity = GetSensitivityModByFOV(g_lastFOV);// XDM
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns value suitable for calculations (never 0)
+// Output : float 90 This function should NEVER return 0!
+//-----------------------------------------------------------------------------
+float CHud::GetCurrentFOV(void)// XDM3037a
+{
+	// XDM3037a: Server-set FOV has highest priority
+	//if (m_ClientData.fov > 0)// && m_ClientData.fov != DEFAULT_FOV)
+	if (m_fFOVServer > 0)// XDM3038a
+		return m_fFOVServer;//m_ClientData.fov;
+	else if (m_fFOV > 0)// XDM3037a: new concept: m_iFOV is an OVERRIDE, normally it should be 0
+		return m_fFOV;
+	else
+		return GetUpdatedDefaultFOV();
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Returns value suitable for calculations (never 0) and validates default FOV cvar
+// Output : float 90 This function should NEVER return 0!
+//-----------------------------------------------------------------------------
+float CHud::GetUpdatedDefaultFOV(void)// XDM
+{
+	if (g_pCvarDefaultFOV->value == 0.0f)
+	{
+		g_pCvarDefaultFOV->value = DEFAULT_FOV;
+		CVAR_SET_FLOAT(g_pCvarDefaultFOV->name, DEFAULT_FOV);// slow
+	}
+	return g_pCvarDefaultFOV->value;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Output : float
+//-----------------------------------------------------------------------------
+float CHud::GetSensitivity(void)
 {
 	return m_flMouseSensitivity;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: XDM: called when game paused state is changed
+// Input  : paused - 
+//-----------------------------------------------------------------------------
+void CHud::OnGamePaused(const int &paused)
+{
+	DBG_HUD_PRINTF("CHud::OnGamePaused(%d)\n", paused);
+	m_iPaused = paused;
+	BGM_GamePaused(paused);
+}
 
+//-----------------------------------------------------------------------------
+// Purpose: XDM: called when game loading state is changed
+// Input  : active - 
+//-----------------------------------------------------------------------------
+void CHud::OnGameActivated(const int &active)
+{
+	DBG_HUD_PRINTF("CHud::OnGameActivated(%d)\n", active);
+	m_iActive = active;
+	if (active)
+	{
+		g_pWorld = gEngfuncs.GetEntityByIndex(0);
+		//fail :(	gViewPort->Initialize();
+
+		// XDM3037a: exec client-side map-related config
+		char cmd[MAX_MAPPATH];
+		_snprintf(cmd, MAX_MAPPATH, "exec maps/%s_cl.cfg\n", GetMapName(true));
+		CLIENT_COMMAND(cmd);
+
+		/* does not work	char *s = gEngfuncs.pfnGetCvarString("bottomcolor");
+		gEngfuncs.PlayerInfo_SetValueForKey("bottomcolor", s);// XDM3038a: read these back from cvars in case game rules change from team-based to free for all
+		s = gEngfuncs.pfnGetCvarString("topcolor");
+		gEngfuncs.PlayerInfo_SetValueForKey("topcolor", s);*/
+
+		g_iMsgRS_UID_Postfix = 0;// XDM3038c
+	}
+	else
+	{
+		if (m_iGameType != GT_SINGLE)// XDM3038: change levels without resetting this data
+		{
+			DistortionReset();
+			m_bFrozen = 0;
+		}
+		if (g_pRenderManager)// XDM3035a
+			g_pRenderManager->DeleteAllSystems();
+
+		g_pWorld = NULL;// XDM3035c
+		g_pViewLeaf = NULL;// XDM3038
+
+		m_flNextAnnounceTime = 0;// XDM3035
+		//no m_flNextSuitSoundTime = 0;
+		m_fLastScoreAward = 0;
+		m_flTimeLeft = 0;// XDM3038
+		m_iTimeLimit = 0;
+		m_iScoreLeft = 0;
+		m_iTimeLeftLast = 0;
+		m_iScoreLeftLast = 0;
+		m_iScoreLimit = 0;
+		m_iRoundsPlayed = 0;
+		m_iRoundsLimit = 0;
+
+		m_Ammo.UpdateCrosshair(CROSSHAIR_OFF);// XDM3038
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: XDM3038: Does local player have the HEV suit on?
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CHud::PlayerHasSuit(void)
+{
+	return FBitSet(m_iWeaponBits, 1<<WEAPON_SUIT);// eventually this should be replaced
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: XDM3038a: Is local player alive?
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CHud::PlayerIsAlive(void)
+{
+	if (IsSpectator())
+	{
+		if (g_iUser2 > 0)
+		{
+			cl_entity_t *pEnt = gEngfuncs.GetEntityByIndex(g_iUser2);
+			if (pEnt && pEnt->curstate.health > 0)
+				return true;
+		}
+		return false;// ?
+	}
+	else if (pmove)
+		return (pmove->dead == false);
+	// BAD! CRASH when gmsgDamage is called too early (CO_AI )else if (gHUD.m_pLocalPlayer)
+	//	return (gHUD.m_pLocalPlayer->curstate.health > 0);
+	else
+		return (gHUD.m_Health.m_iHealth > 0);//return (gHUD.m_ClientData.health > 0);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: XDM3038
+//-----------------------------------------------------------------------------
+void CHud::DistortionReset(void)
+{
+	DBG_HUD_PRINTF("CHud::DistortionReset()\n");
+	m_iDistortMode = 0;// XDM3037
+	m_fDistortValue = 0.0f;
+}
+
+
+
+
+
+//-----------------------------------------------------------------------------
+// Purpose: Active means we have to draw it
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool CHudBase::IsActive(void)
+{
+	return (m_iFlags & HUD_ACTIVE);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Abstraction layer to toggle state
+// Input  : active - 
+//-----------------------------------------------------------------------------
+void CHudBase::SetActive(bool active)
+{
+	if (active)
+		m_iFlags |= HUD_ACTIVE;
+	else
+		m_iFlags &= ~HUD_ACTIVE;
+}

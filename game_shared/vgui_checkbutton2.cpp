@@ -74,17 +74,20 @@ void CCheckButton2::SetImages(Image *pChecked, Image *pUnchecked)
 
 void CCheckButton2::DeleteImages()
 {
-	if(m_bOwnImages)
+	if (m_bOwnImages)
 	{
-		delete m_pChecked;
-		delete m_pUnchecked;
+		if (m_pChecked)// XDM3037: suddenly may be null
+			delete m_pChecked;
+
+		if (m_pUnchecked)
+			delete m_pUnchecked;
 	}
 
 	m_pChecked = NULL;
 	m_pUnchecked = NULL;
 	m_bOwnImages = false;
 
-	SetupControls();
+// XDM3037: WTF?	SetupControls();
 }
 
 
@@ -100,16 +103,15 @@ bool CCheckButton2::GetCheckboxLeft()
 	return m_bCheckboxLeft;
 }
 
+#define CHECKBUTTON_BUFFER_LEN	512
 
 void CCheckButton2::SetText(char const *pText, ...)
 {
-	char str[512];
-	
+	char str[CHECKBUTTON_BUFFER_LEN];
 	va_list marker;
 	va_start(marker, pText);
-	_vsnprintf(str, sizeof(str), pText, marker);
+	vsnprintf(str, CHECKBUTTON_BUFFER_LEN, pText, marker);
 	va_end(marker);
-
 	m_Label.setText(str);
 	SetupControls();
 }

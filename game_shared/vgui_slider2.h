@@ -8,7 +8,10 @@
 #ifndef VGUI_SLIDER2_H
 #define VGUI_SLIDER2_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#pragma warning(disable: 4100)// unreferenced formal parameter // XDM
+#endif /* not __MINGW32__ */
 #endif
 
 #include<VGUI.h>

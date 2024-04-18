@@ -7,9 +7,10 @@
 
 #ifndef VOICE_GAMEMGR_H
 #define VOICE_GAMEMGR_H
-
-#ifdef _WIN32
+#if defined (_WIN32)
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 

@@ -16,9 +16,10 @@
 #ifndef CRC_H
 #define CRC_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
-
 #include "archtypes.h"     // DAL
 
 // MD5 Hash
@@ -48,6 +49,7 @@ int CRC_File(CRC32_t *crcvalue, char *pszFileName);
 #ifdef __cplusplus
 }
 #endif
+
 unsigned char COM_BlockSequenceCRCByte (unsigned char *base, int length, int sequence);
 
 void MD5Init(MD5Context_t *context);

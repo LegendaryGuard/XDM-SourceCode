@@ -1,0 +1,217 @@
+--------
+Important info on all projects in this workspace
+--------
+
+  Project settings:
+
+Project is configured to place intermediate files on a RAM drive (R:), if you don't have it, reconfigure.
+Output files (DLLs) will be copied to %HLROOT%\XDM\ directory, where %HLROOT% must be a valid environment variable containing path to Half-Life installation (e.g. C:\Half-Life)
+
+  Preprocessor defines:
+
+// GLOBAL:
+CLIENT_WEAPONS - use predicted client weapons (buggy and crashy) (default: OFF)
+SERVER_WEAPON_SLOTS - use server-defined static weapon slots (non-customizeable) (default: OFF)
+DOUBLE_MAX_AMMO - use 2 bytes for max ammo instead of 1 which limits amount to 254 (default: OFF)
+OLD_WEAPON_AMMO_INFO - use old ugly ammo code (like HL) (default: OFF)
+SV_NO_PITCH_CORRECTION - server DLL does not fix angles[PITCH] range (like HL) (default: ON)
+NOSQB - don't use some workarounds for the Stupid Quake Bug (tm) (default: ON)
+NOXASH - don't fix incompatibilities related to Xash3D engine (should never be used) (default: OFF)
+USE_WEAPONBITS - (always enable!) use pev->weapons for inventory transmission (unfortunately, HL engine still limits size to 32 weapons in local_state_t) (default: ON)
+USE_EXCEPTIONS - use try...catch construcitons, should be enabled for stability, but work only with /EHa ("with SEH exceptions") on VS2010 (default: ON)
+_DEBUG_ITEMS - item/weapon code produce lots of debug text (debugger output) (default: OFF)
+_DEBUG_GAMERULES - print lots of rules-related debug text (debugger output) (default: OFF)
+_DEBUG_PLAYER - print lots of player-related debug text (debugger output) (default: OFF)
+_DEBUG_INFILOOPS - track infinite loops (for debugging mostly) (default: OFF)
+
+// CLIENT DLL:
+CLDLL_NEWFUNCTIONS - use extended engine API (DLL will stop working under HL1111-) (default: OFF)
+VGUI_20130901 - use extended VGUI library (causes incompatibilities) requires new vgui.lib (default: OFF)
+STUDIO_CUSTOM_RENDERER - use extended CGameStudioModelRenderer (experimental) (default: OFF)
+CLDLL_NOFOG - don't use dynamic OpenGL API (normally unset) (default: OFF)
+NOSDL - disable use of SDL library (currently breaks joystick support) (default: ON)
+ENABLE_BENCKMARK - enable benchmark code from 2013 SDK update (pretty useless) (default: OFF)
+USE_PARTICLEMAN - enable use of HL particle manager (not used by XHL) (default: OFF)
+CLDLL_FIX_PLAYER_ATTACHMENTS - store player attachments that are erased by the engine in a safe place (default: ON)
+_DEBUG_CLIENTDLL - log almost all external function calls (debugger output) (default: OFF)
+_DEBUG_RENDERSYSTEM - log RenderSystem output (debugger output) (default: OFF)
+_DEBUG_GUI - log VGUI stuff (default: OFF)
+_DEBUG_HUD - log HUD stuff (default: OFF)
+
+// SERVER DLL:
+SVDLL_NEWFUNCTIONS - use extended enginefuncs_t API (DLL will work always because of dynamic function table) (default: ON)
+HL1120 - use extended NEW_DLL_FUNCTIONS API (will cause backwards incompatibilitiy, rignt now no new functions are used anyway) (default: OFF)
+_DEBUG_SERVERDLL - log almost all external function calls (debugger output) (default: OFF)
+_DEBUG_ENTITIES - log some think, use, touch functions (debugger output) (default: OFF)
+_DEBUG_MONSTERS - print lots of monster-related debug text (debugger output) (default: OFF)
+_DEBUG_DAMAGE - log RadiusDamage() stuff (debugging) (default: OFF)
+USE_SHOULDCOLLIDE - should never be enabled because of a bug in the HL engine (default: OFF)
+
+// BOTMATCH DLL:
+_DEBUG_BOTDLL - log main bot function calls (debugger output) (default: OFF)
+DEBUG_USERMSG - enable tracking of user messages and possibility to block them (default: OFF)
+
+_______________________________
+///////////////////////////////
+  WARNINGS
+
+LOAD_FILE_FOR_ME is BAD! Eventually engine overflows!
+
+Do not use sizeof() on strings in strn*-like functions! (only use sizeof in memset())
+
+Most problems come from valve's love for static arrays - limitations are all over the code.
+
+When adding new entities don't forget to link them into all proxy DLLs (like botmatch)!
+
+BUGBUG: infinite loops involving ShouldCollide() and DispatchTouch() with acid "grenades"!
+BUGBUG: when a beam (especially ring) is attached to am entity that falls out of PVS, it disappears permanently until restarted.
+
+Fatal Error
+Texture Overflow: MAX_GLTEXTURES
+because HL never clears texture buffer. Use as few textures as possible.
+
+"Host_Error: DispatchUserMsg:  Illegal User Msg 128"
+You have registered too many user messages. Optimize your game logic.
+
+Note: ASSERT() breaks execution only if "developer" is 3.
+
+_______________________________
+///////////////////////////////
+
+  GENERAL NOTES ON HOW IT WORKS
+
+Any object in a game is called Entity and inherited from the root class CBaseEntity.
+Note that every overloadable MyEntity::Fn() should (almost) always call its direct BaseClass::Fn().
+
+class MyEntity : public BaseClass
+
+For every entity placed on a map, a lis of parameters is parsed from the map file during startup:
+
+DispatchKeyValue()
+MyEntity::DispatchKeyValue()// parse key/value pair and fill class variables
+BaseClass::DispatchKeyValue()
+
+When entity is created the normal way, these overloadadable functions calls take place:
+
+DispatchSpawn()
+MyEntity::Spawn(FALSE)
+BaseClass::Spawn(FALSE)
+MyEntity::Spawn()// general initialization of an entity is done here
+BaseClass::Spawn()
+MyEntity::Precache()// only load resources here, because it may also be called directly
+BaseClass::Precache()
+MyEntity::Materialize()// set solidity here
+BaseClass::Materialize()
+
+Every entity may have callback functions that are called at a certain time, they are called THINK functions.
+Defined as follows:
+
+void EXPORT CallMeLaterThink(void);
+
+void MyEntity::CallMeLaterThink(void) {}
+
+To use them, write:
+SetThink(&MyEntity::CallMeLaterThink);// only one THINK function may be scheduled at a time!
+SetNextThink(0.5);// delay the call
+
+To disable, write:
+SetThinkNull();
+DontThink();
+
+_______________________________
+
+LAST CHANGES
+
+DLL: added mandatory Materialize(), OnRespawn(), functions, changed items, weapons accordingly
+DLL: changed GetItemRespawnTime() to GetItemRespawnDelay()
+XBM: changed all waypoint indexes to unsigned types. CAN BE VERY UNSTABLE! UNTESTED!
+
+CMenuPanelActionSignalHandler is now the default Action Signal Handler for all CMenuPanels. Virtual handler is this:
+CMenuPanel::OnActionSignal(int signal, CMenuPanelActionSignalHandler *pCaller)
+it has basic UI sound abilities (optional).
+
+Added g_ServerActive checks before gamerules messages
+Replaced SOLID_TRIGGER with SOLID_SLIDEBOX for all projectiles to prevent "Trigger in clipping list" error.
+
+NEW! Class names are stored in a normal char array inside CBaseEntity, pev->classname points to that array only. When an entity is deleted, that string data is deallocated too. This is going to dramatically increase stability.
+
+BUGBUG: different trains on the same track don't stop when one is blocked
+
+void CFuncTrain::Use() <- ShouldToggle
+
+added infinite sounds presets for func_rotating + start/stop sounds
+added PRECACHE_MODEL
+
+WARNING: crashes in HW.DLL 0x000005 appear when some entity index exceeds 2047!
+
+TODO:
+pev->angles.y of alien slave on a rotating lift (c4a1e?) becomes an INVALID FLOAT!!!
+env_fountain on xhl1a2 after level change and return... msg too early?
+rewrite all TEMPENTS as rendersystems (impossible for glow sprites)
+
+
+dumpbin.exe $(TargetPath) /exports /out:$(OutDir)\XDM_exp.txt
+--------------------------------------------------------------------------------
+WARNING: Don't use 'Maximize Speed' optimization with MS VS6 older than SP6!!!
+Crash in release version when a player fires the gauss!
+    __
+\ b|re|/akable
+  \|./|
+--------------------------------------------------------------------------------
+BYTE = 1
+SHORT = 2
+COORD = 2
+ANGLE = 1
+STRING = -1
+user message size limit is 192 bytes
+--------------------------------------------------------------------------------
+pBeam->SetFlags(BEAM_FSHADEIN);
+start pos (0)-> end pos (255)
+--------------------------------------------------------------------------------
+waterlevel 0 - not in water
+waterlevel 1 - feet in water
+waterlevel 2 - waist in water
+waterlevel 3 - head in water
+--------------------------------------------------------------------------------
+
+/*void RenderWireFrame(void)
+{
+	// all valid model_s' stored in the engine start at 1 by this method, not 0,
+	// and the world model is always the first model.  Thus, it's at index 1.
+	model_s *pModel = IEngineStudio.GetModelByIndex(1);
+
+	// make sure it's a valid model_s pointer and the model type is mod_brush
+	if ((pModel == NULL) || (pModel->type != mod_brush))
+		return;
+
+	// now it shouldn't crash if we do this
+	// we're simply drawing every single edge in the world
+	gEngfuncs.pTriAPI->Begin(TRI_LINES);
+	gEngfuncs.pTriAPI->CullFace(TRI_NONE);	// don't cull
+	gEngfuncs.pTriAPI->RenderMode(kRenderNormal);	// normal render mode
+	gEngfuncs.pTriAPI->Color4ub(255, 255, 255, 255);	// white lines
+
+	// for all edges in the map
+	for (int i = 0; i < pModel->numedges; ++i)
+	{
+		// get the current edge at index i
+		medge_t currentEdge = pModel->edges[i];
+		// the medge_t's simply store indexes into a master vertex (mvertex_t) list, so get those two vertexes
+		mvertex_t currentVertexes[2] =
+		{
+			pModel->vertexes[currentEdge.v[0]],
+			pModel->vertexes[currentEdge.v[1]]
+		};
+		// now render this edge/line
+		gEngfuncs.pTriAPI->Vertex3fv(currentVertexes[0].position);
+		gEngfuncs.pTriAPI->Vertex3fv(currentVertexes[1].position);
+	}
+	gEngfuncs.pTriAPI->End();	// we're done rendering
+}*/
+_______________________________
+///////////////////////////////
+
+ What I dream of:
+DEFINE_FIELD(CBasePlayer, m_fOnTarget,		FIELD_BOOL,		FALSE,			FIELD_DONTSAVE,	NET_SYNC_NONE,		0,		0),
+DEFINE_FIELD(CBasePlayer, m_iSuitPlayNext,	FIELD_INT32,	TRUE/*signed*/,	FIELD_SAVE,		NET_SYNC_HOSTONLY,	10/*bits*/, 1.0/*mult*/),
+DEFINE_ARRAY(CBasePlayer, m_rgpWeapons,		FIELD_EHANDLE,	FALSE,			FIELD_SAVE,		NET_SYNC_EVERYONE,	0,		0,					PLAYER_INVENTORY_SIZE),

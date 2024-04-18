@@ -1,0 +1,57 @@
+#include "resource.h"
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
+LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
+#pragma code_page(1252)
+#endif //_WIN32
+
+#ifndef _MAC
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,0,3,8
+ PRODUCTVERSION 3,0,3,8
+ FILEFLAGSMASK 0x3fL
+#if defined (_DEBUG)
+ FILEFLAGS 0x29L
+#else
+ FILEFLAGS 0x28L
+#endif
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "000004b0"
+        BEGIN
+            VALUE "CompanyName", "~X~\0"
+            VALUE "FileDescription", "X-Half-Life Server dll\0"
+            VALUE "FileVersion", "3.0.3.8\0"
+            VALUE "InternalName", "SERVER DLL\0"
+            VALUE "LegalTrademarks", "XHL\0"
+            VALUE "OriginalFilename", "XDM.dll\0"
+            VALUE "ProductName", "X-Half-Life\0"
+            VALUE "ProductVersion", "3.0.3.8\0"
+#if defined (_DEBUG)
+            VALUE "SpecialBuild", "Debug\0"
+#else
+            VALUE "SpecialBuild", "Release\0"
+#endif
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0, 1200
+    END
+END
+
+#endif    // !_MAC
+
+// Icon with lowest ID value placed first to ensure application icon remains consistent on all systems.
+IDI_ICON              ICON    DISCARDABLE     "..\\common\\res\\xhl.ico"
+
+#endif    // Neutral resources

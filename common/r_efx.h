@@ -15,7 +15,9 @@
 #if !defined ( R_EFXH )
 #define R_EFXH
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 // particle_t
@@ -38,10 +40,10 @@
 #include "cl_entity.h"
 #endif
 
-/*
 // FOR REFERENCE, These are the built-in tracer colors.  Note, color 4 is the one
 //  that uses the tracerred/tracergreen/tracerblue and traceralpha cvar settings
-color24 gTracerColors[] =
+extern color24 gTracerColors[];
+/*color24 gTracerColors[] =
 {
 	{ 255, 255, 255 },		// White
 	{ 255, 0, 0 },			// Red
@@ -55,8 +57,7 @@ color24 gTracerColors[] =
 	{ 255, 140, 90 },		// More Yellowish streaks (garg)
 	{ 200, 130, 90 },		// More red streaks (garg)
 	{ 255, 120, 70 },		// Darker red streaks (garg)
-};
-*/
+};*/
 
 // Temporary entity array
 #define TENTPRIORITY_LOW	0

@@ -1,143 +1,90 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-*   Use, distribution, and modification of this source code and/or resulting
-*   object code is restricted to non-commercial enhancements to products from
-*   Valve LLC.  All other use, distribution, or modification is prohibited
-*   without written permission from Valve LLC.
-*
-****/
-//
-// ammohistory.h
-//
+#ifndef	AMMOHISTORY_H
+#define	AMMOHISTORY_H
+#ifdef _WIN32
+#if !defined (__MINGW32__)
+#pragma once
+#endif /* not __MINGW32__ */
+#endif
 
-// this is the max number of items in each bucket
-#define MAX_WEAPON_POSITIONS		MAX_WEAPON_SLOTS
+#include "protocol.h"
 
+
+#define MAX_WEAPON_POSITIONS		8// max number of items in each bucket
+
+//-----------------------------------------------------------------------------
+// This is the actual inventory
+//-----------------------------------------------------------------------------
 class WeaponsResource
 {
-private:
-	// Information about weapons & ammo
-	WEAPON		rgWeapons[MAX_WEAPONS];	// Weapons Array
-
-	// counts of weapons * ammo
-	WEAPON*		rgSlots[MAX_WEAPON_SLOTS+1][MAX_WEAPON_POSITIONS+1];	// The slots currently in use by weapons.  The value is a pointer to the weapon;  if it's NULL, no weapon is there
-	int			riAmmo[MAX_AMMO_TYPES];							// count of each ammo type
-
 public:
-	void Init( void )
-	{
-		memset( rgWeapons, 0, sizeof rgWeapons );
-		Reset();
-	}
+	void Init(void);
+	void Reset(void);
+	void LoadWeaponSprites(HUD_WEAPON *pWeapon);
+	void LoadAllWeaponSprites(void);
 
-	void Reset( void )
-	{
-		iOldWeaponBits = 0;
-		memset( rgSlots, 0, sizeof rgSlots );
-		memset( riAmmo, 0, sizeof riAmmo );
-	}
+	void AddWeapon(HUD_WEAPON *pWeapon);
+	void PickupWeapon(HUD_WEAPON *pWeapon);
+	void DropWeapon(HUD_WEAPON *pWeapon);
 
-///// WEAPON /////
-	int			iOldWeaponBits;
+	HUD_WEAPON *GetWeaponStruct(const int iId);
+	HUD_WEAPON *GetWeaponSlot(uint16 iSlot, uint16 iSlotPos) { return m_rgSlots[iSlot][iSlotPos]; }
+	HUD_WEAPON *GetFirstPos(uint16 iSlot);
+	HUD_WEAPON *GetNextActivePos(uint16 iSlot, uint16 iSlotPos);
 
-	WEAPON *GetWeapon( int iId ) { return &rgWeapons[iId]; }
-	void AddWeapon( WEAPON *wp ) 
-	{ 
-		rgWeapons[ wp->iId ] = *wp;	
-		LoadWeaponSprites( &rgWeapons[ wp->iId ] );
-	}
+	bool HasWeapons(void);
+	bool HasUsableWeapons(void);
+	bool HasWeapon(const int &iItemID);
+	bool HasAmmo(HUD_WEAPON *pWeapon);
+	bool IsSelectable(HUD_WEAPON *pWeapon);
 
-	void PickupWeapon( WEAPON *wp )
-	{
-		rgSlots[ wp->iSlot ][ wp->iSlotPos ] = wp;
-	}
+	void SetAmmo(const int iId, short iCount);
+	short CountAmmo(const int iId);
 
-	void DropWeapon( WEAPON *wp )
-	{
-		rgSlots[ wp->iSlot ][ wp->iSlotPos ] = NULL;
-	}
+#if defined (OLD_WEAPON_AMMO_INFO)
+	HLSPRITE *GetAmmoPicFromWeapon(const int &iAmmoId, wrect_t &rect);
+#endif
 
-	void DropAllWeapons( void )
-	{
-		for ( int i = 0; i < MAX_WEAPONS; i++ )
-		{
-			if ( rgWeapons[i].iId )
-				DropWeapon( &rgWeapons[i] );
-		}
-	}
-
-	WEAPON* GetWeaponSlot( int slot, int pos ) { return rgSlots[slot][pos]; }
-
-	void LoadWeaponSprites( WEAPON* wp );
-	void LoadAllWeaponSprites( void );
-	WEAPON* GetFirstPos( int iSlot );
-	void SelectSlot( int iSlot, int fAdvance, int iDirection );
-	WEAPON* GetNextActivePos( int iSlot, int iSlotPos );
-
-	int HasAmmo( WEAPON *p );
-
-///// AMMO /////
-	AMMO GetAmmo( int iId ) { return iId; }
-
-	void SetAmmo( int iId, int iCount ) { riAmmo[ iId ] = iCount;	}
-
-	int CountAmmo( int iId );
-
-	HSPRITE* GetAmmoPicFromWeapon( int iAmmoId, wrect_t& rect );
+protected:
+	HUD_WEAPON m_rgWeapons[MAX_WEAPONS];// right now index == ID
+	HUD_WEAPON *m_rgSlots[MAX_WEAPON_SLOTS+1][MAX_WEAPON_POSITIONS+1];// The slots currently in use by weapons.  The value is a pointer to the weapon;  if it's NULL, no weapon is there
+	short m_riAmmo[MAX_AMMO_SLOTS];// count of each ammo type
 };
 
-extern WeaponsResource gWR;
+extern HUD_WEAPON *g_pwNoSelection;
+// XDM3038a extern WeaponsResource gWR;
 
 
-#define MAX_HISTORY 12
-enum {
+//-----------------------------------------------------------------------------
+#define PICKUP_HISTORY_MARGIN		YRES(8)
+#define PICKUP_HISTORY_MAX			256
+
+enum
+{
 	HISTSLOT_EMPTY,
 	HISTSLOT_AMMO,
 	HISTSLOT_WEAP,
 	HISTSLOT_ITEM,
 };
 
+
+//-----------------------------------------------------------------------------
+// Pickup history
+//-----------------------------------------------------------------------------
 class HistoryResource
 {
-private:
-	struct HIST_ITEM {
-		int type;
-		float DisplayTime;  // the time at which this item should be removed from the history
-		int iCount;
-		int iId;
-	};
-
-	HIST_ITEM rgAmmoHistory[MAX_HISTORY];
-
 public:
+	void Init(void);
+	void Reset(void);
+	void AddToHistory(const int &iType, const int &iId, const int &iCount = 0);
+	//void AddToHistory(const int &iType, const char *szName, const int &iCount = 0);
+	void CheckClearHistory(void);
+	int DrawAmmoHistory(const float &flTime);
 
-	void Init( void )
-	{
-		Reset();
-	}
-
-	void Reset( void )
-	{
-		memset( rgAmmoHistory, 0, sizeof rgAmmoHistory );
-	}
-
-	int iHistoryGap;
-	int iCurrentHistorySlot;
-
-	void AddToHistory( int iType, int iId, int iCount = 0 );
-	void AddToHistory( int iType, const char *szName, int iCount = 0 );
-
-	void CheckClearHistory( void );
-	int DrawAmmoHistory( float flTime );
+private:
+	size_t iCurrentHistorySlot;
+	HIST_ITEM rgAmmoHistory[PICKUP_HISTORY_MAX];
 };
 
-extern HistoryResource gHR;
+// XDM3038c extern HistoryResource gHR;
 
-
-
+#endif // AMMOHISTORY_H

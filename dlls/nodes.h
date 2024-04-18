@@ -1,6 +1,14 @@
+#ifndef NODES_H
+#define NODES_H
+#if defined (_WIN32)
+#if !defined (__MINGW32__)
+#pragma once
+#endif
+#endif
+
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -28,6 +36,15 @@
 #define bits_NODE_WATER     ( 1 << 2 )  // Water node, don't nudge.
 #define bits_NODE_GROUP_REALM (bits_NODE_LAND | bits_NODE_AIR | bits_NODE_WATER)
 
+#define	HULL_STEP_SIZE 16// how far the test hull moves on each step
+#define	NODE_HEIGHT	8	// how high to lift nodes off the ground after we drop them all (make stair/ramp mapping easier)
+
+// to help eliminate node clutter by level designers, this is used to cap how many other nodes
+// any given node is allowed to 'see' in the first stage of graph creation "LinkVisibleNodes()".
+#define	MAX_NODE_INITIAL_LINKS	128
+#define	MAX_NODES               1024
+
+
 //=========================================================
 // Instance of a node.
 //=========================================================
@@ -36,7 +53,7 @@ class CNode
 public:
 	Vector	m_vecOrigin;// location of this node in space
 	Vector  m_vecOriginPeek; // location of this node (LAND nodes are NODE_HEIGHT higher).
-	BYTE    m_Region[3]; // Which of 256 regions do each of the coordinate belong?
+	byte    m_Region[3]; // Which of 256 regions do each of the coordinate belong?
 	int		m_afNodeInfo;// bits that tell us more about this location
 	
 	int		m_cNumLinks; // how many links this node has
@@ -89,13 +106,13 @@ public:
 };
 
 
-typedef struct
+typedef struct dist_info_s
 {
 	int m_SortedBy[3];
 	int m_CheckedEvent;
 } DIST_INFO;
 
-typedef struct
+typedef struct cache_entry_s
 {
 	Vector v;
 	short n;		// Nearest node or -1 if no node found.
@@ -103,11 +120,20 @@ typedef struct
 
 //=========================================================
 // CGraph 
+//
+// !!!WARNING!!!
+//
+// This class is saved/loaded directly by memcpy(this)!!!!
+// DO NOT CHANGE ANYTHING!
+//
+// !!!WARNING!!!
+//
 //=========================================================
 #define	GRAPH_VERSION	(int)16// !!!increment this whever graph/node/link classes change, to obsolesce older disk files.
 class CGraph
 {
 public:
+	CGraph();// XDM3037a
 
 // the graph has two flags, and should not be accessed unless both flags are TRUE!
 	BOOL	m_fGraphPresent;// is the graph in memory?
@@ -158,6 +184,7 @@ public:
 	// another such system used to track the search for cover nodes, helps greatly with two monsters trying to get to the same node.
 	int		m_iLastCoverSearch;
 
+	bool IsActive(void);// XDM3037a
 	// functions to create the graph
 	int		LinkVisibleNodes ( CLink *pLinkPool, FILE *file, int *piBadNode );
 	int		RejectInlineLinks ( CLink *pLinkPool, FILE *file );
@@ -171,17 +198,17 @@ public:
 	enum NODEQUERY { NODEGRAPH_DYNAMIC, NODEGRAPH_STATIC };
 	// A static query means we're asking about the possiblity of handling this entity at ANY time
 	// A dynamic query means we're asking about it RIGHT NOW.  So we should query the current state
-	int		HandleLinkEnt ( int iNode, entvars_t *pevLinkEnt, int afCapMask, NODEQUERY queryType );
+	bool		HandleLinkEnt ( int iNode, entvars_t *pevLinkEnt, int afCapMask, NODEQUERY queryType );
 	entvars_t*	LinkEntForLink ( CLink *pLink, CNode *pNode );
 	void	ShowNodeConnections ( int iNode );
-	void	InitGraph( void );
-	int		AllocNodes ( void );
+	void	InitGraph(void);
+	bool	AllocNodes (void);
 	
 	int		CheckNODFile(char *szMapName);
-	int		FLoadGraph(char *szMapName);
-	int		FSaveGraph(char *szMapName);
-	int		FSetGraphPointers(void);
-	void	CheckNode(Vector vecOrigin, int iNode);
+	bool	FLoadGraph(char *szMapName);
+	bool	FSaveGraph(char *szMapName);
+	bool	FSetGraphPointers(void);
+	void	CheckNode(const Vector &vecOrigin, int iNode);
 
 	void    BuildRegionTables(void);
 	void    ComputeStaticRoutingTables(void);
@@ -203,21 +230,26 @@ public:
 		return 0; 
 	}
 
-
 	inline	CNode &Node( int i )
 	{
-#ifdef _DEBUG
+#if defined (_DEBUG)
 		if ( !m_pNodes || i < 0 || i > m_cNodes )
+		{
 			ALERT( at_error, "Bad Node!\n" );
+			i = 0;
+		}
 #endif
 		return m_pNodes[i];
 	}
 
 	inline	CLink &Link( int i )
 	{
-#ifdef _DEBUG
+#if defined (_DEBUG)
 		if ( !m_pLinkPool || i < 0 || i > m_cLinks )
+		{
 			ALERT( at_error, "Bad link!\n" );
+			i = 0;
+		}
 #endif
 		return m_pLinkPool[i];
 	}
@@ -261,9 +293,10 @@ public:
 //=========================================================
 class CNodeEnt : public CBaseEntity
 {
-	void Spawn( void );
-	void KeyValue( KeyValueData *pkvd );
-	virtual int	ObjectCaps( void ) { return CBaseEntity :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual void Spawn(void);
+	virtual void KeyValue(KeyValueData *pkvd);
+	virtual int	ObjectCaps(void) { return CBaseEntity::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual bool ShouldRespawn(void) const { return false; }// XDM3035
 
 	short m_sHintType;
 	short m_sHintActivity;
@@ -273,35 +306,35 @@ class CNodeEnt : public CBaseEntity
 //=========================================================
 // CStack - last in, first out.
 //=========================================================
-class CStack 
+/*class CStack 
 {
 public:
-			CStack( void );
+			CStack(void);
 	void	Push( int value );
-	int		Pop( void );
-	int		Top( void );
-	int		Empty( void ) { return m_level==0; }
-	int		Size( void ) { return m_level; }
+	int		Pop(void);
+	int		Top(void);
+	int		Empty(void) { return m_level==0; }
+	int		Size(void) { return m_level; }
 	void    CopyToArray ( int *piArray );
 
 private:
 	int		m_stack[ MAX_STACK_NODES ];
 	int		m_level;
-};
+};*/
 
 
 //=========================================================
 // CQueue - first in, first out.
 //=========================================================
-class CQueue
+/*class CQueue
 {
 public:
 
-	CQueue( void );// constructor
-	inline int Full ( void ) { return ( m_cSize == MAX_STACK_NODES ); }
-	inline int Empty ( void ) { return ( m_cSize == 0 ); }
-	//inline int Tail ( void ) { return ( m_queue[ m_tail ] ); }
-	inline int Size ( void ) { return ( m_cSize ); }
+	CQueue(void);// constructor
+	inline int Full (void) { return ( m_cSize == MAX_STACK_NODES ); }
+	inline int Empty (void) { return ( m_cSize == 0 ); }
+	//inline int Tail (void) { return ( m_queue[ m_tail ] ); }
+	inline int Size (void) { return ( m_cSize ); }
 	void Insert( int, float );
 	int Remove( float & );
 
@@ -314,7 +347,7 @@ private:
     } m_queue[ MAX_STACK_NODES ];
 	int m_head;
 	int m_tail;
-};
+};*/
 
 //=========================================================
 // CQueuePriority - Priority queue (smallest item out first).
@@ -324,11 +357,11 @@ class CQueuePriority
 {
 public:
 
-	CQueuePriority( void );// constructor
-	inline int Full ( void ) { return ( m_cSize == MAX_STACK_NODES ); }
-	inline int Empty ( void ) { return ( m_cSize == 0 ); }
+	CQueuePriority(void);// constructor
+	inline int Full (void) { return ( m_cSize == MAX_STACK_NODES ); }
+	inline int Empty (void) { return ( m_cSize == 0 ); }
 	//inline int Tail ( float & ) { return ( m_queue[ m_tail ].Id ); }
-	inline int Size ( void ) { return ( m_cSize ); }
+	inline int Size (void) { return ( m_cSize ); }
 	void Insert( int, float );
 	int Remove( float &);
 
@@ -348,7 +381,7 @@ private:
 // hints - these MUST coincide with the HINTS listed under
 // info_node in the FGD file!
 //=========================================================
-enum
+enum node_hints_e
 {
 	HINT_NONE = 0,
 	HINT_WORLD_DOOR,
@@ -372,3 +405,5 @@ enum
 };
 
 extern CGraph WorldGraph;
+
+#endif // NODES_H

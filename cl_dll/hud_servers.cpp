@@ -11,15 +11,19 @@
 #include "hud_servers_priv.h"
 #include "hud_servers.h"
 #include "net_api.h"
-#include <string.h>
 #ifdef _WIN32
-#include "winsani_in.h"
 #include <winsock.h>
-#include "winsani_out.h"
 #else
 #define __cdecl
 #include <arpa/inet.h>
 #endif
+
+
+#define CALLBACK    __stdcall
+#define WS_SWAP_SHORT(s)                            \
+            ( ( ((s) >> 8) & 0x00FF ) |             \
+              ( ((s) << 8) & 0xFF00 ) )
+
 static int	context_id;
 
 // Default master server address in case we can't read any from valvecomm.lst file
@@ -28,7 +32,7 @@ static int	context_id;
 #define PORT_SERVER  27015
 
 // File where we really should look for master servers
-#define MASTER_PARSE_FILE "valvecomm.lst"
+//#define MASTER_PARSE_FILE "valvecomm.lst"
 
 #define MAX_QUERIES 20
 
@@ -166,7 +170,7 @@ void CHudServers::ServerResponse( struct net_response_s *response )
 	char *szresponse;
 	request_t *p;
 	server_t *browser;
-	int	len;
+	size_t	len;
 	char sz[ 32 ];
 
 	// Remove from active list
@@ -190,15 +194,20 @@ void CHudServers::ServerResponse( struct net_response_s *response )
 			sprintf( sz, "%i", (int)( 1000.0 * response->ping ) );
 
 			browser = new server_t;
-			browser->remote_address = response->remote_address;
-			browser->info = new char[ len ];
-			browser->ping = (int)( 1000.0 * response->ping );
-			strcpy( browser->info, szresponse );
+			if (browser)
+			{
+				browser->remote_address = response->remote_address;
+				browser->info = new char[ len ];
+				browser->ping = (int)( 1000.0 * response->ping );
+				strcpy( browser->info, szresponse );
 
-			NET_API->SetValueForKey( browser->info, "address", gEngfuncs.pNetAPI->AdrToString( &response->remote_address ), len );
-			NET_API->SetValueForKey( browser->info, "ping", sz, len );
+				NET_API->SetValueForKey( browser->info, "address", gEngfuncs.pNetAPI->AdrToString( &response->remote_address ), len );
+				NET_API->SetValueForKey( browser->info, "ping", sz, len );
 			
-			AddServer( &m_pServers, browser );
+				AddServer( &m_pServers, browser );
+			}
+			else
+				conprintf(0, "CHudServers::ServerResponse() error!\n");
 		}
 		break;
 	default:
@@ -311,7 +320,7 @@ int	CHudServers::CompareServers( server_t *p1, server_t *p2 )
 
 			if ( n1 && n2 )
 			{
-				if ( stricmp( n1, n2 ) < 0 )
+				if ( _stricmp( n1, n2 ) < 0 )
 					return 1;
 			}
 		}
@@ -424,7 +433,7 @@ void CHudServers::QueryThink( void )
 	if ( !m_pServerList )
 		return;
 
-	while ( 1 )
+	while (1)// XDM3035c: warning C4127
 	{
 		p = m_pServerList;
 
@@ -588,6 +597,9 @@ int CompareField( CHudServers::server_t *p1, CHudServers::server_t *p2, const ch
 	sz1 = NET_API->ValueForKey( p1->info, fieldname );
 	sz2 = NET_API->ValueForKey( p2->info, fieldname );
 
+	if (sz1 == NULL || sz2 == NULL)
+		return 0;
+
 	fv1 = atof( sz1 );
 	fv2 = atof( sz2 );
 
@@ -602,7 +614,7 @@ int CompareField( CHudServers::server_t *p1, CHudServers::server_t *p2, const ch
 	}
 
 	// String compare
-	return stricmp( sz1, sz2 );
+	return _stricmp( sz1, sz2 );
 }
 
 int ServerListCompareFunc( CHudServers::server_t *p1, CHudServers::server_t *p2, const char *fieldname )
@@ -610,13 +622,7 @@ int ServerListCompareFunc( CHudServers::server_t *p1, CHudServers::server_t *p2,
 	if (!p1 || !p2)  // No meaningful comparison
 		return 0;  
 
-	int iSortOrder = 1;
-
-	int retval = 0;
-
-	retval = CompareField( p1, p2, fieldname, iSortOrder );
-
-	return retval;
+	return CompareField(p1, p2, fieldname, 1);
 }
 
 static char g_fieldname[ 256 ];
@@ -762,11 +768,11 @@ int CHudServers::LoadMasterAddresses( int maxservers, int *count, netadr_t *padr
 	int			nPort;
 	int			nCount = 0;
 	bool		bIgnore;
-	int			nDefaultPort;
+	int			nDefaultPort = PORT_SERVER;
 
 	// Assume default master and master file
 	strcpy( szMaster, VALVE_MASTER_ADDRESS );    // IP:PORT string
-	strcpy( szMasterFile, MASTER_PARSE_FILE );
+	strcpy( szMasterFile, g_pCvarMasterServerFile->string);// XDM3038c MASTER_PARSE_FILE );
 
 	// See if there is a command line override
 	i = gEngfuncs.CheckParm( "-comm", &pstart );
@@ -793,7 +799,7 @@ int CHudServers::LoadMasterAddresses( int maxservers, int *count, netadr_t *padr
 
 		bIgnore = true;
 
-		if ( !stricmp( m_szToken, "Master" ) )
+		if ( !_stricmp( m_szToken, "Master" ) )
 		{
 			nDefaultPort = PORT_MASTER;
 			bIgnore = FALSE;
@@ -804,7 +810,7 @@ int CHudServers::LoadMasterAddresses( int maxservers, int *count, netadr_t *padr
 		if ( strlen(m_szToken) <= 0 )
 			break;
 
-		if ( stricmp ( m_szToken, "{" ) )
+		if ( _stricmp ( m_szToken, "{" ) )
 			break;
 
 		// Parse addresses until we get to "}"
@@ -818,7 +824,7 @@ int CHudServers::LoadMasterAddresses( int maxservers, int *count, netadr_t *padr
 			if (strlen(m_szToken) <= 0)
 				break;
 
-			if ( !stricmp ( m_szToken, "}" ) )
+			if ( !_stricmp ( m_szToken, "}" ) )
 				break;
 			
 			sprintf( base, "%s", m_szToken );
@@ -828,7 +834,7 @@ int CHudServers::LoadMasterAddresses( int maxservers, int *count, netadr_t *padr
 			if (strlen(m_szToken) <= 0)
 				break;
 
-			if ( stricmp( m_szToken, ":" ) )
+			if ( _stricmp( m_szToken, ":" ) )
 				break;
 
 			pstart = gEngfuncs.COM_ParseFile( pstart, m_szToken );
@@ -933,7 +939,7 @@ void CHudServers::RequestBroadcastList( int clearpending )
 	}
 
 	// Make sure to byte swap server if necessary ( using "host" to "net" conversion
-	adr.port = htons( PORT_SERVER );
+	adr.port = WS_SWAP_SHORT(PORT_SERVER);// htons( PORT_SERVER ); XDM3033: now we don't need wsock32. dependancy
 
 	// Make sure networking system has started.
 	NET_API->InitNetworking();

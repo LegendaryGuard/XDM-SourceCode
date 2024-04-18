@@ -17,7 +17,9 @@
 #ifndef CUSTOM_H
 #define CUSTOM_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 #include "const.h"
@@ -53,7 +55,7 @@ typedef struct resourceinfo_s
 #define RES_FATALIFMISSING (1<<0)   // Disconnect if we can't get this file.
 #define RES_WASMISSING     (1<<1)   // Do we have the file locally, did we get it ok?
 #define RES_CUSTOM         (1<<2)   // Is this resource one that corresponds to another player's customization
-								    // or is it a server startup resource.
+								    //  or is it a server startup resource.
 #define RES_REQUESTED	   (1<<3)	// Already requested a download of this one
 #define RES_PRECACHED	   (1<<4)	// Already precached
 #define RES_ALWAYS		   (1<<5)	// download always even if available on client	

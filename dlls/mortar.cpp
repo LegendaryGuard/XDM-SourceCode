@@ -1,9 +1,9 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   Use, distribution, and modification of this source code and/or resulting
@@ -16,7 +16,7 @@
 
 ===== mortar.cpp ========================================================
 
-  the "LaBuznik" mortar device              
+  the "LaBuznik" mortar device
 
 */
 
@@ -27,24 +27,22 @@
 #include "weapons.h"
 #include "decals.h"
 #include "soundent.h"
+#include "skill.h"// XDM
+#include "game.h"
+#include "gamerules.h"
 
 class CFuncMortarField : public CBaseToggle
 {
 public:
-	void Spawn( void );
-	void Precache( void );
-	void KeyValue( KeyValueData *pkvd );
-
+	virtual void Spawn(void);
+	virtual void Precache(void);
+	virtual void KeyValue(KeyValueData *pkvd);
 	// Bmodels don't go across transitions
-	virtual int	ObjectCaps( void ) { return CBaseToggle :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
-
-	virtual int	Save( CSave &save );
-	virtual int	Restore( CRestore &restore );
-
+	virtual int	ObjectCaps(void) { return CBaseToggle::ObjectCaps() & ~FCAP_ACROSS_TRANSITION; }
+	virtual int Save(CSave &save);
+	virtual int Restore(CRestore &restore);
 	static	TYPEDESCRIPTION m_SaveData[];
-
-	void EXPORT FieldUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-
+	void EXPORT FieldUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	int m_iszXController;
 	int m_iszYController;
 	float m_flSpread;
@@ -55,7 +53,7 @@ public:
 
 LINK_ENTITY_TO_CLASS( func_mortar_field, CFuncMortarField );
 
-TYPEDESCRIPTION	CFuncMortarField::m_SaveData[] = 
+TYPEDESCRIPTION	CFuncMortarField::m_SaveData[] =
 {
 	DEFINE_FIELD( CFuncMortarField, m_iszXController, FIELD_STRING ),
 	DEFINE_FIELD( CFuncMortarField, m_iszYController, FIELD_STRING ),
@@ -67,8 +65,7 @@ TYPEDESCRIPTION	CFuncMortarField::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE( CFuncMortarField, CBaseToggle );
 
-
-void CFuncMortarField :: KeyValue( KeyValueData *pkvd )
+void CFuncMortarField::KeyValue(KeyValueData *pkvd)
 {
 	if (FStrEq(pkvd->szKeyName, "m_iszXController"))
 	{
@@ -95,96 +92,96 @@ void CFuncMortarField :: KeyValue( KeyValueData *pkvd )
 		m_iCount = atoi(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else// XDM3038: WOW! What a bug!!
+		CBaseToggle::KeyValue(pkvd);
 }
 
-
 // Drop bombs from above
-void CFuncMortarField :: Spawn( void )
+void CFuncMortarField::Spawn(void)
 {
 	pev->solid = SOLID_NOT;
-	SET_MODEL(ENT(pev), STRING(pev->model));    // set size and link into world
+	pev->takedamage = DAMAGE_NO;// XDM3038c
+	SET_MODEL(edict(), STRING(pev->model));    // set size and link into world
 	pev->movetype = MOVETYPE_NONE;
-	SetBits( pev->effects, EF_NODRAW );
-	SetUse( & CFuncMortarField::FieldUse );
+	SetBits(pev->effects, EF_NODRAW);
+	SetUse(&CFuncMortarField::FieldUse);
 	Precache();
 }
 
-
-void CFuncMortarField :: Precache( void )
+void CFuncMortarField::Precache(void)
 {
-	PRECACHE_SOUND ("weapons/mortar.wav");
-	PRECACHE_SOUND ("weapons/mortarhit.wav");
-	PRECACHE_MODEL( "sprites/lgtning.spr" );
+	if (FStringNull(pev->noise))
+		pev->noise = MAKE_STRING("weapons/mortar.wav");// custom fall sound
+
+	PRECACHE_SOUND(STRINGV(pev->noise));
+
+	if (!FStringNull(pev->noise1))// XDM3038c: custom explosion sound
+		PRECACHE_SOUND(STRINGV(pev->noise1));
+
+	UTIL_PrecacheOther("monster_mortar");// XDM: we can't override precached default sound in there
 }
 
-
 // If connected to a table, then use the table controllers, else hit where the trigger is.
-void CFuncMortarField :: FieldUse( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CFuncMortarField::FieldUse(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	Vector vecStart;
+	Vector vecStart(RANDOM_FLOAT(pev->mins.x, pev->maxs.x), RANDOM_FLOAT(pev->mins.y, pev->maxs.y), pev->maxs.z);
 
-	vecStart.x = RANDOM_FLOAT( pev->mins.x, pev->maxs.x );
-	vecStart.y = RANDOM_FLOAT( pev->mins.y, pev->maxs.y );
-	vecStart.z = pev->maxs.z;
-
-	switch( m_fControl )
+	if (m_fControl == 1)// Trigger Activator
 	{
-	case 0:	// random
-		break;
-	case 1: // Trigger Activator
 		if (pActivator != NULL)
 		{
 			vecStart.x = pActivator->pev->origin.x;
 			vecStart.y = pActivator->pev->origin.y;
 		}
-		break;
-	case 2: // table
-		{
-			CBaseEntity *pController;
+	}
+	else if (m_fControl == 2)// table
+	{
+		CBaseEntity *pController;
 
-			if (!FStringNull(m_iszXController))
+		if (!FStringNull(m_iszXController))
+		{
+			pController = UTIL_FindEntityByTargetname( NULL, STRING(m_iszXController));
+			if (pController != NULL)
 			{
-				pController = UTIL_FindEntityByTargetname( NULL, STRING(m_iszXController));
-				if (pController != NULL)
-				{
-					vecStart.x = pev->mins.x + pController->pev->ideal_yaw * (pev->size.x);
-				}
-			}
-			if (!FStringNull(m_iszYController))
-			{
-				pController = UTIL_FindEntityByTargetname( NULL, STRING(m_iszYController));
-				if (pController != NULL)
-				{
-					vecStart.y = pev->mins.y + pController->pev->ideal_yaw * (pev->size.y);
-				}
+				vecStart.x = pev->mins.x + pController->pev->ideal_yaw * (pev->size.x);
 			}
 		}
-		break;
+		if (!FStringNull(m_iszYController))
+		{
+			pController = UTIL_FindEntityByTargetname( NULL, STRING(m_iszYController));
+			if (pController != NULL)
+			{
+				vecStart.y = pev->mins.y + pController->pev->ideal_yaw * (pev->size.y);
+			}
+		}
 	}
 
-	int pitch = RANDOM_LONG(95,124);
-
-	EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "weapons/mortar.wav", 1.0, ATTN_NONE, 0, pitch);	
+	EMIT_SOUND_DYN(edict(), CHAN_VOICE, STRING(pev->noise), VOL_NORM, ATTN_NONE, 0, RANDOM_LONG(95,124));
 
 	float t = 2.5;
+	TraceResult tr;
 	for (int i = 0; i < m_iCount; i++)
 	{
-		Vector vecSpot = vecStart;
-		vecSpot.x += RANDOM_FLOAT( -m_flSpread, m_flSpread );
-		vecSpot.y += RANDOM_FLOAT( -m_flSpread, m_flSpread );
+		Vector vecSpot(vecStart);
+		vecSpot.x += RANDOM_FLOAT(-m_flSpread, m_flSpread);
+		vecSpot.y += RANDOM_FLOAT(-m_flSpread, m_flSpread);
 
-		TraceResult tr;
-		UTIL_TraceLine( vecSpot, vecSpot + Vector( 0, 0, -1 ) * 4096, ignore_monsters, ENT(pev), &tr );
-
+		UTIL_TraceLine(vecSpot, vecSpot + Vector(0, 0, -1) * 4096, ignore_monsters, edict(), &tr);
 		edict_t *pentOwner = NULL;
-		if (pActivator)	pentOwner = pActivator->edict();
+		if (pActivator)
+			pentOwner = pActivator->edict();
 
-		CBaseEntity *pMortar = Create("monster_mortar", tr.vecEndPos, Vector( 0, 0, 0 ), pentOwner );
-		pMortar->pev->nextthink = gpGlobals->time + t;
-		t += RANDOM_FLOAT( 0.2, 0.5 );
+		CBaseEntity *pMortar = Create("monster_mortar", tr.vecEndPos, g_vecZero, pentOwner);
+		if (pMortar)
+		{
+			if (!FStringNull(pev->noise1))// XDM3038c: custom explosion sound
+				pMortar->pev->noise = pev->noise1;
 
+			pMortar->SetNextThink(t);// XDM3038a
+			t += RANDOM_FLOAT(0.2, 0.5);
+		}
 		if (i == 0)
-			CSoundEnt::InsertSound ( bits_SOUND_DANGER, tr.vecEndPos, 400, 0.3 );
+			CSoundEnt::InsertSound(bits_SOUND_DANGER, tr.vecEndPos, 400, 0.3);
 	}
 }
 
@@ -192,132 +189,110 @@ void CFuncMortarField :: FieldUse( CBaseEntity *pActivator, CBaseEntity *pCaller
 class CMortar : public CGrenade
 {
 public:
-	void Spawn( void );
-	void Precache( void );
-
-	void EXPORT MortarExplode( void );
-
-	int m_spriteTexture;
+	virtual void Spawn(void);
+	virtual void Precache(void);
+	virtual void Killed(CBaseEntity *pInflictor, CBaseEntity *pAttacker, int iGib);
+	void EXPORT MortarExplode(void);
 };
 
 LINK_ENTITY_TO_CLASS( monster_mortar, CMortar );
 
-void CMortar::Spawn( )
+void CMortar::Spawn(void)
 {
-	pev->movetype	= MOVETYPE_NONE;
-	pev->solid		= SOLID_NOT;
+	SetBits(pev->flags, FL_IMMUNE_WATER|FL_IMMUNE_SLIME|FL_IMMUNE_LAVA);// XDM3038c: Set these to prevent engine from distorting entvars!
+	pev->takedamage = DAMAGE_NO;
+	pev->movetype = MOVETYPE_NONE;
+	pev->solid = SOLID_NOT;
+	if (pev->dmg == 0)
+		pev->dmg	 = gSkillData.DmgMortar;// XDM3038c
 
-	pev->dmg		= 200;
-
-	SetThink( &CMortar::MortarExplode );
-	pev->nextthink = 0;
-
-	Precache( );
-
-
+	SetThink(&CMortar::MortarExplode);
+	DontThink();// XDM3038a
+	SetTouchNull();// XDM3038c
+	Precache();
 }
 
-
-void CMortar::Precache( )
+void CMortar::Precache(void)
 {
-	m_spriteTexture = PRECACHE_MODEL( "sprites/lgtning.spr" );
+	if (FStringNull(pev->noise))
+		pev->noise = MAKE_STRING("weapons/mortarhit.wav");// custom explosion sound
+
+	PRECACHE_SOUND(STRINGV(pev->noise));
 }
 
-void CMortar::MortarExplode( void )
+void CMortar::MortarExplode(void)
 {
-#if 1
+	TraceResult tr;
+	UTIL_TraceLine(pev->origin, pev->origin + Vector(0.0f, 0.0f, g_psv_zmax->value), dont_ignore_monsters, edict(), &tr);
 	// mortar beam
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_BEAMPOINTS );
+	MESSAGE_BEGIN(MSG_BROADCAST, svc_temp_entity);
+		WRITE_BYTE(TE_BEAMPOINTS);
 		WRITE_COORD(pev->origin.x);
 		WRITE_COORD(pev->origin.y);
 		WRITE_COORD(pev->origin.z);
-		WRITE_COORD(pev->origin.x);
-		WRITE_COORD(pev->origin.y);
-		WRITE_COORD(pev->origin.z + 1024);
-		WRITE_SHORT(m_spriteTexture );
-		WRITE_BYTE( 0 ); // framerate
-		WRITE_BYTE( 0 ); // framerate
-		WRITE_BYTE( 1 ); // life
-		WRITE_BYTE( 40 );  // width
-		WRITE_BYTE( 0 );   // noise
-		WRITE_BYTE( 255 );   // r, g, b
-		WRITE_BYTE( 160 );   // r, g, b
-		WRITE_BYTE( 100 );   // r, g, b
-		WRITE_BYTE( 128 );	// brightness
-		WRITE_BYTE( 0 );		// speed
+		WRITE_COORD(tr.vecEndPos.x);
+		WRITE_COORD(tr.vecEndPos.y);
+		WRITE_COORD(tr.vecEndPos.z);
+		WRITE_SHORT(g_iModelIndexShockWave);
+		WRITE_BYTE(0); // framerate
+		WRITE_BYTE(10); // framerate
+		WRITE_BYTE(1); // life
+		WRITE_BYTE(40); // width
+		WRITE_BYTE(0); // noise
+		WRITE_BYTE(255); // r
+		WRITE_BYTE(191); // g
+		WRITE_BYTE(127); // b
+		WRITE_BYTE(95); // brightness
+		WRITE_BYTE(0); // speed
 	MESSAGE_END();
-#endif
-
-#if 0
 	// blast circle
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_BEAMTORUS);
+	if (g_pGameRules == NULL || g_pGameRules->FAllowEffects())
+	{
+	MESSAGE_BEGIN(MSG_BROADCAST, svc_temp_entity);
+		WRITE_BYTE(TE_BEAMTORUS);
 		WRITE_COORD(pev->origin.x);
 		WRITE_COORD(pev->origin.y);
 		WRITE_COORD(pev->origin.z + 32);
 		WRITE_COORD(pev->origin.x);
 		WRITE_COORD(pev->origin.y);
 		WRITE_COORD(pev->origin.z + 32 + pev->dmg * 2 / .2); // reach damage radius over .3 seconds
-		WRITE_SHORT(m_spriteTexture );
-		WRITE_BYTE( 0 ); // startframe
-		WRITE_BYTE( 0 ); // framerate
-		WRITE_BYTE( 2 ); // life
-		WRITE_BYTE( 12 );  // width
-		WRITE_BYTE( 0 );   // noise
-		WRITE_BYTE( 255 );   // r, g, b
-		WRITE_BYTE( 160 );   // r, g, b
-		WRITE_BYTE( 100 );   // r, g, b
-		WRITE_BYTE( 255 );	// brightness
-		WRITE_BYTE( 0 );		// speed
+		WRITE_SHORT(g_iModelIndexShockWave);
+		WRITE_BYTE(0); // startframe
+		WRITE_BYTE(10); // framerate
+		WRITE_BYTE(2); // life
+		WRITE_BYTE(12); // width
+		WRITE_BYTE(0); // noise
+		WRITE_BYTE(255); // r
+		WRITE_BYTE(159); // g
+		WRITE_BYTE(127); // b
+		WRITE_BYTE(127); // brightness
+		WRITE_BYTE(10); // speed
 	MESSAGE_END();
-#endif
-
-	TraceResult tr;
-	UTIL_TraceLine( pev->origin + Vector( 0, 0, 1024 ), pev->origin - Vector( 0, 0, 1024 ), dont_ignore_monsters, ENT(pev), &tr );
-
-	Explode( &tr, DMG_BLAST | DMG_MORTAR );
-	UTIL_ScreenShake( tr.vecEndPos, 25.0, 150.0, 1.0, 750 );
-
-#if 0
-	int pitch = RANDOM_LONG(95,124);
-	EMIT_SOUND_DYN(ENT(pev), CHAN_VOICE, "weapons/mortarhit.wav", 1.0, 0.55, 0, pitch);
-
-	// ForceSound( SNDRADIUS_MP5, bits_SOUND_COMBAT );
-
-	// ExplodeModel( pev->origin, 400, g_sModelIndexShrapnel, 30 );
-
-	RadiusDamage ( pev, VARS(pev->owner), pev->dmg, CLASS_NONE, DMG_BLAST );
-
-	/*
-	if ( RANDOM_FLOAT ( 0 , 1 ) < 0.5 )
-	{
-		UTIL_DecalTrace( pTrace, DECAL_SCORCH1 );
 	}
-	else
+	SetBits(pev->spawnflags, SF_NODECAL);// XDM: don't draw regular explosion decal
+	UTIL_TraceLine(pev->origin + Vector(0.0f,0.0f,pev->dmg*2.0f), pev->origin - Vector(0.0f, 0.0f, g_psv_zmax->value), dont_ignore_monsters, edict(), &tr);
+	if (tr.flFraction < 1.0f)// XDM3037: pull out of the wall a bit
+		pev->origin = tr.vecEndPos + (tr.vecPlaneNormal * 8.0f);
+
+	// SQB?
+	//tr.vecPlaneNormal.x *= -1.0f;
+	//tr.vecPlaneNormal.y *= -1.0f;
+	VectorAngles(tr.vecPlaneNormal, pev->angles);// XDM3037a: explosion code calculates decal direction
+	Explode(pev->origin, DMG_BLAST, g_iModelIndexBigExplo3, 40, g_iModelIndexBigExplo3, 32, 8.0f, STRING(pev->noise));// XDM
+	if (g_pGameRules == NULL || g_pGameRules->FAllowEffects())
 	{
-		UTIL_DecalTrace( pTrace, DECAL_SCORCH2 );
+		//UTIL_ScreenShake(tr.vecEndPos, 25.0, 150.0, 1.0, 800);// additional
+		UTIL_DecalTrace(&tr, DECAL_BLOW);
 	}
-	*/
-
-	SetThink( &CMortar::SUB_Remove );
-	pev->nextthink = gpGlobals->time + 0.1;
-#endif
-
+	pev->health = 0;
+	SetThink(&CBaseEntity::SUB_Remove);
+	SetNextThink(0.1);// XDM3038a
 }
 
-
-#if 0
-void CMortar::ShootTimed( EVARS *pevOwner, Vector vecStart, float time )
+// XDM3038c: in case this gets called directly
+void CMortar::Killed(CBaseEntity *pInflictor, CBaseEntity *pAttacker, int iGib)
 {
-	CMortar *pMortar = GetClassPtr( (CMortar *)NULL );
-	pMortar->Spawn();
-
-	TraceResult tr;
-	UTIL_TraceLine( vecStart, vecStart + Vector( 0, 0, -1 ) * 4096, ignore_monsters, ENT(pMortar->pev), &tr );
-
-	pMortar->pev->nextthink = gpGlobals->time + time;
-
-	UTIL_SetOrigin( pMortar->pev, tr.vecEndPos );
+	pev->health = 0;
+	SetThink(&CBaseEntity::SUB_Remove);
+	SetNextThink(0);
 }
-#endif

@@ -41,7 +41,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir ".\Release"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /YX /c
-# ADD CPP /nologo /W3 /GX /Zi /O1 /I "..\common" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /YX /FD /c
+# ADD CPP /nologo /W3 /GX /Zi /O1 /I "..\common" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /FR /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -85,15 +85,15 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;for;f90"
 # Begin Source File
 
-SOURCE=..\common\cmdlib.c
+SOURCE=.\cmdlib.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\lbmlib.c
+SOURCE=.\lbmlib.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\scriplib.c
+SOURCE=.\scriplib.c
 # End Source File
 # Begin Source File
 
@@ -105,15 +105,15 @@ SOURCE=.\sprgen.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl;fi;fd"
 # Begin Source File
 
-SOURCE=..\common\cmdlib.h
+SOURCE=.\cmdlib.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\lbmlib.h
+SOURCE=.\lbmlib.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\common\scriplib.h
+SOURCE=.\scriplib.h
 # End Source File
 # Begin Source File
 
@@ -123,6 +123,14 @@ SOURCE=.\spritegn.h
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;cnt;rtf;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\sprgen.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\sprgen.rc
+# End Source File
 # End Group
 # End Target
 # End Project

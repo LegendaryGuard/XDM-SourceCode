@@ -15,7 +15,9 @@
 #ifndef USERCMD_H
 #define USERCMD_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 typedef struct usercmd_s

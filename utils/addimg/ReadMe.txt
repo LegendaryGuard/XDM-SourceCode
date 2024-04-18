@@ -1,0 +1,1 @@
+Purpose: a command-line utility that can add BMP images to existing WAD packages.

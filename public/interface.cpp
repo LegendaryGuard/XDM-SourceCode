@@ -9,28 +9,27 @@
 //
 void *GetModuleHandle(const char *name)
 {
-        void *handle;
+	void *handle;
 
+	if( name == NULL )
+	{
+		// hmm, how can this be handled under linux....
+		// is it even needed?
+		return NULL;
+	}
 
-        if( name == NULL )
-        {
-                // hmm, how can this be handled under linux....
-                // is it even needed?
-                return NULL;
-        }
-
-        if( (handle=dlopen(name, RTLD_NOW))==NULL)
-        {   
+	if( (handle=dlopen(name, RTLD_NOW))==NULL)
+	{   
 		//printf("Error:%s\n",dlerror());
-                // couldn't open this file
-                return NULL;
-        }
+		// couldn't open this file
+		return NULL;
+	}
 
-        // read "man dlopen" for details
-        // in short dlopen() inc a ref count
-        // so dec the ref count by performing the close
-        dlclose(handle);
-       return handle;
+	// read "man dlopen" for details
+	// in short dlopen() inc a ref count
+	// so dec the ref count by performing the close
+	dlclose(handle);
+	return handle;
 }
 #endif
 
@@ -56,7 +55,7 @@ InterfaceReg::InterfaceReg( InstantiateInterfaceFn fn, const char *pName ) :
 EXPORT_FUNCTION IBaseInterface *CreateInterface( const char *pName, int *pReturnCode )
 {
 	InterfaceReg *pCur;
-	
+
 	for(pCur=InterfaceReg::s_pInterfaceRegs; pCur; pCur=pCur->m_pNext)
 	{
 		if(strcmp(pCur->m_pName, pName) == 0)
@@ -80,7 +79,7 @@ EXPORT_FUNCTION IBaseInterface *CreateInterface( const char *pName, int *pReturn
 static IBaseInterface *CreateInterfaceLocal( const char *pName, int *pReturnCode )
 {
 	InterfaceReg *pCur;
-	
+
 	for(pCur=InterfaceReg::s_pInterfaceRegs; pCur; pCur=pCur->m_pNext)
 	{
 		if(strcmp(pCur->m_pName, pName) == 0)
@@ -92,7 +91,7 @@ static IBaseInterface *CreateInterfaceLocal( const char *pName, int *pReturnCode
 			return pCur->m_CreateFn();
 		}
 	}
-	
+
 	if ( pReturnCode )
 	{
 		*pReturnCode = IFACE_FAILED;
@@ -103,7 +102,8 @@ static IBaseInterface *CreateInterfaceLocal( const char *pName, int *pReturnCode
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include "windows.h"
+#define WIN32_EXTRALEAN
+#include <windows.h>
 #endif
 
 //-----------------------------------------------------------------------------
@@ -114,7 +114,11 @@ static IBaseInterface *CreateInterfaceLocal( const char *pName, int *pReturnCode
 //static hlds_run wants to use this function 
 static void *Sys_GetProcAddress( const char *pModuleName, const char *pName )
 {
-	return GetProcAddress( GetModuleHandle(pModuleName), pName );
+	HMODULE hm = GetModuleHandle(pModuleName);
+	if (hm)
+		return GetProcAddress(hm, pName);
+
+	return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -154,13 +158,12 @@ CSysModule	*Sys_LoadModule( const char *pModuleName )
 		if ( szCwd[ strlen( szCwd ) - 1 ] == '/' )
 			szCwd[ strlen( szCwd ) - 1 ] = 0;
 
-		_snprintf( szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s/%s", szCwd, pModuleName );
-
+		_snprintf(szAbsoluteModuleName, 1024, "%s/%s", szCwd, pModuleName);
 		hDLL = dlopen( szAbsoluteModuleName, RTLD_NOW );
 	}
 	else
 	{
-		_snprintf( szAbsoluteModuleName, sizeof(szAbsoluteModuleName), "%s", pModuleName );
+		_snprintf(szAbsoluteModuleName, 1024, "%s", pModuleName);
 		 hDLL = dlopen( pModuleName, RTLD_NOW );
 	}
 #endif
@@ -169,15 +172,15 @@ CSysModule	*Sys_LoadModule( const char *pModuleName )
 	{
 		char str[512];
 #if defined ( _WIN32 )
-		_snprintf( str, sizeof(str), "%s.dll", pModuleName );
+		_snprintf(str, 512, "%s.dll", pModuleName);
 		hDLL = LoadLibrary( str );
 #elif defined(OSX)
 		printf("Error:%s\n",dlerror());
-		_snprintf( str, sizeof(str), "%s.dylib", szAbsoluteModuleName );
+		_snprintf(str, 512, "%s.dylib", szAbsoluteModuleName);
 		hDLL = dlopen(str, RTLD_NOW);		
 #else
 		printf("Error:%s\n",dlerror());
-		_snprintf( str, sizeof(str), "%s.so", szAbsoluteModuleName );
+		_snprintf(str, 512, "%s.so", szAbsoluteModuleName);
 		hDLL = dlopen(str, RTLD_NOW);
 #endif
 	}
@@ -230,8 +233,6 @@ CreateInterfaceFn Sys_GetFactory( CSysModule *pModule )
 #endif
 }
 
-
-
 //-----------------------------------------------------------------------------
 // Purpose: returns the instance of this module
 // Output : interface_instance_t
@@ -265,6 +266,3 @@ CreateInterfaceFn Sys_GetFactory( const char *pModuleName )
 	return (CreateInterfaceFn)( Sys_GetProcAddress( pModuleName, CREATEINTERFACE_PROCNAME ) );
 #endif
 }
-
-
-

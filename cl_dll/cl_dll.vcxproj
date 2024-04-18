@@ -1,0 +1,617 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <SccProjectName>
+    </SccProjectName>
+    <SccLocalPath>
+    </SccLocalPath>
+    <RootNamespace>cl_dll</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <WholeProgramOptimization>PGInstrument</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IntDir>R:\COMPILER/cl/$(Configuration)/intermediate\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
+    <TargetName>client</TargetName>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IntDir>R:\COMPILER/cl/$(Configuration)/intermediate\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
+    <TargetName>client</TargetName>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>Disabled</Optimization>
+      <WarningLevel>Level4</WarningLevel>
+      <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalIncludeDirectories>.;$(IncludePath);rendersystem;..\dlls;..\dlls\gamerules;..\game_shared;..\engine;..\common;..\pm_shared;..\public;..\external;..\utils\vgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;CLIENT_DLL;NOSDL;NOSQB;USE_EXCEPTIONS;USE_WEAPONBITS;OLD_DEATHMSG;SV_NO_PITCH_CORRECTION;CLDLL_FIX_PLAYER_ATTACHMENTS;_DEBUG_ANGLES;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName)_vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <UndefinePreprocessorDefinitions>NDEBUG</UndefinePreprocessorDefinitions>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnablePREfast>true</EnablePREfast>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\debug\cl_dll.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <IgnoreStandardIncludePath>false</IgnoreStandardIncludePath>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\debug\cl_dll.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <LinkDLL>true</LinkDLL>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <ImportLibrary>.\debug\client.lib</ImportLibrary>
+      <BaseAddress>0x01900000</BaseAddress>
+      <AdditionalDependencies>winmm.lib;wsock32.lib;..\utils\vgui\lib\win32_vc6\vgui.lib;..\lib\public\sdl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OptimizeReferences>false</OptimizeReferences>
+      <Version>3.3</Version>
+      <AssemblyDebug>true</AssemblyDebug>
+    </Link>
+    <CustomBuildStep>
+      <Command>copy $(TargetPath) %HLROOT%\XDM\cl_dlls\</Command>
+      <Message>Copying to cl_dlls</Message>
+      <Outputs>%HLROOT%\XDM\cl_dlls\$(TargetName);%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>MaxSpeed</Optimization>
+      <WarningLevel>Level4</WarningLevel>
+      <AdditionalIncludeDirectories>.;$(IncludePath);rendersystem;..\dlls;..\dlls\gamerules;..\game_shared;..\engine;..\common;..\pm_shared;..\public;..\external;..\utils\vgui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;CLIENT_DLL;NOSDL;NOSQB;USE_EXCEPTIONS;USE_WEAPONBITS;OLD_DEATHMSG;SV_NO_PITCH_CORRECTION;CLDLL_FIX_PLAYER_ATTACHMENTS;WIN32;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName)_vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <UndefinePreprocessorDefinitions>_DEBUG</UndefinePreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnablePREfast>true</EnablePREfast>
+      <ExceptionHandling>Async</ExceptionHandling>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\release\cl_dll.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>.\release\cl_dll.bsc</OutputFile>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <LinkDLL>true</LinkDLL>
+      <SubSystem>Windows</SubSystem>
+      <ImportLibrary>.\release\client.lib</ImportLibrary>
+      <BaseAddress>0x01900000</BaseAddress>
+      <AdditionalDependencies>winmm.lib;wsock32.lib;..\utils\vgui\lib\win32_vc6\vgui.lib;..\lib\public\sdl2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OptimizeReferences>true</OptimizeReferences>
+      <Version>3.3</Version>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+    <CustomBuildStep>
+      <Command>echo signtool sign /a $(TargetPath)
+copy $(TargetPath) %HLROOT%\XDM\cl_dlls\</Command>
+      <Message>Copying to cl_dlls</Message>
+      <Outputs>%HLROOT%\XDM\cl_dlls\$(TargetName);%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\common\util_common.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponAcidLauncher.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponBeamRifle.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponBHG.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponChemGun.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponCrossbow.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponCrowbar.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponCustom.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponDiskLauncher.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponDisplacer.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponEgon.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponFlame.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponGauss.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponGlock.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponGrenadeLauncher.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponHandGrenade.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponHornetGun.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponMP5.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponPlasma.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponPython.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponRPG.cpp" />
+    <ClCompile Include="..\game_shared\weapons\weapons.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSatchel.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponShotgun.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSniperRifle.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSqueak.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponStrikeTarget.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSword.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponTripmine.cpp" />
+    <ClCompile Include="hl\hl_baseentity.cpp" />
+    <ClCompile Include="hl\hl_weapons.cpp" />
+    <ClCompile Include="..\pm_shared\pm_debug.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\pm_shared\pm_math.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\pm_shared\pm_shared.cpp" />
+    <ClCompile Include="hud_gamedisplay.cpp" />
+    <ClCompile Include="hud_timer.cpp" />
+    <ClCompile Include="rendersystem\PSCustom.cpp" />
+    <ClCompile Include="rendersystem\RSRadialBeams.cpp" />
+    <ClCompile Include="vgui_CommandMenu.cpp" />
+    <ClCompile Include="vgui_CustomObjects.cpp" />
+    <ClCompile Include="vgui_EntityEntryPanel.cpp" />
+    <ClCompile Include="vgui_Int.cpp" />
+    <ClCompile Include="vgui_MenuPanel.cpp" />
+    <ClCompile Include="vgui_MessageWindow.cpp" />
+    <ClCompile Include="vgui_MusicPlayer.cpp" />
+    <ClCompile Include="vgui_PSEditorPanel.cpp" />
+    <ClCompile Include="vgui_SchemeManager.cpp" />
+    <ClCompile Include="vgui_ScorePanel.cpp" />
+    <ClCompile Include="vgui_ServerBrowser.cpp" />
+    <ClCompile Include="vgui_SpectatorPanel.cpp" />
+    <ClCompile Include="vgui_StatsPanel.cpp" />
+    <ClCompile Include="vgui_TeamMenu.cpp" />
+    <ClCompile Include="vgui_Viewport.cpp" />
+    <ClCompile Include="voice_status.cpp" />
+    <ClCompile Include="..\game_shared\voice_banmgr.cpp" />
+    <ClCompile Include="..\game_shared\voice_vgui_tweakdlg.cpp" />
+    <ClCompile Include="GameStudioModelRenderer.cpp" />
+    <ClCompile Include="studio_util.cpp" />
+    <ClCompile Include="StudioModelRenderer.cpp" />
+    <ClCompile Include="tri.cpp" />
+    <ClCompile Include="hud_ammo.cpp" />
+    <ClCompile Include="hud_historyresource.cpp" />
+    <ClCompile Include="hud_battery.cpp" />
+    <ClCompile Include="hud_deathnotice.cpp" />
+    <ClCompile Include="hud_flashlight.cpp" />
+    <ClCompile Include="hud_geiger.cpp" />
+    <ClCompile Include="hud_health.cpp" />
+    <ClCompile Include="hud.cpp" />
+    <ClCompile Include="hud_bench.cpp" />
+    <ClCompile Include="hud_benchtrace.cpp" />
+    <ClCompile Include="hud_domdisplay.cpp" />
+    <ClCompile Include="hud_flagdisplay.cpp" />
+    <ClCompile Include="hud_gamerules.cpp" />
+    <ClCompile Include="hud_msg.cpp" />
+    <ClCompile Include="hud_redraw.cpp" />
+    <ClCompile Include="hud_rocketscreen.cpp" />
+    <ClCompile Include="hud_servers.cpp" />
+    <ClCompile Include="hud_spectator.cpp" />
+    <ClCompile Include="hud_update.cpp" />
+    <ClCompile Include="hud_weaponresource.cpp" />
+    <ClCompile Include="hud_zoomcrosshair.cpp" />
+    <ClCompile Include="hud_message.cpp" />
+    <ClCompile Include="hud_saytext.cpp" />
+    <ClCompile Include="hud_status_icons.cpp" />
+    <ClCompile Include="hud_statusbar.cpp" />
+    <ClCompile Include="hud_train.cpp" />
+    <ClCompile Include="rendersystem\Particle.cpp" />
+    <ClCompile Include="rendersystem\ParticleSystem.cpp" />
+    <ClCompile Include="rendersystem\PSBeam.cpp" />
+    <ClCompile Include="rendersystem\PSBubbles.cpp" />
+    <ClCompile Include="rendersystem\PSDrips.cpp" />
+    <ClCompile Include="rendersystem\PSFlameCone.cpp" />
+    <ClCompile Include="rendersystem\PSFlatTrail.cpp" />
+    <ClCompile Include="rendersystem\PSSparks.cpp" />
+    <ClCompile Include="rendersystem\PSSpiralEffect.cpp" />
+    <ClCompile Include="rendersystem\RenderManager.cpp" />
+    <ClCompile Include="rendersystem\RenderSystem.cpp" />
+    <ClCompile Include="rendersystem\RotatingSystem.cpp" />
+    <ClCompile Include="rendersystem\RSBeam.cpp" />
+    <ClCompile Include="rendersystem\RSBeamStar.cpp" />
+    <ClCompile Include="rendersystem\RSCylinder.cpp" />
+    <ClCompile Include="rendersystem\RSDelayed.cpp" />
+    <ClCompile Include="rendersystem\RSDisk.cpp" />
+    <ClCompile Include="rendersystem\RSLight.cpp" />
+    <ClCompile Include="rendersystem\RSModel.cpp" />
+    <ClCompile Include="rendersystem\RSSphere.cpp" />
+    <ClCompile Include="rendersystem\RSSprite.cpp" />
+    <ClCompile Include="rendersystem\RSTeleparts.cpp" />
+    <ClCompile Include="ev_common.cpp" />
+    <ClCompile Include="ev_fx.cpp" />
+    <ClCompile Include="ev_game.cpp" />
+    <ClCompile Include="ev_weapons.cpp" />
+    <ClCompile Include="events.cpp" />
+    <ClCompile Include="..\game_shared\vgui_checkbutton2.cpp" />
+    <ClCompile Include="..\game_shared\vgui_grid.cpp" />
+    <ClCompile Include="..\game_shared\vgui_listbox.cpp" />
+    <ClCompile Include="..\game_shared\vgui_loadtga.cpp" />
+    <ClCompile Include="..\game_shared\vgui_scrollbar2.cpp" />
+    <ClCompile Include="..\game_shared\vgui_slider2.cpp" />
+    <ClCompile Include="..\common\color.cpp" />
+    <ClCompile Include="..\common\materials.cpp" />
+    <ClCompile Include="..\common\shared_resources.cpp" />
+    <ClCompile Include="..\common\util_vector.cpp" />
+    <ClCompile Include="..\common\vector.cpp" />
+    <ClCompile Include="..\public\interface.cpp" />
+    <ClCompile Include="bsputil.cpp" />
+    <ClCompile Include="cdll_int.cpp" />
+    <ClCompile Include="cl_cmd.cpp" />
+    <ClCompile Include="cl_fx.cpp" />
+    <ClCompile Include="cl_msg.cpp" />
+    <ClCompile Include="cl_msg_fx.cpp" />
+    <ClCompile Include="com_weapons.cpp" />
+    <ClCompile Include="demo.cpp" />
+    <ClCompile Include="entity.cpp" />
+    <ClCompile Include="in_camera.cpp" />
+    <ClCompile Include="input.cpp" />
+    <ClCompile Include="inputw32.cpp" />
+    <ClCompile Include="interpolation.cpp" />
+    <ClCompile Include="musicplayer.cpp" />
+    <ClCompile Include="parsemsg.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="view.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\util_common.h" />
+    <ClInclude Include="..\dlls\util.h" />
+    <ClInclude Include="..\external\fmod\fmod.h" />
+    <ClInclude Include="..\external\fmod\fmoddyn.h" />
+    <ClInclude Include="..\external\fmod\fmod_errors.h" />
+    <ClInclude Include="..\game_shared\weapons\weapons.h" />
+    <ClInclude Include="..\pm_shared\pm_debug.h" />
+    <ClInclude Include="..\pm_shared\pm_defs.h" />
+    <ClInclude Include="..\pm_shared\pm_info.h" />
+    <ClInclude Include="..\pm_shared\pm_materials.h" />
+    <ClInclude Include="..\pm_shared\pm_movevars.h" />
+    <ClInclude Include="..\pm_shared\pm_shared.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ActionSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_App.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Bitmap.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_BitmapTGA.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Border.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_BorderLayout.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_BorderPair.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_BuildGroup.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Button.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ButtonController.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ButtonGroup.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ChangeSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_CheckButton.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Color.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ComboKey.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ConfigWizard.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Cursor.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Dar.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_DataInputStream.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Desktop.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_DesktopIcon.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_EditPanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_EtchedBorder.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_FileInputStream.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_FlowLayout.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_FocusChangeSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_FocusNavGroup.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Font.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Frame.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_FrameSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_GridLayout.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_HeaderPanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Image.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ImagePanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_InputSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_InputStream.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_IntChangeSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_IntLabel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_KeyCode.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Label.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Layout.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_LayoutInfo.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_LineBorder.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ListPanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_LoweredBorder.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Menu.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_MenuItem.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_MenuSeparator.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_MessageBox.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_MiniApp.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_MouseCode.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Panel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Point.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_PopupMenu.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ProgressBar.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_RadioButton.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_RaisedBorder.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_RepaintSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Scheme.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ScrollBar.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ScrollPanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Slider.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_StackLayout.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_String.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_Surface.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_SurfaceBase.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_SurfaceGL.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TablePanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TabPanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TaskBar.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TextEntry.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TextGrid.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TextImage.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TextPanel.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TickSignal.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_ToggleButton.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_TreeFolder.h" />
+    <ClInclude Include="..\utils\vgui\include\VGUI_WizardPanel.h" />
+    <ClInclude Include="GameStudioModelRenderer.h" />
+    <ClInclude Include="rendersystem\PSCustom.h" />
+    <ClInclude Include="rendersystem\RSRadialBeams.h" />
+    <ClInclude Include="studio_util.h" />
+    <ClInclude Include="StudioModelRenderer.h" />
+    <ClInclude Include="tri.h" />
+    <ClInclude Include="..\game_shared\bitvec.h" />
+    <ClInclude Include="..\game_shared\vgui_checkbutton2.h" />
+    <ClInclude Include="..\game_shared\vgui_defaultinputsignal.h" />
+    <ClInclude Include="..\game_shared\vgui_grid.h" />
+    <ClInclude Include="..\game_shared\vgui_listbox.h" />
+    <ClInclude Include="..\game_shared\vgui_loadtga.h" />
+    <ClInclude Include="..\game_shared\vgui_scrollbar2.h" />
+    <ClInclude Include="..\game_shared\vgui_slider2.h" />
+    <ClInclude Include="..\game_shared\voice_banmgr.h" />
+    <ClInclude Include="..\game_shared\voice_common.h" />
+    <ClInclude Include="..\game_shared\voice_status.h" />
+    <ClInclude Include="..\game_shared\voice_vgui_tweakdlg.h" />
+    <ClInclude Include="health.h" />
+    <ClInclude Include="hud.h" />
+    <ClInclude Include="hud_benchtrace.h" />
+    <ClInclude Include="hud_servers.h" />
+    <ClInclude Include="hud_servers_priv.h" />
+    <ClInclude Include="hud_spectator.h" />
+    <ClInclude Include="..\dlls\animation.h" />
+    <ClInclude Include="..\dlls\basemonster.h" />
+    <ClInclude Include="..\dlls\cbase.h" />
+    <ClInclude Include="..\dlls\ctf_objects.h" />
+    <ClInclude Include="..\dlls\decals.h" />
+    <ClInclude Include="..\dlls\effects.h" />
+    <ClInclude Include="..\dlls\enginecallback.h" />
+    <ClInclude Include="..\dlls\explode.h" />
+    <ClInclude Include="..\dlls\extdll.h" />
+    <ClInclude Include="..\dlls\game.h" />
+    <ClInclude Include="..\dlls\gamerules\gamerules.h" />
+    <ClInclude Include="..\dlls\globals.h" />
+    <ClInclude Include="..\dlls\monsterevent.h" />
+    <ClInclude Include="..\dlls\monsters.h" />
+    <ClInclude Include="..\dlls\player.h" />
+    <ClInclude Include="..\dlls\projectiles\projectile.h" />
+    <ClInclude Include="..\dlls\saverestore.h" />
+    <ClInclude Include="..\dlls\schedule.h" />
+    <ClInclude Include="..\dlls\skill.h" />
+    <ClInclude Include="..\dlls\sound.h" />
+    <ClInclude Include="..\dlls\soundent.h" />
+    <ClInclude Include="..\common\activity.h" />
+    <ClInclude Include="..\common\basetsd.h" />
+    <ClInclude Include="..\common\beamdef.h" />
+    <ClInclude Include="..\common\bspfile.h" />
+    <ClInclude Include="..\common\cdll_dll.h" />
+    <ClInclude Include="..\common\cl_entity.h" />
+    <ClInclude Include="..\common\color.h" />
+    <ClInclude Include="..\common\colors.h" />
+    <ClInclude Include="..\common\com_model.h" />
+    <ClInclude Include="..\common\con_nprint.h" />
+    <ClInclude Include="..\common\const.h" />
+    <ClInclude Include="..\common\crc.h" />
+    <ClInclude Include="..\common\cvardef.h" />
+    <ClInclude Include="..\common\damage.h" />
+    <ClInclude Include="..\common\decals.h" />
+    <ClInclude Include="..\common\demo_api.h" />
+    <ClInclude Include="..\common\dlight.h" />
+    <ClInclude Include="..\common\entity_state.h" />
+    <ClInclude Include="..\common\entity_types.h" />
+    <ClInclude Include="..\common\event_api.h" />
+    <ClInclude Include="..\common\event_args.h" />
+    <ClInclude Include="..\common\event_flags.h" />
+    <ClInclude Include="..\common\gamedefs.h" />
+    <ClInclude Include="..\common\hltv.h" />
+    <ClInclude Include="..\common\in_buttons.h" />
+    <ClInclude Include="..\common\interface.h" />
+    <ClInclude Include="..\common\ivoicetweak.h" />
+    <ClInclude Include="..\common\mathlib.h" />
+    <ClInclude Include="..\common\matrix.h" />
+    <ClInclude Include="..\common\net_api.h" />
+    <ClInclude Include="..\common\netadr.h" />
+    <ClInclude Include="..\common\particledef.h" />
+    <ClInclude Include="..\common\platform.h" />
+    <ClInclude Include="..\common\playerstats.h" />
+    <ClInclude Include="..\common\pmtrace.h" />
+    <ClInclude Include="..\common\port.h" />
+    <ClInclude Include="..\common\protocol.h" />
+    <ClInclude Include="..\common\r_efx.h" />
+    <ClInclude Include="..\common\r_studioint.h" />
+    <ClInclude Include="..\common\randomrange.h" />
+    <ClInclude Include="..\common\ref_params.h" />
+    <ClInclude Include="..\common\screenfade.h" />
+    <ClInclude Include="..\common\Sequence.h" />
+    <ClInclude Include="..\common\shared_resources.h" />
+    <ClInclude Include="..\common\studio_event.h" />
+    <ClInclude Include="..\common\triangleapi.h" />
+    <ClInclude Include="..\common\usercmd.h" />
+    <ClInclude Include="..\common\util_vector.h" />
+    <ClInclude Include="..\common\vector.h" />
+    <ClInclude Include="..\common\weapondef.h" />
+    <ClInclude Include="..\common\weaponinfo.h" />
+    <ClInclude Include="..\common\weaponslots.h" />
+    <ClInclude Include="..\engine\anorms.h" />
+    <ClInclude Include="..\engine\APIProxy.h" />
+    <ClInclude Include="..\engine\cdll_int.h" />
+    <ClInclude Include="..\engine\custom.h" />
+    <ClInclude Include="..\engine\customentity.h" />
+    <ClInclude Include="..\engine\edict.h" />
+    <ClInclude Include="..\engine\eiface.h" />
+    <ClInclude Include="..\engine\keydefs.h" />
+    <ClInclude Include="..\engine\progdefs.h" />
+    <ClInclude Include="..\engine\progs.h" />
+    <ClInclude Include="..\engine\shake.h" />
+    <ClInclude Include="..\engine\studio.h" />
+    <ClInclude Include="rendersystem\Particle.h" />
+    <ClInclude Include="rendersystem\ParticleSystem.h" />
+    <ClInclude Include="rendersystem\PSBeam.h" />
+    <ClInclude Include="rendersystem\PSBubbles.h" />
+    <ClInclude Include="rendersystem\PSDrips.h" />
+    <ClInclude Include="rendersystem\PSFlameCone.h" />
+    <ClInclude Include="rendersystem\PSFlatTrail.h" />
+    <ClInclude Include="rendersystem\PSSparks.h" />
+    <ClInclude Include="rendersystem\PSSpiralEffect.h" />
+    <ClInclude Include="rendersystem\RenderManager.h" />
+    <ClInclude Include="rendersystem\RenderSystem.h" />
+    <ClInclude Include="rendersystem\RotatingSystem.h" />
+    <ClInclude Include="rendersystem\RSBeam.h" />
+    <ClInclude Include="rendersystem\RSBeamStar.h" />
+    <ClInclude Include="rendersystem\RSCylinder.h" />
+    <ClInclude Include="rendersystem\RSDelayed.h" />
+    <ClInclude Include="rendersystem\RSDisk.h" />
+    <ClInclude Include="rendersystem\RSLight.h" />
+    <ClInclude Include="rendersystem\RSModel.h" />
+    <ClInclude Include="rendersystem\RSSphere.h" />
+    <ClInclude Include="rendersystem\RSSprite.h" />
+    <ClInclude Include="rendersystem\RSTeleparts.h" />
+    <ClInclude Include="..\public\archtypes.h" />
+    <ClInclude Include="..\public\interface.h" />
+    <ClInclude Include="..\public\keydefs.h" />
+    <ClInclude Include="..\public\particleman.h" />
+    <ClInclude Include="..\public\pman_particlemem.h" />
+    <ClInclude Include="..\public\pman_triangleffect.h" />
+    <ClInclude Include="..\public\steam\steamtypes.h" />
+    <ClInclude Include="..\external\SDL2\begin_code.h" />
+    <ClInclude Include="..\external\SDL2\close_code.h" />
+    <ClInclude Include="..\external\SDL2\SDL_blendmode.h" />
+    <ClInclude Include="..\external\SDL2\SDL_config.h" />
+    <ClInclude Include="..\external\SDL2\SDL_config_windows.h" />
+    <ClInclude Include="..\external\SDL2\SDL_error.h" />
+    <ClInclude Include="..\external\SDL2\SDL_gamecontroller.h" />
+    <ClInclude Include="..\external\SDL2\SDL_joystick.h" />
+    <ClInclude Include="..\external\SDL2\SDL_mouse.h" />
+    <ClInclude Include="..\external\SDL2\SDL_pixels.h" />
+    <ClInclude Include="..\external\SDL2\SDL_platform.h" />
+    <ClInclude Include="..\external\SDL2\SDL_rect.h" />
+    <ClInclude Include="..\external\SDL2\SDL_rwops.h" />
+    <ClInclude Include="..\external\SDL2\SDL_stdinc.h" />
+    <ClInclude Include="..\external\SDL2\SDL_surface.h" />
+    <ClInclude Include="..\external\SDL2\SDL_video.h" />
+    <ClInclude Include="ammo.h" />
+    <ClInclude Include="ammohistory.h" />
+    <ClInclude Include="bench.h" />
+    <ClInclude Include="bsputil.h" />
+    <ClInclude Include="camera.h" />
+    <ClInclude Include="cl_dll.h" />
+    <ClInclude Include="cl_enginefuncs.h" />
+    <ClInclude Include="cl_fx.h" />
+    <ClInclude Include="cl_util.h" />
+    <ClInclude Include="com_weapons.h" />
+    <ClInclude Include="demo.h" />
+    <ClInclude Include="eventscripts.h" />
+    <ClInclude Include="Exports.h" />
+    <ClInclude Include="gl_dynamic.h" />
+    <ClInclude Include="..\public\cl_dll\IGameClientExports.h" />
+    <ClInclude Include="in_defs.h" />
+    <ClInclude Include="interpolation.h" />
+    <ClInclude Include="kbutton.h" />
+    <ClInclude Include="musicplayer.h" />
+    <ClInclude Include="parsemsg.h" />
+    <ClInclude Include="player_info.h" />
+    <ClInclude Include="vgui_CustomObjects.h" />
+    <ClInclude Include="vgui_EntityEntryPanel.h" />
+    <ClInclude Include="vgui_int.h" />
+    <ClInclude Include="vgui_MessageWindow.h" />
+    <ClInclude Include="vgui_MusicPlayer.h" />
+    <ClInclude Include="vgui_PSEditorPanel.h" />
+    <ClInclude Include="vgui_SchemeManager.h" />
+    <ClInclude Include="vgui_ScorePanel.h" />
+    <ClInclude Include="vgui_ServerBrowser.h" />
+    <ClInclude Include="vgui_SpectatorPanel.h" />
+    <ClInclude Include="vgui_StatsPanel.h" />
+    <ClInclude Include="vgui_TeamMenu.h" />
+    <ClInclude Include="vgui_Viewport.h" />
+    <ClInclude Include="view.h" />
+    <ClInclude Include="voice_status.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="cl_dll.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\common\res\xhl.ico" />
+    <CustomBuild Include="..\common\comments.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="..\lib\public\game_controls.lib" />
+    <Library Include="..\lib\public\SDL2.lib" />
+    <Library Include="..\utils\vgui\lib\win32_vc6\vgui.lib" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

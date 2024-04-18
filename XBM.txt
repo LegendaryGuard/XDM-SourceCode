@@ -1,0 +1,10 @@
+Modified version of High Ping Bastard bot v3.1
+
+* Removed all non-hl code (TFC,CS,OP4CTF,etc.)
+* Added adaptive dynamic engine version selection.
+* Added some commands like follow and hold position.
+* Added XDM S2C protocol support.
+* Added XDM DLL API support.
+* Heavily rewritten.
+
+Source code should be placed into the root source code directory along with "dlls", "common", "engine", etc. Uses common headers.

@@ -15,8 +15,17 @@
 #if !defined ( DLIGHTH )
 #define DLIGHTH
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
+
+enum
+{
+	LIGHT_INDEX_TE_DYNAMIC = 0x10000000,
+	LIGHT_INDEX_PLAYER_BRIGHT = 0x20000000,
+	LIGHT_INDEX_MUZZLEFLASH = 0x40000000,
+};
 
 typedef struct dlight_s
 {

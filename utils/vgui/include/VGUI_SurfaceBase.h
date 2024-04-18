@@ -44,7 +44,9 @@ public:
 	virtual bool hasFocus()=0;
 	virtual bool isWithin(int x,int y)=0;
 	virtual int  createNewTextureID(void)=0;
+#if defined (VGUI_20130901)// HL20130901
 	virtual void GetMousePos( int &x, int &y ) = 0;
+#endif
 protected:
 	virtual void addModeInfo(int wide,int tall,int bpp);
 protected:

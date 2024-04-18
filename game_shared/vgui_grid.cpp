@@ -6,25 +6,26 @@
 //=============================================================================
 
 #include <assert.h>
+#include "platform.h"// XDM3037a
 #include "vgui_grid.h"
 
 
 using namespace vgui;
 
 
-#define AssertCheck(expr, msg) \
+#define AssertCheck ASSERTSZ
+/*#define AssertCheck(expr, msg) \
 	if(!(expr))\
 	{\
 		assert(!msg);\
 		return 0;\
-	}
+	}*/
 
 
 
 // ------------------------------------------------------------------------------ //
 // CGrid::CGridEntry.
 // ------------------------------------------------------------------------------ //
-
 CGrid::CGridEntry::CGridEntry()
 {
 	m_pPanel = NULL;
@@ -39,7 +40,6 @@ CGrid::CGridEntry::~CGridEntry()
 // ------------------------------------------------------------------------------ //
 // CGrid.
 // ------------------------------------------------------------------------------ //
-
 CGrid::CGrid()
 {
 	Clear();
@@ -292,7 +292,7 @@ void CGrid::paint()
 	Panel::paint();
 
 	// walk the grid looking for underlined rows
-	int x = 0, y = 0;
+	int y = 0;
 	for (int row = 0; row < m_yRows; row++)
 	{
 		CGridEntry *cell = GridEntry(0, row);
@@ -314,7 +314,7 @@ void CGrid::paintBackground()
 //-----------------------------------------------------------------------------
 // Purpose: sets underline color for a particular row
 //-----------------------------------------------------------------------------
-void CGrid::SetRowUnderline(int row, bool enabled, int offset, int r, int g, int b, int a)
+void CGrid::SetRowUnderline(int row, bool enabled, int offset, short r, short g, short b, short a)
 {
 	CGridEntry *cell = GridEntry(0, row);
 	cell->m_bUnderline = enabled;
@@ -394,5 +394,3 @@ bool CGrid::getCellAtPoint(int worldX, int worldY, int &row, int &col)
 		
 	return false;
 }
-
-

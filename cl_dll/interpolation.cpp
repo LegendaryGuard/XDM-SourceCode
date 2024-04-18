@@ -23,7 +23,7 @@
 								  (a)[0] * ( (b)[1]*(c)[2] - (b)[2]*(c)[1] ) )
 
 // slove 3 vector linear system of equations v0 = x*v1 + y*v2 + z*v3 (if possible)
-bool SolveLSE (vec3_t v0, vec3_t v1, vec3_t v2, vec3_t v3, float * x, float * y, float * z)
+bool SolveLSE(const vec3_t &v0, const vec3_t &v1, const vec3_t &v2, const vec3_t &v3, float * x, float * y, float * z)
 {
 	float d = Determinant(v1,v2,v3);
 
@@ -75,7 +75,7 @@ CInterpolation::~CInterpolation()
 	m_SmoothStart = m_SmoothEnd = false;
 }
 
-void CInterpolation::SetViewAngles( vec3_t start, vec3_t end )
+void CInterpolation::SetViewAngles(const vec3_t &start, const vec3_t &end)
 {
 	m_StartAngle = start;
 	m_EndAngle  = end;
@@ -89,7 +89,7 @@ void CInterpolation::SetFOVs(float start, float end)
 	m_EndFov = end;
 }
 
-void CInterpolation::SetWaypoints( vec3_t * prev, vec3_t start, vec3_t end, vec3_t * next)
+void CInterpolation::SetWaypoints(vec3_t *prev, const vec3_t &start, const vec3_t &end, vec3_t *next)
 {
 	m_StartPoint = start;
 	m_EndPoint = end;
@@ -105,7 +105,7 @@ void CInterpolation::SetWaypoints( vec3_t * prev, vec3_t start, vec3_t end, vec3
 	else if ( !prev )
 	{
 		a = start - end; 
-		float dist = a.Length() / 2.0f; 
+		vec_t dist = a.Length() / 2.0f; 
 		a = a.Normalize();
 		b = *next - end;
 		b = b.Normalize();
@@ -119,7 +119,7 @@ void CInterpolation::SetWaypoints( vec3_t * prev, vec3_t start, vec3_t end, vec3
 		a = *prev - start;
 		a = a.Normalize(); 
 		b = end - start; 
-		float dist = b.Length() / 2.0f;
+		vec_t dist = b.Length() / 2.0f;
 		b = b.Normalize();
 		c = b - a;
 		c = c.Normalize();
@@ -217,6 +217,3 @@ void CInterpolation::InterpolateAngle( float t, vec3_t &angle )
 
 	NormalizeAngles( angle );
 }
-
-
-

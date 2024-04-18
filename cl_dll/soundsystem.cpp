@@ -19,8 +19,8 @@
 #include <dsound.h>
 #include <mmsystem.h>
 #include "r_studioint.h"
+#include "studio_util.h"
 
-extern engine_studio_api_t IEngineStudio;
 
 #define RENDERTYPE_UNDEFINED	0
 #define RENDERTYPE_SOFTWARE		1

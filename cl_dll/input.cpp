@@ -4,13 +4,10 @@
 
 // Quake is a trademark of Id Software, Inc., (c) 1996 Id Software, Inc. All
 // rights reserved.
+
 #include "hud.h"
 #include "cl_util.h"
-#include "camera.h"
-extern "C"
-{
-#include "kbutton.h"
-}
+#include "util_vector.h"
 #include "cvardef.h"
 #include "usercmd.h"
 #include "const.h"
@@ -18,52 +15,48 @@ extern "C"
 #include "in_defs.h"
 #include "view.h"
 #include "bench.h"
-#include <string.h>
 #include <ctype.h>
+#include "vgui_Viewport.h"
+#include "vgui_ScorePanel.h"// XDM3038
+#include "voice_status.h"
+#include "port.h"
 #include "Exports.h"
+#include "pm_defs.h"// XDM3037a
+#include "pm_movevars.h"// XDM3037a
+#include "pm_shared.h"
 
-#include "vgui_TeamFortressViewport.h"
-
-
-extern int g_iAlive;
-
+//extern struct playermove_s *pmove;// XDM3037a: we need movevars
 extern int g_weaponselect;
 extern cl_enginefunc_t gEngfuncs;
-
 // Defined in pm_math.c
-extern "C" float anglemod( float a );
-
-void IN_Init (void);
-void IN_Move ( float frametime, usercmd_t *cmd);
-void IN_Shutdown( void );
-void V_Init( void );
-void VectorAngles( const float *forward, float *angles );
-int CL_ButtonBits( int );
+//extern "C" float anglemod( float a );
+//float anglemod( float a );
 
 // xxx need client dll function to get and clear impuse
-extern cvar_t *in_joystick;
 
 int	in_impulse	= 0;
-int	in_cancel	= 0;
+// XDM3038 int	in_cancel	= 0;
 
-cvar_t	*m_pitch;
-cvar_t	*m_yaw;
-cvar_t	*m_forward;
-cvar_t	*m_side;
+cvar_t	*m_pitch = NULL;
+cvar_t	*m_yaw = NULL;
+cvar_t	*m_forward = NULL;
+cvar_t	*m_side = NULL;
 
-cvar_t	*lookstrafe;
-cvar_t	*lookspring;
-cvar_t	*cl_pitchup;
-cvar_t	*cl_pitchdown;
-cvar_t	*cl_upspeed;
-cvar_t	*cl_forwardspeed;
-cvar_t	*cl_backspeed;
-cvar_t	*cl_sidespeed;
-cvar_t	*cl_movespeedkey;
-cvar_t	*cl_yawspeed;
-cvar_t	*cl_pitchspeed;
-cvar_t	*cl_anglespeedkey;
-cvar_t	*cl_vsmoothing;
+cvar_t	*lookstrafe = NULL;
+cvar_t	*lookspring = NULL;
+cvar_t	*cl_pitchup = NULL;
+cvar_t	*cl_pitchdown = NULL;
+cvar_t	*cl_upspeed = NULL;
+cvar_t	*cl_forwardspeed = NULL;
+cvar_t	*cl_backspeed = NULL;
+cvar_t	*cl_sidespeed = NULL;
+cvar_t	*cl_movespeedkey = NULL;
+//cvar_t	*cl_spectatorspeed = NULL;// XDM3037a: do we need it?
+cvar_t	*cl_yawspeed = NULL;
+cvar_t	*cl_pitchspeed = NULL;
+cvar_t	*cl_anglespeedkey = NULL;
+cvar_t	*cl_vsmoothing = NULL;
+
 /*
 ===============================================================================
 
@@ -107,10 +100,11 @@ kbutton_t	in_up;
 kbutton_t	in_down;
 kbutton_t	in_duck;
 kbutton_t	in_reload;
-kbutton_t	in_alt1;
+//kbutton_t	in_alt1;
 kbutton_t	in_score;
 kbutton_t	in_break;
 kbutton_t	in_graph;  // Display the netgraph
+kbutton_t	in_select;
 
 typedef struct kblist_s
 {
@@ -191,9 +185,12 @@ int KB_ConvertString( char *in, char **ppout )
 	}
 
 	*pOut = '\0';
+	sz[4095] = '\0';
 
 	pOut = ( char * )malloc( strlen( sz ) + 1 );
-	strcpy( pOut, sz );
+	if (pOut)
+		strcpy( pOut, sz );
+
 	*ppout = pOut;
 
 	return 1;
@@ -208,13 +205,13 @@ Allows the engine to get a kbutton_t directly ( so it can check +mlook state, et
 */
 struct kbutton_s CL_DLLEXPORT *KB_Find( const char *name )
 {
+//	DBG_CL_PRINT("KB_Find(%s)\n", name);
 //	RecClFindKey(name);
 
-	kblist_t *p;
-	p = g_kbkeys;
+	kblist_t *p = g_kbkeys;
 	while ( p )
 	{
-		if ( !stricmp( name, p->name ) )
+		if ( !_stricmp( name, p->name ) )
 			return p->pkey;
 
 		p = p->next;
@@ -235,17 +232,20 @@ void KB_Add( const char *name, kbutton_t *pkb )
 	kbutton_t *kb;
 
 	kb = KB_Find( name );
-	
+
 	if ( kb )
 		return;
 
 	p = ( kblist_t * )malloc( sizeof( kblist_t ) );
-	memset( p, 0, sizeof( *p ) );
+	if (p)
+	{
+		memset( p, 0, sizeof( *p ) );
 
-	strcpy( p->name, name );
-	p->pkey = pkb;
+		strcpy( p->name, name );
+		p->pkey = pkb;
 
-	p->next = g_kbkeys;
+		p->next = g_kbkeys;
+	}
 	g_kbkeys = p;
 }
 
@@ -263,6 +263,7 @@ void KB_Init( void )
 	KB_Add( "in_graph", &in_graph );
 	KB_Add( "in_mlook", &in_mlook );
 	KB_Add( "in_jlook", &in_jlook );
+	KB_Add( "in_select", &in_select );// XDM3035a: is this really nescessary?
 }
 
 /*
@@ -295,7 +296,7 @@ void KeyDown (kbutton_t *b)
 	int		k;
 	char	*c;
 
-	c = gEngfuncs.Cmd_Argv(1);
+	c = CMD_ARGV(1);
 	if (c[0])
 		k = atoi(c);
 	else
@@ -303,19 +304,20 @@ void KeyDown (kbutton_t *b)
 
 	if (k == b->down[0] || k == b->down[1])
 		return;		// repeating key
-	
+
 	if (!b->down[0])
 		b->down[0] = k;
 	else if (!b->down[1])
 		b->down[1] = k;
 	else
 	{
-		gEngfuncs.Con_DPrintf ("Three keys down for a button '%c' '%c' '%c'!\n", b->down[0], b->down[1], c);
+		gEngfuncs.Con_DPrintf("Three keys down for a button '%c' '%c' '%c'!\n", b->down[0], b->down[1], c);
 		return;
 	}
-	
+
 	if (b->state & 1)
 		return;		// still down
+
 	b->state |= 1 + 2;	// down + impulse down
 }
 
@@ -328,8 +330,8 @@ void KeyUp (kbutton_t *b)
 {
 	int		k;
 	char	*c;
-	
-	c = gEngfuncs.Cmd_Argv(1);
+
+	c = CMD_ARGV(1);
 	if (c[0])
 		k = atoi(c);
 	else
@@ -345,6 +347,7 @@ void KeyUp (kbutton_t *b)
 		b->down[1] = 0;
 	else
 		return;		// key up without coresponding down (menu pass through)
+
 	if (b->down[0] || b->down[1])
 	{
 		//Con_Printf ("Keys down for button: '%c' '%c' '%c' (%d,%d,%d)!\n", b->down[0], b->down[1], c, b->down[0], b->down[1], c);
@@ -375,13 +378,14 @@ int CL_DLLEXPORT HUD_Key_Event( int down, int keynum, const char *pszCurrentBind
 	return 1;
 }
 
-void IN_BreakDown( void ) { KeyDown( &in_break );};
-void IN_BreakUp( void ) { KeyUp( &in_break ); };
-void IN_KLookDown (void) {KeyDown(&in_klook);}
-void IN_KLookUp (void) {KeyUp(&in_klook);}
-void IN_JLookDown (void) {KeyDown(&in_jlook);}
-void IN_JLookUp (void) {KeyUp(&in_jlook);}
-void IN_MLookDown (void) {KeyDown(&in_mlook);}
+// These are called direcly by the engine's binding system
+void IN_BreakDown(void) {KeyDown(&in_break);}
+void IN_BreakUp(void) { KeyUp(&in_break); }
+void IN_KLookDown(void) {KeyDown(&in_klook);}
+void IN_KLookUp(void) {KeyUp(&in_klook);}
+void IN_JLookDown(void) {KeyDown(&in_jlook);}
+void IN_JLookUp(void) {KeyUp(&in_jlook);}
+void IN_MLookDown(void) {KeyDown(&in_mlook);}
 void IN_UpDown(void) {KeyDown(&in_up);}
 void IN_UpUp(void) {KeyUp(&in_up);}
 void IN_DownDown(void) {KeyDown(&in_down);}
@@ -445,22 +449,6 @@ void IN_SpeedDown(void) {KeyDown(&in_speed);}
 void IN_SpeedUp(void) {KeyUp(&in_speed);}
 void IN_StrafeDown(void) {KeyDown(&in_strafe);}
 void IN_StrafeUp(void) {KeyUp(&in_strafe);}
-
-// needs capture by hud/vgui also
-extern void __CmdFunc_InputPlayerSpecial(void);
-
-void IN_Attack2Down(void) 
-{
-	KeyDown(&in_attack2);
-
-#ifdef _TFC
-	__CmdFunc_InputPlayerSpecial();
-#endif
-
-	gHUD.m_Spectator.HandleButtonsDown( IN_ATTACK2 );
-}
-
-void IN_Attack2Up(void) {KeyUp(&in_attack2);}
 void IN_UseDown (void)
 {
 	KeyDown(&in_use);
@@ -483,60 +471,104 @@ void IN_DuckDown(void)
 void IN_DuckUp(void) {KeyUp(&in_duck);}
 void IN_ReloadDown(void) {KeyDown(&in_reload);}
 void IN_ReloadUp(void) {KeyUp(&in_reload);}
-void IN_Alt1Down(void) {KeyDown(&in_alt1);}
-void IN_Alt1Up(void) {KeyUp(&in_alt1);}
+//void IN_Alt1Down(void) {KeyDown(&in_alt1);}
+//void IN_Alt1Up(void) {KeyUp(&in_alt1);}
 void IN_GraphDown(void) {KeyDown(&in_graph);}
 void IN_GraphUp(void) {KeyUp(&in_graph);}
 
 void IN_AttackDown(void)
 {
+//	CON_PRINTF("IN_AttackDown()\n");
+/*	if (gViewPort)// && multiplayer)
+		if (gViewPort->GetScoreBoard())
+			if (gViewPort->GetScoreBoard()->isVisible())
+				return;*/
+
 	KeyDown( &in_attack );
 	gHUD.m_Spectator.HandleButtonsDown( IN_ATTACK );
 }
-
 void IN_AttackUp(void)
 {
+//	CON_PRINTF("IN_AttackUp()\n");
 	KeyUp( &in_attack );
-	in_cancel = 0;
+//	in_cancel = 0;
+}
+
+void IN_Attack2Down(void) 
+{
+	KeyDown(&in_attack2);
+	gHUD.m_Spectator.HandleButtonsDown( IN_ATTACK2 );
+}
+void IN_Attack2Up(void)
+{
+	KeyUp(&in_attack2);
 }
 
 // Special handling
-void IN_Cancel(void)
+/*void IN_Cancel(void)
 {
 	in_cancel = 1;
-}
+}*/
 
-void IN_Impulse (void)
+void IN_Impulse(void)
 {
-	in_impulse = atoi( gEngfuncs.Cmd_Argv(1) );
+	in_impulse = atoi(CMD_ARGV(1));
 }
 
 void IN_ScoreDown(void)
 {
+//	CON_DPRINTF("IN_ScoreDown()\n");
 	KeyDown(&in_score);
-	if ( gViewPort )
-	{
-		gViewPort->ShowScoreBoard();
-	}
-}
 
+	if (gViewPort)
+		gViewPort->ShowScoreBoard();
+}
 void IN_ScoreUp(void)
 {
+//	CON_DPRINTF("IN_ScoreUp()\n");
 	KeyUp(&in_score);
-	if ( gViewPort )
-	{
+	//KeyUp(&in_attack);// XDM3038
+	/* TODO: HACK: dig this shit and unpress the button	in_attack.state = 2;
+	in_attack.down[0] = -1;
+	in_attack.down[1] = -1;*/
+
+	if (gViewPort)
 		gViewPort->HideScoreBoard();
-	}
 }
 
-void IN_MLookUp (void)
+void IN_MLookUp(void)
 {
 	KeyUp( &in_mlook );
-	if ( !( in_mlook.state & 1 ) && lookspring->value )
+	if ( !( in_mlook.state & 1 ) && (lookspring->value > 0))
 	{
 		V_StartPitchDrift();
 	}
 }
+/* this doesn't work right
+// XDM3035a: enable entity manipulation mode
+void IN_SelectDown(void)
+{
+	KeyDown(&in_select);
+	// other values are possible in the future so check carefully
+	if (g_iMouseManipulationMode == 0)
+		g_iMouseManipulationMode = 1;
+
+	gViewPort->UpdateCursorState();
+}
+
+// XDM3035a: disable entity manipulation mode
+void IN_SelectUp(void)
+{
+	KeyUp(&in_select);
+	//if (in_select.state & 2)
+	{
+		if (g_iMouseManipulationMode == 1)
+			g_iMouseManipulationMode = 0;
+
+		gViewPort->UpdateCursorState();
+	}
+}*/
+
 
 /*
 ===============
@@ -560,19 +592,19 @@ float CL_KeyState (kbutton_t *key)
 	if ( impulsedown && !impulseup )
 	{
 		// pressed and held this frame?
-		val = down ? 0.5 : 0.0;
+		val = down ? 0.5f : 0.0f;
 	}
 
 	if ( impulseup && !impulsedown )
 	{
 		// released this frame?
-		val = down ? 0.0 : 0.0;
+		val = down ? 0.0f : 0.0f;
 	}
 
 	if ( !impulsedown && !impulseup )
 	{
 		// held the entire frame?
-		val = down ? 1.0 : 0.0;
+		val = down ? 1.0f : 0.0f;
 	}
 
 	if ( impulsedown && impulseup )
@@ -601,11 +633,11 @@ CL_AdjustAngles
 Moves the local angle positions
 ================
 */
-void CL_AdjustAngles ( float frametime, float *viewangles )
+void CL_AdjustAngles(const float &frametime, float *viewangles)
 {
 	float	speed;
 	float	up, down;
-	
+
 	if (in_speed.state & 1)
 	{
 		speed = frametime * cl_anglespeedkey->value;
@@ -627,16 +659,16 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 		viewangles[PITCH] -= speed*cl_pitchspeed->value * CL_KeyState (&in_forward);
 		viewangles[PITCH] += speed*cl_pitchspeed->value * CL_KeyState (&in_back);
 	}
-	
+
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
-	
+
 	viewangles[PITCH] -= speed*cl_pitchspeed->value * up;
 	viewangles[PITCH] += speed*cl_pitchspeed->value * down;
 
 	if (up || down)
 		V_StopPitchDrift ();
-		
+
 	if (viewangles[PITCH] > cl_pitchdown->value)
 		viewangles[PITCH] = cl_pitchdown->value;
 	if (viewangles[PITCH] < -cl_pitchup->value)
@@ -644,7 +676,7 @@ void CL_AdjustAngles ( float frametime, float *viewangles )
 
 	if (viewangles[ROLL] > 50)
 		viewangles[ROLL] = 50;
-	if (viewangles[ROLL] < -50)
+	else if (viewangles[ROLL] < -50)
 		viewangles[ROLL] = -50;
 }
 
@@ -659,86 +691,121 @@ if active == 1 then we are 1) not playing back demos ( where our commands are ig
 */
 void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int active )
 {	
+	DBG_CL_PRINT("CL_CreateMove(%d, %d)\n", cmd->weaponselect, active);
 //	RecClCL_CreateMove(frametime, cmd, active);
-
 	float spd;
 	vec3_t viewangles;
 	static vec3_t oldangles;
 
-	if ( active && !Bench_Active() )
+	if (gHUD.m_iActive != active)
 	{
-		//memset( viewangles, 0, sizeof( vec3_t ) );
-		//viewangles[ 0 ] = viewangles[ 1 ] = viewangles[ 2 ] = 0.0;
-		gEngfuncs.GetViewAngles( (float *)viewangles );
-
-		CL_AdjustAngles ( frametime, viewangles );
-
-		memset (cmd, 0, sizeof(*cmd));
-		
-		gEngfuncs.SetViewAngles( (float *)viewangles );
-
-		if ( in_strafe.state & 1 )
+		if (active)
 		{
-			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_right);
-			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_left);
+			PM_InitMaterials(GetMapName(true));
+			CL_Precache();
 		}
+		gHUD.OnGameActivated(active);
+		if (gViewPort)
+			gViewPort->OnGameActivated(active);
+	}
 
-		cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
-		cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+#if defined (ENABLE_BENCKMARK)
+	if ( active && !Bench_Active() )
+#else
+	if (active)
+#endif
+	{
+		gEngfuncs.GetViewAngles((float *)viewangles);
+#if defined (_DEBUG_ANGLES)
+		vec_t oldpitch = viewangles[PITCH];
+		//viewangles[PITCH] *= cl_test1->value;
+#endif
+		CL_AdjustAngles(frametime, viewangles);
+		//DBG_ANGLES_NPRINT(2, "CL_CreateMove() pitch %f -> %f", oldpitch, viewangles[PITCH]);
+		DBG_ANGLES_DRAW(2, gHUD.m_pLocalPlayer->origin, viewangles, gHUD.m_pLocalPlayer->index, "CL_CreateMove() viewang");
 
-		cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
-		cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
+		memset(cmd, 0, sizeof(*cmd));
 
-		if ( !(in_klook.state & 1 ) )
-		{	
-			cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
-			cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
-		}	
+		gEngfuncs.SetViewAngles((float *)viewangles);
 
-		// adjust for speed key
-		if ( in_speed.state & 1 )
+		if (g_iUser1 == OBS_NONE || g_iUser1 == OBS_ROAMING)// XDM3037a: TODO: also disable mouse and joystick
 		{
-			cmd->forwardmove *= cl_movespeedkey->value;
-			cmd->sidemove *= cl_movespeedkey->value;
-			cmd->upmove *= cl_movespeedkey->value;
-		}
+			// clip to maxspeed
+			bool bSpectator = gHUD.IsSpectator();
+			if (bSpectator && pmove && pmove->movevars)
+				spd = pmove->movevars->spectatormaxspeed;
+			else
+				spd = gEngfuncs.GetClientMaxspeed();
 
-		// clip to maxspeed
-		spd = gEngfuncs.GetClientMaxspeed();
-		if ( spd != 0.0 )
-		{
-			// scale the 3 speeds so that the total velocity is not > cl.maxspeed
-			float fmov = sqrt( (cmd->forwardmove*cmd->forwardmove) + (cmd->sidemove*cmd->sidemove) + (cmd->upmove*cmd->upmove) );
-
-			if ( fmov > spd )
+			if ( in_strafe.state & 1 )
 			{
-				float fratio = spd / fmov;
-				cmd->forwardmove *= fratio;
-				cmd->sidemove *= fratio;
-				cmd->upmove *= fratio;
+				cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_right);
+				cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_left);
+			}
+
+			cmd->sidemove += cl_sidespeed->value * CL_KeyState (&in_moveright);
+			cmd->sidemove -= cl_sidespeed->value * CL_KeyState (&in_moveleft);
+
+			cmd->upmove += cl_upspeed->value * CL_KeyState (&in_up);
+			cmd->upmove -= cl_upspeed->value * CL_KeyState (&in_down);
+
+			if ( !(in_klook.state & 1 ) )
+			{
+				if (bSpectator && spd > 0)// XDM3037a: always use maximum speed in spectator mode?
+					cmd->forwardmove += spd * CL_KeyState(&in_forward);// UNDONE: cl_spectatorspeed ?
+				else
+					cmd->forwardmove += cl_forwardspeed->value * CL_KeyState (&in_forward);
+
+				cmd->forwardmove -= cl_backspeed->value * CL_KeyState (&in_back);
+			}
+
+			// adjust for speed key
+			if ( in_speed.state & 1 )
+			{
+				cmd->forwardmove *= cl_movespeedkey->value;
+				cmd->sidemove *= cl_movespeedkey->value;
+				cmd->upmove *= cl_movespeedkey->value;
+			}
+
+			if ( spd != 0.0 )
+			{
+				// scale the 3 speeds so that the total velocity is not > cl.maxspeed
+				float fmov = (float)sqrt( (cmd->forwardmove*cmd->forwardmove) + (cmd->sidemove*cmd->sidemove) + (cmd->upmove*cmd->upmove) );
+				if ( fmov > spd )
+				{
+					float fratio = spd / fmov;
+					cmd->forwardmove *= fratio;
+					cmd->sidemove *= fratio;
+					cmd->upmove *= fratio;
+				}
 			}
 		}
-
 		// Allow mice and other controllers to add their inputs
 		IN_Move ( frametime, cmd );
-	}
+	}// active
 
 	cmd->impulse = in_impulse;
 	in_impulse = 0;
 
-	cmd->weaponselect = g_weaponselect;
-	g_weaponselect = 0;
 	//
 	// set button and flag bits
 	//
 	cmd->buttons = CL_ButtonBits( 1 );
 
+	/*if (gViewPort && cmd->buttons & IN_ATTACK)// && multiplayer)
+		if (gViewPort->GetScoreBoard())
+			if (gViewPort->GetScoreBoard()->isVisible())
+			{
+				CON_PRINTF("CL_CreateMove(): SB preventing attack\n", cmd->buttons);
+				cmd->buttons &= ~IN_ATTACK;
+			}*/
+
 	// If they're in a modal dialog, ignore the attack button.
-	if(GetClientVoiceMgr()->IsInSquelchMode())
-		cmd->buttons &= ~IN_ATTACK;
+	if (/*(cmd->buttons & IN_SCORE) || */GetClientVoiceMgr()->IsInSquelchMode())// XDM3037a: scoreboard too, secondary fire too
+		cmd->buttons &= ~BUTTONS_FIRE;
 
 	// Using joystick?
-	if ( in_joystick->value )
+	if (in_joystick && in_joystick->value )
 	{
 		if ( cmd->forwardmove > 0 )
 		{
@@ -749,11 +816,19 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 			cmd->buttons |= IN_BACK;
 		}
 	}
+	if (g_weaponselect == WEAPON_NONE && (cmd->buttons & IN_ATTACK))// XDM3038a: un-holster
+		gHUD.m_Ammo.UserCmd_Holster();
 
+	cmd->weaponselect = g_weaponselect;
+	// XDM3038: keep current value!	g_weaponselect = 0;
+
+	// XDM3035c: strangely this line affects PlayerPostThink() calls frequency on server!! (look at the gluon beam)
 	gEngfuncs.GetViewAngles( (float *)viewangles );
-	// Set current view angles.
 
-	if ( g_iAlive )
+	// Set current view angles.
+	//if ( g_iAlive )
+	//if (g_pRefParams && g_pRefParams->health > 0 || g_iUser1 > 0)
+	if (!CL_IsDead() || gHUD.IsSpectator())// XDM3037a
 	{
 		VectorCopy( viewangles, cmd->viewangles );
 		VectorCopy( viewangles, oldangles );
@@ -762,20 +837,12 @@ void CL_DLLEXPORT CL_CreateMove ( float frametime, struct usercmd_s *cmd, int ac
 	{
 		VectorCopy( oldangles, cmd->viewangles );
 	}
-
+#if defined (ENABLE_BENCKMARK)
 	Bench_SetViewAngles( 1, (float *)&cmd->viewangles, frametime, cmd );
-}
+#endif
 
-/*
-============
-CL_IsDead
-
-Returns 1 if health is <= 0
-============
-*/
-int	CL_IsDead( void )
-{
-	return ( gHUD.m_Health.m_iHealth <= 0 ) ? 1 : 0;
+	//if (cmd->buttons != 0)
+	//	CON_PRINTF("CL_CreateMove(%d)\n", cmd->buttons);
 }
 
 /*
@@ -790,11 +857,11 @@ int CL_ButtonBits( int bResetState )
 {
 	int bits = 0;
 
-	if ( in_attack.state & 3 )
+	if (in_attack.state & 3)
 	{
 		bits |= IN_ATTACK;
 	}
-	
+
 	if (in_duck.state & 3)
 	{
 		bits |= IN_DUCK;
@@ -805,7 +872,7 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_JUMP;
 	}
 
-	if ( in_forward.state & 3 )
+	if (in_forward.state & 3)
 	{
 		bits |= IN_FORWARD;
 	}
@@ -820,12 +887,12 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_USE;
 	}
 
-	if (in_cancel)
+/* XDM3038	if (in_cancel)
 	{
 		bits |= IN_CANCEL;
-	}
+	}*/
 
-	if ( in_left.state & 3 )
+	if (in_left.state & 3)
 	{
 		bits |= IN_LEFT;
 	}
@@ -835,7 +902,7 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_RIGHT;
 	}
 	
-	if ( in_moveleft.state & 3 )
+	if (in_moveleft.state & 3)
 	{
 		bits |= IN_MOVELEFT;
 	}
@@ -843,6 +910,11 @@ int CL_ButtonBits( int bResetState )
 	if (in_moveright.state & 3)
 	{
 		bits |= IN_MOVERIGHT;
+	}
+
+	if (in_speed.state & 3)
+	{
+		bits |= IN_SPEED;
 	}
 
 	if (in_attack2.state & 3)
@@ -855,23 +927,32 @@ int CL_ButtonBits( int bResetState )
 		bits |= IN_RELOAD;
 	}
 
-	if (in_alt1.state & 3)
+/*UNUSED	if (in_alt1.state & 3)
 	{
 		bits |= IN_ALT1;
-	}
+	}*/
 
-	if ( in_score.state & 3 )
+/* XDM3038a: HACK! This generates a lot of input packets! WHY!?	if (in_score.state & 3)
 	{
 		bits |= IN_SCORE;
-	}
+	}*/
 
+/* UNDONE: someone needs this?
+	if (in_up.state & 3)
+	{
+		bits |= IN_MOVEUP;
+	}
+	if (in_down.state & 3)
+	{
+		bits |= IN_MOVEDOWN;
+	}*/
 	// Dead or in intermission? Shore scoreboard, too
-	if ( CL_IsDead() || gHUD.m_iIntermission )
+/* XDM3037a: eww! what a hack!	if (CL_IsDead() || gHUD.m_iIntermission)
 	{
 		bits |= IN_SCORE;
-	}
+	}*/
 
-	if ( bResetState )
+	if (bResetState)
 	{
 		in_attack.state &= ~2;
 		in_duck.state &= ~2;
@@ -883,12 +964,15 @@ int CL_ButtonBits( int bResetState )
 		in_right.state &= ~2;
 		in_moveleft.state &= ~2;
 		in_moveright.state &= ~2;
+		in_speed.state &= ~2;// XDM3038
+		//in_up.state &= ~2;
+		//in_down.state &= ~2;
 		in_attack2.state &= ~2;
 		in_reload.state &= ~2;
-		in_alt1.state &= ~2;
+		//UNUSED	in_alt1.state &= ~2;
 		in_score.state &= ~2;
+		in_select.state &= ~2;// XDM3035a
 	}
-
 	return bits;
 }
 
@@ -901,6 +985,7 @@ CL_ResetButtonBits
 void CL_ResetButtonBits( int bits )
 {
 	int bitsNew = CL_ButtonBits( 0 ) ^ bits;
+//	CON_PRINTF("CL_ResetButtonBits(%d, %d)\n", bits, bitsNew);
 
 	// Has the attack button been changed
 	if ( bitsNew & IN_ATTACK )
@@ -925,82 +1010,84 @@ InitInput
 */
 void InitInput (void)
 {
-	gEngfuncs.pfnAddCommand ("+moveup",IN_UpDown);
-	gEngfuncs.pfnAddCommand ("-moveup",IN_UpUp);
-	gEngfuncs.pfnAddCommand ("+movedown",IN_DownDown);
-	gEngfuncs.pfnAddCommand ("-movedown",IN_DownUp);
-	gEngfuncs.pfnAddCommand ("+left",IN_LeftDown);
-	gEngfuncs.pfnAddCommand ("-left",IN_LeftUp);
-	gEngfuncs.pfnAddCommand ("+right",IN_RightDown);
-	gEngfuncs.pfnAddCommand ("-right",IN_RightUp);
-	gEngfuncs.pfnAddCommand ("+forward",IN_ForwardDown);
-	gEngfuncs.pfnAddCommand ("-forward",IN_ForwardUp);
-	gEngfuncs.pfnAddCommand ("+back",IN_BackDown);
-	gEngfuncs.pfnAddCommand ("-back",IN_BackUp);
-	gEngfuncs.pfnAddCommand ("+lookup", IN_LookupDown);
-	gEngfuncs.pfnAddCommand ("-lookup", IN_LookupUp);
-	gEngfuncs.pfnAddCommand ("+lookdown", IN_LookdownDown);
-	gEngfuncs.pfnAddCommand ("-lookdown", IN_LookdownUp);
-	gEngfuncs.pfnAddCommand ("+strafe", IN_StrafeDown);
-	gEngfuncs.pfnAddCommand ("-strafe", IN_StrafeUp);
-	gEngfuncs.pfnAddCommand ("+moveleft", IN_MoveleftDown);
-	gEngfuncs.pfnAddCommand ("-moveleft", IN_MoveleftUp);
-	gEngfuncs.pfnAddCommand ("+moveright", IN_MoverightDown);
-	gEngfuncs.pfnAddCommand ("-moveright", IN_MoverightUp);
-	gEngfuncs.pfnAddCommand ("+speed", IN_SpeedDown);
-	gEngfuncs.pfnAddCommand ("-speed", IN_SpeedUp);
-	gEngfuncs.pfnAddCommand ("+attack", IN_AttackDown);
-	gEngfuncs.pfnAddCommand ("-attack", IN_AttackUp);
-	gEngfuncs.pfnAddCommand ("+attack2", IN_Attack2Down);
-	gEngfuncs.pfnAddCommand ("-attack2", IN_Attack2Up);
-	gEngfuncs.pfnAddCommand ("+use", IN_UseDown);
-	gEngfuncs.pfnAddCommand ("-use", IN_UseUp);
-	gEngfuncs.pfnAddCommand ("+jump", IN_JumpDown);
-	gEngfuncs.pfnAddCommand ("-jump", IN_JumpUp);
-	gEngfuncs.pfnAddCommand ("impulse", IN_Impulse);
-	gEngfuncs.pfnAddCommand ("+klook", IN_KLookDown);
-	gEngfuncs.pfnAddCommand ("-klook", IN_KLookUp);
-	gEngfuncs.pfnAddCommand ("+mlook", IN_MLookDown);
-	gEngfuncs.pfnAddCommand ("-mlook", IN_MLookUp);
-	gEngfuncs.pfnAddCommand ("+jlook", IN_JLookDown);
-	gEngfuncs.pfnAddCommand ("-jlook", IN_JLookUp);
-	gEngfuncs.pfnAddCommand ("+duck", IN_DuckDown);
-	gEngfuncs.pfnAddCommand ("-duck", IN_DuckUp);
-	gEngfuncs.pfnAddCommand ("+reload", IN_ReloadDown);
-	gEngfuncs.pfnAddCommand ("-reload", IN_ReloadUp);
-	gEngfuncs.pfnAddCommand ("+alt1", IN_Alt1Down);
-	gEngfuncs.pfnAddCommand ("-alt1", IN_Alt1Up);
-	gEngfuncs.pfnAddCommand ("+score", IN_ScoreDown);
-	gEngfuncs.pfnAddCommand ("-score", IN_ScoreUp);
-	gEngfuncs.pfnAddCommand ("+showscores", IN_ScoreDown);
-	gEngfuncs.pfnAddCommand ("-showscores", IN_ScoreUp);
-	gEngfuncs.pfnAddCommand ("+graph", IN_GraphDown);
-	gEngfuncs.pfnAddCommand ("-graph", IN_GraphUp);
-	gEngfuncs.pfnAddCommand ("+break",IN_BreakDown);
-	gEngfuncs.pfnAddCommand ("-break",IN_BreakUp);
+	ADD_DOMMAND("+moveup",IN_UpDown);
+	ADD_DOMMAND("-moveup",IN_UpUp);
+	ADD_DOMMAND("+movedown",IN_DownDown);
+	ADD_DOMMAND("-movedown",IN_DownUp);
+	ADD_DOMMAND("+left",IN_LeftDown);
+	ADD_DOMMAND("-left",IN_LeftUp);
+	ADD_DOMMAND("+right",IN_RightDown);
+	ADD_DOMMAND("-right",IN_RightUp);
+	ADD_DOMMAND("+forward",IN_ForwardDown);
+	ADD_DOMMAND("-forward",IN_ForwardUp);
+	ADD_DOMMAND("+back",IN_BackDown);
+	ADD_DOMMAND("-back",IN_BackUp);
+	ADD_DOMMAND("+lookup", IN_LookupDown);
+	ADD_DOMMAND("-lookup", IN_LookupUp);
+	ADD_DOMMAND("+lookdown", IN_LookdownDown);
+	ADD_DOMMAND("-lookdown", IN_LookdownUp);
+	ADD_DOMMAND("+strafe", IN_StrafeDown);
+	ADD_DOMMAND("-strafe", IN_StrafeUp);
+	ADD_DOMMAND("+moveleft", IN_MoveleftDown);
+	ADD_DOMMAND("-moveleft", IN_MoveleftUp);
+	ADD_DOMMAND("+moveright", IN_MoverightDown);
+	ADD_DOMMAND("-moveright", IN_MoverightUp);
+	ADD_DOMMAND("+speed", IN_SpeedDown);
+	ADD_DOMMAND("-speed", IN_SpeedUp);
+	ADD_DOMMAND("+attack", IN_AttackDown);
+	ADD_DOMMAND("-attack", IN_AttackUp);
+	ADD_DOMMAND("+attack2", IN_Attack2Down);
+	ADD_DOMMAND("-attack2", IN_Attack2Up);
+	ADD_DOMMAND("+use", IN_UseDown);
+	ADD_DOMMAND("-use", IN_UseUp);
+	ADD_DOMMAND("+jump", IN_JumpDown);
+	ADD_DOMMAND("-jump", IN_JumpUp);
+	ADD_DOMMAND("+klook", IN_KLookDown);
+	ADD_DOMMAND("-klook", IN_KLookUp);
+	ADD_DOMMAND("+mlook", IN_MLookDown);
+	ADD_DOMMAND("-mlook", IN_MLookUp);
+	ADD_DOMMAND("+jlook", IN_JLookDown);
+	ADD_DOMMAND("-jlook", IN_JLookUp);
+	ADD_DOMMAND("+duck", IN_DuckDown);
+	ADD_DOMMAND("-duck", IN_DuckUp);
+	ADD_DOMMAND("+reload", IN_ReloadDown);
+	ADD_DOMMAND("-reload", IN_ReloadUp);
+	//UNUSED	ADD_DOMMAND("+alt1", IN_Alt1Down);
+	//ADD_DOMMAND("-alt1", IN_Alt1Up);
+	ADD_DOMMAND("+score", IN_ScoreDown);
+	ADD_DOMMAND("-score", IN_ScoreUp);
+	ADD_DOMMAND("+showscores", IN_ScoreDown);
+	ADD_DOMMAND("-showscores", IN_ScoreUp);
+	ADD_DOMMAND("+graph", IN_GraphDown);
+	ADD_DOMMAND("-graph", IN_GraphUp);
+	ADD_DOMMAND("+break",IN_BreakDown);
+	ADD_DOMMAND("-break",IN_BreakUp);
+	//ADD_DOMMAND("+select",IN_SelectDown);// XDM3035a
+	//ADD_DOMMAND("-select",IN_SelectUp);
+	ADD_DOMMAND("impulse", IN_Impulse);
+	//ADD_DOMMAND(???"cancelselect", IN_Cancel);// XDM3037
 
-	lookstrafe			= gEngfuncs.pfnRegisterVariable ( "lookstrafe", "0", FCVAR_ARCHIVE );
-	lookspring			= gEngfuncs.pfnRegisterVariable ( "lookspring", "0", FCVAR_ARCHIVE );
-	cl_anglespeedkey	= gEngfuncs.pfnRegisterVariable ( "cl_anglespeedkey", "0.67", 0 );
-	cl_yawspeed			= gEngfuncs.pfnRegisterVariable ( "cl_yawspeed", "210", 0 );
-	cl_pitchspeed		= gEngfuncs.pfnRegisterVariable ( "cl_pitchspeed", "225", 0 );
-	cl_upspeed			= gEngfuncs.pfnRegisterVariable ( "cl_upspeed", "320", 0 );
-	cl_forwardspeed		= gEngfuncs.pfnRegisterVariable ( "cl_forwardspeed", "400", FCVAR_ARCHIVE );
-	cl_backspeed		= gEngfuncs.pfnRegisterVariable ( "cl_backspeed", "400", FCVAR_ARCHIVE );
-	cl_sidespeed		= gEngfuncs.pfnRegisterVariable ( "cl_sidespeed", "400", 0 );
-	cl_movespeedkey		= gEngfuncs.pfnRegisterVariable ( "cl_movespeedkey", "0.3", 0 );
-	cl_pitchup			= gEngfuncs.pfnRegisterVariable ( "cl_pitchup", "89", 0 );
-	cl_pitchdown		= gEngfuncs.pfnRegisterVariable ( "cl_pitchdown", "89", 0 );
-
-	cl_vsmoothing		= gEngfuncs.pfnRegisterVariable ( "cl_vsmoothing", "0.05", FCVAR_ARCHIVE );
-
-	m_pitch			    = gEngfuncs.pfnRegisterVariable ( "m_pitch","0.022", FCVAR_ARCHIVE );
-	m_yaw				= gEngfuncs.pfnRegisterVariable ( "m_yaw","0.022", FCVAR_ARCHIVE );
-	m_forward			= gEngfuncs.pfnRegisterVariable ( "m_forward","1", FCVAR_ARCHIVE );
-	m_side				= gEngfuncs.pfnRegisterVariable ( "m_side","0.8", FCVAR_ARCHIVE );
+	lookstrafe			= CVAR_CREATE("lookstrafe", "0", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	lookspring			= CVAR_CREATE("lookspring", "0", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	cl_anglespeedkey	= CVAR_CREATE("cl_anglespeedkey", "0.67", FCVAR_CLIENTDLL);
+	cl_yawspeed			= CVAR_CREATE("cl_yawspeed", "210", FCVAR_CLIENTDLL);
+	cl_pitchspeed		= CVAR_CREATE("cl_pitchspeed", "225", FCVAR_CLIENTDLL);
+	cl_upspeed			= CVAR_CREATE("cl_upspeed", "320", FCVAR_CLIENTDLL);
+	cl_forwardspeed		= CVAR_CREATE("cl_forwardspeed", "400", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	cl_backspeed		= CVAR_CREATE("cl_backspeed", "400", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	cl_sidespeed		= CVAR_CREATE("cl_sidespeed", "400", FCVAR_CLIENTDLL);
+	cl_movespeedkey		= CVAR_CREATE("cl_movespeedkey", "0.3", FCVAR_CLIENTDLL);
+	//cl_spectatorspeed	= CVAR_CREATE("cl_spectatorspeed", "800", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	cl_pitchup			= CVAR_CREATE("cl_pitchup", "89", FCVAR_CLIENTDLL);
+	cl_pitchdown		= CVAR_CREATE("cl_pitchdown", "89", FCVAR_CLIENTDLL);
+	cl_vsmoothing		= CVAR_CREATE("cl_vsmoothing", "0.05", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_pitch			    = CVAR_CREATE("m_pitch","0.022", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_yaw				= CVAR_CREATE("m_yaw","0.022", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_forward			= CVAR_CREATE("m_forward","1", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
+	m_side				= CVAR_CREATE("m_side","0.8", FCVAR_ARCHIVE | FCVAR_CLIENTDLL);
 
 	// Initialize third person camera controls.
-	CAM_Init();
+	//CAM_Init();
 	// Initialize inputs
 	IN_Init();
 	// Initialize keyboard
@@ -1020,22 +1107,7 @@ void ShutdownInput (void)
 	KB_Shutdown();
 }
 
-#include "interface.h"
-void CL_UnloadParticleMan( void );
-
-#if defined( _TFC )
-void ClearEventList( void );
-#endif
-
+/*
+XDM: in cdll_int.cpp
 void CL_DLLEXPORT HUD_Shutdown( void )
-{
-//	RecClShutdown();
-
-	ShutdownInput();
-
-#if defined( _TFC )
-	ClearEventList();
-#endif
-	
-	CL_UnloadParticleMan();
-}
+*/

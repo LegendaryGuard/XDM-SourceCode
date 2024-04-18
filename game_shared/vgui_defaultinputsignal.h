@@ -8,11 +8,14 @@
 #ifndef VGUI_DEFAULTINPUTSIGNAL_H
 #define VGUI_DEFAULTINPUTSIGNAL_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#pragma warning(disable: 4100)// unreferenced formal parameter // XDM
+#endif /* not __MINGW32__ */
 #endif
 
 
-#include "VGUI_InputSignal.h"
+#include <VGUI_InputSignal.h>
 
 
 namespace vgui

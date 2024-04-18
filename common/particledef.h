@@ -15,7 +15,9 @@
 #if !defined( PARTICLEDEFH )
 #define PARTICLEDEFH
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 typedef enum {

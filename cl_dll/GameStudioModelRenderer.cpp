@@ -5,36 +5,23 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include <assert.h>
 #include "hud.h"
 #include "cl_util.h"
-#include "const.h"
 #include "com_model.h"
 #include "studio.h"
-#include "entity_state.h"
-#include "cl_entity.h"
-#include "dlight.h"
-#include "triangleapi.h"
-
-#include <stdio.h>
-#include <string.h>
-#include <memory.h>
-#include <math.h>
-
-#include "studio_util.h"
 #include "r_studioint.h"
-
+#include <memory.h>
+#include "studio_util.h"
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
+#include "pm_shared.h"
+#include "triangleapi.h"
 #include "Exports.h"
 
 //
 // Override the StudioModelRender virtual member functions here to implement custom bone
 // setup, blending, etc.
 //
-
-// Global engine <-> studio model rendering code interface
-extern engine_studio_api_t IEngineStudio;
 
 // The renderer object, created on the stack.
 CGameStudioModelRenderer g_StudioRenderer;
@@ -44,9 +31,10 @@ CGameStudioModelRenderer
 
 ====================
 */
-CGameStudioModelRenderer::CGameStudioModelRenderer( void )
+CGameStudioModelRenderer::CGameStudioModelRenderer(void) : CStudioModelRenderer()
 {
 }
+
 
 ////////////////////////////////////
 // Hooks to class implementation
@@ -102,6 +90,7 @@ Export this function for the engine to use the studio renderer class to render o
 */
 int CL_DLLEXPORT HUD_GetStudioModelInterface( int version, struct r_studio_interface_s **ppinterface, struct engine_studio_api_s *pstudio )
 {
+	DBG_CL_PRINT("HUD_GetStudioModelInterface(%d)\n", version);
 //	RecClStudioInterface(version, ppinterface, pstudio);
 
 	if ( version != STUDIO_INTERFACE_VERSION )

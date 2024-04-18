@@ -1,631 +1,432 @@
-//========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
+//====================================================================
 //
-// Purpose: 
+// Purpose: XDM doesn't use HL camera methods, utilizing refdef instead.
+// Here goes the "click on screen" code
 //
-// $NoKeywords: $
-//=============================================================================
-
+//====================================================================
 #include "hud.h"
 #include "cl_util.h"
-#include "camera.h"
-#include "kbutton.h"
-#include "cvardef.h"
-#include "usercmd.h"
-#include "const.h"
-#include "camera.h"
+//#include "camera.h"
 #include "in_defs.h"
+#include "event_api.h"
+#include "pm_defs.h"
+#include "pm_shared.h"
+#include "pmtrace.h"
+#include "com_model.h"
+#include "triangleapi.h"
+#include "r_studioint.h"
+#include "r_efx.h"
+#include "shared_resources.h"
+#include "cl_fx.h"
+#include "vgui_Viewport.h"
+#include "vgui_CustomObjects.h"
+#include "vgui_EntityEntryPanel.h"
+#include "RenderManager.h"
+#include "RenderSystem.h"
+#include "RSSprite.h"
+#include "RSModel.h"
 #include "Exports.h"
+//#include "SDL2/SDL_mouse.h"
+//#include "port.h"
 
-#include "SDL2/SDL_mouse.h"
-#include "port.h"
+extern int mouse_x, mouse_y;
+//extern vec3_t g_vecViewForward;
 
-float CL_KeyState (kbutton_t *key);
+//const float cam_offset[3] = {0.0f,0.0f,64.0f};// XDM: 3034 ?
+const vec3_t cam_offset(0.0f,0.0f,0.0f);
 
-extern cl_enginefunc_t gEngfuncs;
 
-//-------------------------------------------------- Constants
-
-#define CAM_DIST_DELTA 1.0
-#define CAM_ANGLE_DELTA 2.5
-#define CAM_ANGLE_SPEED 2.5
-#define CAM_MIN_DIST 30.0
-#define CAM_ANGLE_MOVE .5
-#define MAX_ANGLE_DIFF 10.0
-#define PITCH_MAX 90.0
-#define PITCH_MIN 0
-#define YAW_MAX  135.0
-#define YAW_MIN	 -135.0
-
-enum ECAM_Command
+//-----------------------------------------------------------------------------
+// Purpose: Camera code is in V_CalcThirdPersonRefdef
+// Warning: This is the only global function that is called before adding entities
+//-----------------------------------------------------------------------------
+void CL_DLLEXPORT CAM_Think(void)
 {
-	CAM_COMMAND_NONE = 0,
-	CAM_COMMAND_TOTHIRDPERSON = 1,
-	CAM_COMMAND_TOFIRSTPERSON = 2
-};
-
-//-------------------------------------------------- Global Variables
-
-cvar_t	*cam_command;
-cvar_t	*cam_snapto;
-cvar_t	*cam_idealyaw;
-cvar_t	*cam_idealpitch;
-cvar_t	*cam_idealdist;
-cvar_t	*cam_contain;
-
-cvar_t	*c_maxpitch;
-cvar_t	*c_minpitch;
-cvar_t	*c_maxyaw;
-cvar_t	*c_minyaw;
-cvar_t	*c_maxdistance;
-cvar_t	*c_mindistance;
-
-// pitch, yaw, dist
-vec3_t cam_ofs;
-
-
-// In third person
-int cam_thirdperson;
-int cam_mousemove; //true if we are moving the cam with the mouse, False if not
-int iMouseInUse=0;
-int cam_distancemove;
-extern int mouse_x, mouse_y;  //used to determine what the current x and y values are
-int cam_old_mouse_x, cam_old_mouse_y; //holds the last ticks mouse movement
-POINT		cam_mouse;
-//-------------------------------------------------- Local Variables
-
-static kbutton_t cam_pitchup, cam_pitchdown, cam_yawleft, cam_yawright;
-static kbutton_t cam_in, cam_out, cam_move;
-
-//-------------------------------------------------- Prototypes
-
-void CAM_ToThirdPerson(void);
-void CAM_ToFirstPerson(void);
-void CAM_StartDistance(void);
-void CAM_EndDistance(void);
-
-void SDL_GetCursorPos( POINT *p )
-{
-	gEngfuncs.GetMousePosition( (int *)&p->x, (int *)&p->y );
-//	SDL_GetMouseState( (int *)&p->x, (int *)&p->y );
+//	DBG_CL_PRINT("CAM_Think()\n");
+	/* BAD POINTER DURING LEVEL CHANGE if (gHUD.m_pLocalPlayer)
+	{
+		//gHUD.m_pLocalPlayer->angles[PITCH] *= PITCH_CORRECTION_MULTIPLIER;
+		//gHUD.m_pLocalPlayer->curstate.angles[PITCH] *= PITCH_CORRECTION_MULTIPLIER;
+		DBG_ANGLES_NPRINT(5, "CAM_Think() pitch: %f, curstate %f", gHUD.m_pLocalPlayer->angles[PITCH], gHUD.m_pLocalPlayer->curstate.angles[PITCH]);
+		DBG_ANGLES_DRAW(5, gHUD.m_pLocalPlayer->origin, gHUD.m_pLocalPlayer->angles, "CAM_Think()");
+	}*/
 }
 
-void SDL_SetCursorPos( const int x, const int y )
+//-----------------------------------------------------------------------------
+// Purpose: ???
+// Input  : *ofs - 
+//-----------------------------------------------------------------------------
+void CL_DLLEXPORT CL_CameraOffset(float *ofs)
 {
+//	DBG_CL_PRINT("CL_CameraOffset()\n");
+//	RecClCL_GetCameraOffsets(ofs);
+	VectorCopy(cam_offset, ofs);
 }
 
-//-------------------------------------------------- Local Functions
-
-float MoveToward( float cur, float goal, float maxspeed )
+//-----------------------------------------------------------------------------
+// Purpose: Tells the engine that current view is not in first person mode
+// Output : int 1 true 0 false
+//-----------------------------------------------------------------------------
+int CL_DLLEXPORT CL_IsThirdPerson(void)
 {
-	if( cur != goal )
-	{
-		if( abs( cur - goal ) > 180.0 )
-		{
-			if( cur < goal )
-				cur += 360.0;
-			else
-				cur -= 360.0;
-		}
-
-		if( cur < goal )
-		{
-			if( cur < goal - 1.0 )
-				cur += ( goal - cur ) / 4.0;
-			else
-				cur = goal;
-		}
-		else
-		{
-			if( cur > goal + 1.0 )
-				cur -= ( cur - goal ) / 4.0;
-			else
-				cur = goal;
-		}
-	}
-
-
-	// bring cur back into range
-	if( cur < 0 )
-		cur += 360.0;
-	else if( cur >= 360 )
-		cur -= 360;
-
-	return cur;
-}
-
-
-//-------------------------------------------------- Gobal Functions
-
-typedef struct
-{
-	vec3_t		boxmins, boxmaxs;// enclose the test object along entire move
-	float		*mins, *maxs;	// size of the moving object
-	vec3_t		mins2, maxs2;	// size when clipping against mosnters
-	float		*start, *end;
-	trace_t		trace;
-	int			type;
-	edict_t		*passedict;
-	qboolean	monsterclip;
-} moveclip_t;
-
-extern trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
-
-void CL_DLLEXPORT CAM_Think( void )
-{
-//	RecClCamThink();
-
-	vec3_t origin;
-	vec3_t ext, pnt, camForward, camRight, camUp;
-	moveclip_t	clip;
-	float dist;
-	vec3_t camAngles;
-	float flSensitivity;
-#ifdef LATER
-	int i;
-#endif
-	vec3_t viewangles;
-
-	switch( (int) cam_command->value )
-	{
-		case CAM_COMMAND_TOTHIRDPERSON:
-			CAM_ToThirdPerson();
-			break;
-
-		case CAM_COMMAND_TOFIRSTPERSON:
-			CAM_ToFirstPerson();
-			break;
-
-		case CAM_COMMAND_NONE:
-		default:
-			break;
-	}
-
-	if( !cam_thirdperson )
-		return;
-	
-#ifdef LATER
-	if ( cam_contain->value )
-	{
-		gEngfuncs.GetClientOrigin( origin );
-		ext[0] = ext[1] = ext[2] = 0.0;
-	}
-#endif
-
-	camAngles[ PITCH ] = cam_idealpitch->value;
-	camAngles[ YAW ] = cam_idealyaw->value;
-	dist = cam_idealdist->value;
-	//
-	//movement of the camera with the mouse
-	//
-	if (cam_mousemove)
-	{
-	    //get windows cursor position
-		SDL_GetCursorPos (&cam_mouse);
-		//check for X delta values and adjust accordingly
-		//eventually adjust YAW based on amount of movement
-	  //don't do any movement of the cam using YAW/PITCH if we are zooming in/out the camera	
-	  if (!cam_distancemove)
-	  {
-		
-		//keep the camera within certain limits around the player (ie avoid certain bad viewing angles)  
-		if (cam_mouse.x>gEngfuncs.GetWindowCenterX())
-		{
-			//if ((camAngles[YAW]>=225.0)||(camAngles[YAW]<135.0))
-			if (camAngles[YAW]<c_maxyaw->value)
-			{
-				camAngles[ YAW ] += (CAM_ANGLE_MOVE)*((cam_mouse.x-gEngfuncs.GetWindowCenterX())/2);
-			}
-			if (camAngles[YAW]>c_maxyaw->value)
-			{
-				
-				camAngles[YAW]=c_maxyaw->value;
-			}
-		}
-		else if (cam_mouse.x<gEngfuncs.GetWindowCenterX())
-		{
-			//if ((camAngles[YAW]<=135.0)||(camAngles[YAW]>225.0))
-			if (camAngles[YAW]>c_minyaw->value)
-			{
-			   camAngles[ YAW ] -= (CAM_ANGLE_MOVE)* ((gEngfuncs.GetWindowCenterX()-cam_mouse.x)/2);
-			   	
-			}
-			if (camAngles[YAW]<c_minyaw->value)
-			{
-				camAngles[YAW]=c_minyaw->value;
-				
-			}
-		}
-
-		//check for y delta values and adjust accordingly
-		//eventually adjust PITCH based on amount of movement
-		//also make sure camera is within bounds
-		if (cam_mouse.y>gEngfuncs.GetWindowCenterY())
-		{
-			if(camAngles[PITCH]<c_maxpitch->value)
-			{
-			    camAngles[PITCH] +=(CAM_ANGLE_MOVE)* ((cam_mouse.y-gEngfuncs.GetWindowCenterY())/2);
-			}
-			if (camAngles[PITCH]>c_maxpitch->value)
-			{
-				camAngles[PITCH]=c_maxpitch->value;
-			}
-		}
-		else if (cam_mouse.y<gEngfuncs.GetWindowCenterY())
-		{
-			if (camAngles[PITCH]>c_minpitch->value)
-			{
-			   camAngles[PITCH] -= (CAM_ANGLE_MOVE)*((gEngfuncs.GetWindowCenterY()-cam_mouse.y)/2);
-			}
-			if (camAngles[PITCH]<c_minpitch->value)
-			{
-				camAngles[PITCH]=c_minpitch->value;
-			}
-		}
-
-		//set old mouse coordinates to current mouse coordinates
-		//since we are done with the mouse
-
-		if ( ( flSensitivity = gHUD.GetSensitivity() ) != 0 )
-		{
-			cam_old_mouse_x=cam_mouse.x*flSensitivity;
-			cam_old_mouse_y=cam_mouse.y*flSensitivity;
-		}
-		else
-		{
-			cam_old_mouse_x=cam_mouse.x;
-			cam_old_mouse_y=cam_mouse.y;
-		}
-		SDL_SetCursorPos (gEngfuncs.GetWindowCenterX(), gEngfuncs.GetWindowCenterY());
-	  }
-	}
-
-	//Nathan code here
-	if( CL_KeyState( &cam_pitchup ) )
-		camAngles[ PITCH ] += CAM_ANGLE_DELTA;
-	else if( CL_KeyState( &cam_pitchdown ) )
-		camAngles[ PITCH ] -= CAM_ANGLE_DELTA;
-
-	if( CL_KeyState( &cam_yawleft ) )
-		camAngles[ YAW ] -= CAM_ANGLE_DELTA;
-	else if( CL_KeyState( &cam_yawright ) )
-		camAngles[ YAW ] += CAM_ANGLE_DELTA;
-
-	if( CL_KeyState( &cam_in ) )
-	{
-		dist -= CAM_DIST_DELTA;
-		if( dist < CAM_MIN_DIST )
-		{
-			// If we go back into first person, reset the angle
-			camAngles[ PITCH ] = 0;
-			camAngles[ YAW ] = 0;
-			dist = CAM_MIN_DIST;
-		}
-
-	}
-	else if( CL_KeyState( &cam_out ) )
-		dist += CAM_DIST_DELTA;
-
-	if (cam_distancemove)
-	{
-		if (cam_mouse.y>gEngfuncs.GetWindowCenterY())
-		{
-			if(dist<c_maxdistance->value)
-			{
-			    dist +=CAM_DIST_DELTA * ((cam_mouse.y-gEngfuncs.GetWindowCenterY())/2);
-			}
-			if (dist>c_maxdistance->value)
-			{
-				dist=c_maxdistance->value;
-			}
-		}
-		else if (cam_mouse.y<gEngfuncs.GetWindowCenterY())
-		{
-			if (dist>c_mindistance->value)
-			{
-			   dist -= (CAM_DIST_DELTA)*((gEngfuncs.GetWindowCenterY()-cam_mouse.y)/2);
-			}
-			if (dist<c_mindistance->value)
-			{
-				dist=c_mindistance->value;
-			}
-		}
-		//set old mouse coordinates to current mouse coordinates
-		//since we are done with the mouse
-		cam_old_mouse_x=cam_mouse.x*gHUD.GetSensitivity();
-		cam_old_mouse_y=cam_mouse.y*gHUD.GetSensitivity();
-		SDL_SetCursorPos (gEngfuncs.GetWindowCenterX(), gEngfuncs.GetWindowCenterY());
-	}
-#ifdef LATER
-	if( cam_contain->value )
-	{
-		// check new ideal
-		VectorCopy( origin, pnt );
-		AngleVectors( camAngles, camForward, camRight, camUp );
-		for (i=0 ; i<3 ; i++)
-			pnt[i] += -dist*camForward[i];
-
-		// check line from r_refdef.vieworg to pnt
-		memset ( &clip, 0, sizeof ( moveclip_t ) );
-		clip.trace = SV_ClipMoveToEntity( sv.edicts, r_refdef.vieworg, ext, ext, pnt );
-		if( clip.trace.fraction == 1.0 )
-		{
-			// update ideal
-			cam_idealpitch->value = camAngles[ PITCH ];
-			cam_idealyaw->value = camAngles[ YAW ];
-			cam_idealdist->value = dist;
-		}
-	}
-	else
-#endif
-	{
-		// update ideal
-		cam_idealpitch->value = camAngles[ PITCH ];
-		cam_idealyaw->value = camAngles[ YAW ];
-		cam_idealdist->value = dist;
-	}
-
-	// Move towards ideal
-	VectorCopy( cam_ofs, camAngles );
-
-	gEngfuncs.GetViewAngles( (float *)viewangles );
-
-	if( cam_snapto->value )
-	{
-		camAngles[ YAW ] = cam_idealyaw->value + viewangles[ YAW ];
-		camAngles[ PITCH ] = cam_idealpitch->value + viewangles[ PITCH ];
-		camAngles[ 2 ] = cam_idealdist->value;
-	}
-	else
-	{
-		if( camAngles[ YAW ] - viewangles[ YAW ] != cam_idealyaw->value )
-			camAngles[ YAW ] = MoveToward( camAngles[ YAW ], cam_idealyaw->value + viewangles[ YAW ], CAM_ANGLE_SPEED );
-
-		if( camAngles[ PITCH ] - viewangles[ PITCH ] != cam_idealpitch->value )
-			camAngles[ PITCH ] = MoveToward( camAngles[ PITCH ], cam_idealpitch->value + viewangles[ PITCH ], CAM_ANGLE_SPEED );
-
-		if( abs( camAngles[ 2 ] - cam_idealdist->value ) < 2.0 )
-			camAngles[ 2 ] = cam_idealdist->value;
-		else
-			camAngles[ 2 ] += ( cam_idealdist->value - camAngles[ 2 ] ) / 4.0;
-	}
-#ifdef LATER
-	if( cam_contain->value )
-	{
-		// Test new position
-		dist = camAngles[ ROLL ];
-		camAngles[ ROLL ] = 0;
-
-		VectorCopy( origin, pnt );
-		AngleVectors( camAngles, camForward, camRight, camUp );
-		for (i=0 ; i<3 ; i++)
-			pnt[i] += -dist*camForward[i];
-
-		// check line from r_refdef.vieworg to pnt
-		memset ( &clip, 0, sizeof ( moveclip_t ) );
-		ext[0] = ext[1] = ext[2] = 0.0;
-		clip.trace = SV_ClipMoveToEntity( sv.edicts, r_refdef.vieworg, ext, ext, pnt );
-		if( clip.trace.fraction != 1.0 )
-			return;
-	}
-#endif
-	cam_ofs[ 0 ] = camAngles[ 0 ];
-	cam_ofs[ 1 ] = camAngles[ 1 ];
-	cam_ofs[ 2 ] = dist;
-}
-
-extern void KeyDown (kbutton_t *b);	// HACK
-extern void KeyUp (kbutton_t *b);	// HACK
-
-void CAM_PitchUpDown(void) { KeyDown( &cam_pitchup ); }
-void CAM_PitchUpUp(void) { KeyUp( &cam_pitchup ); }
-void CAM_PitchDownDown(void) { KeyDown( &cam_pitchdown ); }
-void CAM_PitchDownUp(void) { KeyUp( &cam_pitchdown ); }
-void CAM_YawLeftDown(void) { KeyDown( &cam_yawleft ); }
-void CAM_YawLeftUp(void) { KeyUp( &cam_yawleft ); }
-void CAM_YawRightDown(void) { KeyDown( &cam_yawright ); }
-void CAM_YawRightUp(void) { KeyUp( &cam_yawright ); }
-void CAM_InDown(void) { KeyDown( &cam_in ); }
-void CAM_InUp(void) { KeyUp( &cam_in ); }
-void CAM_OutDown(void) { KeyDown( &cam_out ); }
-void CAM_OutUp(void) { KeyUp( &cam_out ); }
-
-void CAM_ToThirdPerson(void)
-{ 
-	vec3_t viewangles;
-
-#if !defined( _DEBUG )
-	if ( gEngfuncs.GetMaxClients() > 1 )
-	{
-		// no thirdperson in multiplayer.
-		return;
-	}
-#endif
-
-	gEngfuncs.GetViewAngles( (float *)viewangles );
-
-	if( !cam_thirdperson )
-	{
-		cam_thirdperson = 1; 
-		
-		cam_ofs[ YAW ] = viewangles[ YAW ]; 
-		cam_ofs[ PITCH ] = viewangles[ PITCH ]; 
-		cam_ofs[ 2 ] = CAM_MIN_DIST; 
-	}
-
-	gEngfuncs.Cvar_SetValue( "cam_command", 0 );
-}
-
-void CAM_ToFirstPerson(void) 
-{ 
-	cam_thirdperson = 0;
-	
-	gEngfuncs.Cvar_SetValue( "cam_command", 0 );
-}
-
-void CAM_ToggleSnapto( void )
-{ 
-	cam_snapto->value = !cam_snapto->value;
-}
-
-void CAM_Init( void )
-{
-	gEngfuncs.pfnAddCommand( "+campitchup", CAM_PitchUpDown );
-	gEngfuncs.pfnAddCommand( "-campitchup", CAM_PitchUpUp );
-	gEngfuncs.pfnAddCommand( "+campitchdown", CAM_PitchDownDown );
-	gEngfuncs.pfnAddCommand( "-campitchdown", CAM_PitchDownUp );
-	gEngfuncs.pfnAddCommand( "+camyawleft", CAM_YawLeftDown );
-	gEngfuncs.pfnAddCommand( "-camyawleft", CAM_YawLeftUp );
-	gEngfuncs.pfnAddCommand( "+camyawright", CAM_YawRightDown );
-	gEngfuncs.pfnAddCommand( "-camyawright", CAM_YawRightUp );
-	gEngfuncs.pfnAddCommand( "+camin", CAM_InDown );
-	gEngfuncs.pfnAddCommand( "-camin", CAM_InUp );
-	gEngfuncs.pfnAddCommand( "+camout", CAM_OutDown );
-	gEngfuncs.pfnAddCommand( "-camout", CAM_OutUp );
-	gEngfuncs.pfnAddCommand( "thirdperson", CAM_ToThirdPerson );
-	gEngfuncs.pfnAddCommand( "firstperson", CAM_ToFirstPerson );
-	gEngfuncs.pfnAddCommand( "+cammousemove",CAM_StartMouseMove);
-	gEngfuncs.pfnAddCommand( "-cammousemove",CAM_EndMouseMove);
-	gEngfuncs.pfnAddCommand( "+camdistance", CAM_StartDistance );
-	gEngfuncs.pfnAddCommand( "-camdistance", CAM_EndDistance );
-	gEngfuncs.pfnAddCommand( "snapto", CAM_ToggleSnapto );
-
-	cam_command				= gEngfuncs.pfnRegisterVariable ( "cam_command", "0", 0 );	 // tells camera to go to thirdperson
-	cam_snapto				= gEngfuncs.pfnRegisterVariable ( "cam_snapto", "0", 0 );	 // snap to thirdperson view
-	cam_idealyaw			= gEngfuncs.pfnRegisterVariable ( "cam_idealyaw", "90", 0 );	 // thirdperson yaw
-	cam_idealpitch			= gEngfuncs.pfnRegisterVariable ( "cam_idealpitch", "0", 0 );	 // thirperson pitch
-	cam_idealdist			= gEngfuncs.pfnRegisterVariable ( "cam_idealdist", "64", 0 );	 // thirdperson distance
-	cam_contain				= gEngfuncs.pfnRegisterVariable ( "cam_contain", "0", 0 );	// contain camera to world
-
-	c_maxpitch				= gEngfuncs.pfnRegisterVariable ( "c_maxpitch", "90.0", 0 );
-	c_minpitch				= gEngfuncs.pfnRegisterVariable ( "c_minpitch", "0.0", 0 );
-	c_maxyaw				= gEngfuncs.pfnRegisterVariable ( "c_maxyaw",   "135.0", 0 );
-	c_minyaw				= gEngfuncs.pfnRegisterVariable ( "c_minyaw",   "-135.0", 0 );
-	c_maxdistance			= gEngfuncs.pfnRegisterVariable ( "c_maxdistance",   "200.0", 0 );
-	c_mindistance			= gEngfuncs.pfnRegisterVariable ( "c_mindistance",   "30.0", 0 );
-}
-
-void CAM_ClearStates( void )
-{
-	vec3_t viewangles;
-
-	gEngfuncs.GetViewAngles( (float *)viewangles );
-
-	cam_pitchup.state = 0;
-	cam_pitchdown.state = 0;
-	cam_yawleft.state = 0;
-	cam_yawright.state = 0;
-	cam_in.state = 0;
-	cam_out.state = 0;
-
-	cam_thirdperson = 0;
-	cam_command->value = 0;
-	cam_mousemove=0;
-
-	cam_snapto->value = 0;
-	cam_distancemove = 0;
-
-	cam_ofs[ 0 ] = 0.0;
-	cam_ofs[ 1 ] = 0.0;
-	cam_ofs[ 2 ] = CAM_MIN_DIST;
-
-	cam_idealpitch->value = viewangles[ PITCH ];
-	cam_idealyaw->value = viewangles[ YAW ];
-	cam_idealdist->value = CAM_MIN_DIST;
-}
-
-void CAM_StartMouseMove(void)
-{
-	float flSensitivity;
-		
-	//only move the cam with mouse if we are in third person.
-	if (cam_thirdperson)
-	{
-		//set appropriate flags and initialize the old mouse position
-		//variables for mouse camera movement
-		if (!cam_mousemove)
-		{
-			cam_mousemove=1;
-			iMouseInUse=1;
-			SDL_GetCursorPos (&cam_mouse);
-
-			if ( ( flSensitivity = gHUD.GetSensitivity() ) != 0 )
-			{
-				cam_old_mouse_x=cam_mouse.x*flSensitivity;
-				cam_old_mouse_y=cam_mouse.y*flSensitivity;
-			}
-			else
-			{
-				cam_old_mouse_x=cam_mouse.x;
-				cam_old_mouse_y=cam_mouse.y;
-			}
-		}
-	}
-	//we are not in 3rd person view..therefore do not allow camera movement
-	else
-	{   
-		cam_mousemove=0;
-		iMouseInUse=0;
-	}
-}
-
-//the key has been released for camera movement
-//tell the engine that mouse camera movement is off
-void CAM_EndMouseMove(void)
-{
-   cam_mousemove=0;
-   iMouseInUse=0;
-}
-
-
-//----------------------------------------------------------
-//routines to start the process of moving the cam in or out 
-//using the mouse
-//----------------------------------------------------------
-void CAM_StartDistance(void)
-{
-	//only move the cam with mouse if we are in third person.
-	if (cam_thirdperson)
-	{
-	  //set appropriate flags and initialize the old mouse position
-	  //variables for mouse camera movement
-	  if (!cam_distancemove)
-	  {
-		  cam_distancemove=1;
-		  cam_mousemove=1;
-		  iMouseInUse=1;
-		  SDL_GetCursorPos (&cam_mouse);
-		  cam_old_mouse_x=cam_mouse.x*gHUD.GetSensitivity();
-		  cam_old_mouse_y=cam_mouse.y*gHUD.GetSensitivity();
-	  }
-	}
-	//we are not in 3rd person view..therefore do not allow camera movement
-	else
-	{   
-		cam_distancemove=0;
-		cam_mousemove=0;
-		iMouseInUse=0;
-	}
-}
-
-//the key has been released for camera movement
-//tell the engine that mouse camera movement is off
-void CAM_EndDistance(void)
-{
-   cam_distancemove=0;
-   cam_mousemove=0;
-   iMouseInUse=0;
-}
-
-int CL_DLLEXPORT CL_IsThirdPerson( void )
-{
+//	DBG_CL_PRINT("CL_IsThirdPerson()\n");
 //	RecClCL_IsThirdPerson();
 
-	return (cam_thirdperson ? 1 : 0) || (g_iUser1 && (g_iUser2 == gEngfuncs.GetLocalPlayer()->index) );
+	// XDM3037: this is fine with HL, but causes really bad things in Xash3D
+	if (g_ThirdPersonView)// XDM: this tells if we are REALLY TECHNICALLY watching in 3rd person
+		return 1;
+
+	return 0;
 }
 
-void CL_DLLEXPORT CL_CameraOffset( float *ofs )
+//-----------------------------------------------------------------------------
+// Purpose: IsThirdPersonAlloed
+// Output : byte 1 - yes
+//-----------------------------------------------------------------------------
+byte CL_IsThirdPersonAllowed(void)
 {
-//	RecClCL_GetCameraOffsets(ofs);
+	if (gHUD.m_iGameType == GT_SINGLE || (gHUD.m_iGameFlags & GAME_FLAG_ALLOW_CAMERA))//gHUD.m_pCvarDeveloper->value > 0.0f)
+		return 1;
 
-	VectorCopy( cam_ofs, ofs );
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Trace mouse click into real world
+// Input  : &mouse_x &mouse_y - mouse coordinates
+//			traceFlags - PM_STUDIO_BOX|PM_WORLD_ONLY
+//			*ptrace - output: pmtrace_t
+//			tracestart - output: use to get screen2world position (optional)
+// Output : Returns true on hit in empty space, false otherwise.
+//-----------------------------------------------------------------------------
+bool TraceClick(int &mousex, int &mousey, int traceFlags, pmtrace_t *ptrace, Vector *tracestart = NULL)
+{
+	if (ptrace)
+	{
+		memset(ptrace, 0, sizeof(pmtrace_t));
+		vec3_t screen, src, end;
+		screen[0] = XUNPROJECT((float)mousex);
+		screen[1] = -YUNPROJECT((float)mousey);
+		screen[2] = 0.0f;
+		gEngfuncs.pTriAPI->ScreenToWorld(screen, src);// WARNING! This doesn't work properly when minimap or spectator windows are active!
+		screen[2] = 1.0f;
+		gEngfuncs.pTriAPI->ScreenToWorld(screen, end);// end goes into infinity
+		gEngfuncs.pEventAPI->EV_SetUpPlayerPrediction(false, false);// skip local client in THIS case only!
+		gEngfuncs.pEventAPI->EV_PushPMStates();
+		gEngfuncs.pEventAPI->EV_SetSolidPlayers(-1);
+		gEngfuncs.pEventAPI->EV_SetTraceHull(HULL_POINT);
+		//pmtrace_t pmtrace;
+		//pmtrace_t *ptrace = &pmtrace;
+
+		// find local player's physent to ignore
+		int pe_ignore = PM_GetPhysent(gEngfuncs.GetLocalPlayer()->index);
+		//ASSERT(pe_ignore > 0);
+#if defined (_DEBUG)
+		gEngfuncs.pEfxAPI->R_BeamPoints(src, end, g_iModelIndexLaser, 2.0f, 0.1, 0.0f, 1.0f, 10.0, 0, 30, 1,0,0);
+#endif
+		gEngfuncs.pEventAPI->EV_PlayerTrace(src, end, traceFlags, pe_ignore, ptrace);// 1st, this can hit players
+		//ptrace = gEngfuncs.PM_TraceLine(src, end, PM_TRACELINE_PHYSENTSONLY, 2, -1);
+		gEngfuncs.pEventAPI->EV_PopPMStates();
+
+		if (tracestart)
+			*tracestart = src;
+
+		if (ptrace->inopen && ptrace->fraction < 1.0f)
+			return true;
+	}
+	return false;
+}
+
+
+
+uint32 g_iMouseManipulationMode = MMM_NONE;
+//int g_iMouseLastEvent = 0;
+int g_iUsedEntity = 0;
+RS_INDEX g_iEntityCreationRS = 0;
+cl_entity_t *g_pPickedEntity = NULL;// TODO: WARNING! This using this pointer is very risky! It may become invalid if the entity gets removed (or the player disconnected)
+//cl_entity_t *g_pUsedEntity = NULL;
+
+//-----------------------------------------------------------------------------
+// Purpose: Mouse event
+// Input  : &button - which button (starting from 0)
+//			state - pressed or released
+//-----------------------------------------------------------------------------
+void CL_MouseEvent(const int &button, byte state)
+{
+	if (CON_IS_VISIBLE() != 0)// in steam HL it is useless
+		return;
+
+	//CON_PRINTF("CL_MouseEvent(%d %d)\n", button, state);
+	char str[128];
+	str[0] = '\0';
+
+	if (g_iMouseManipulationMode != MMM_NONE && gHUD.m_Spectator.ShouldDrawOverview())
+	{
+		//_snprintf(str, 128, "* Disable all inset views!\n(minimap, overview, spectator, etc.)\n");
+		LocaliseTextString("#MMM_ERROR_INSET", str, 128);
+		g_iMouseManipulationMode = MMM_NONE;
+		//return;
+	}
+
+	if (g_iMouseManipulationMode == MMM_USE)// +USE
+	{
+		if (state == 1)// pressed
+		{
+			if (g_iUsedEntity == 0)
+			{
+				pmtrace_t pmtrace;// trace new location
+				Vector vSrc;
+				if (TraceClick(mouse_x, mouse_y, PM_STUDIO_BOX, &pmtrace, &vSrc))// PM_WORLD_ONLY ignores func_walls, but otherwise trace hits the player himself
+				{
+					if (pmtrace.ent)
+					{
+						g_iUsedEntity = gEngfuncs.pEventAPI->EV_IndexFromTrace(&pmtrace);
+						if (g_iUsedEntity > 0)// not the world
+						{
+							_snprintf(str, 128, ".u %d %d %d", g_iUsedEntity, state, (button == 0)?1:0);// TODO: continuous use?
+							SERVER_COMMAND(str);
+							str[0] = 0;
+							//_snprintf(str, 128, "* Using entity %d\n", g_iUsedEntity);
+						}
+					}
+				}
+			}
+			//else
+				//sprintf(str, "* Already using an entity\n");
+		}
+		else if (state == 0)// released
+		{
+			if (g_iUsedEntity)
+			{
+				_snprintf(str, 128, ".u %d 3 0", g_iUsedEntity);// XDM3037: state '3' means button was released
+				SERVER_COMMAND(str);
+				str[0] = 0;
+				//_snprintf(str, 128, "* Unusing entity %d\n", g_iUsedEntity);
+				g_iUsedEntity = 0;
+			}
+		}
+	}
+	else if (g_iMouseManipulationMode == MMM_PICK)
+	{
+		if (button == 0)// MOUSE1: pick
+		{
+			if (state == 1)// pressed //UNDONE: event should be triggered when the button is released
+			{
+				vec3_t screen, vSrc, vEnd;
+				screen[0] = XUNPROJECT((float)mouse_x);
+				screen[1] = -YUNPROJECT((float)mouse_y);
+				screen[2] = 0.0f;
+				gEngfuncs.pTriAPI->ScreenToWorld(screen, vSrc);
+				screen[2] = 1.0f;
+				gEngfuncs.pTriAPI->ScreenToWorld(screen, vEnd);// end goes into infinity
+				//gEngfuncs.pEfxAPI->R_TempSprite(src, (float *)g_vecZero, 0.01f, g_iModelIndexAnimglow01, kRenderTransAdd, kRenderFxNone, 1.0f, life, 0);
+				//gEngfuncs.pEfxAPI->R_BeamPoints(src, end, g_iModelIndexLaser, 1.0f, 0.25f, 0.0f, 1.0f, 10.0, 0, 30, 0,1,0);
+				//gEngfuncs.pEfxAPI->R_TempSprite(end, (float *)g_vecZero, 0.1f, g_iModelIndexZeroGlow, kRenderTransAdd, kRenderFxNone, 1.0f, 1.0f, FTENT_FADEOUT);
+				// :( gEngfuncs.pNetAPI->SendRequest(
+				char scmd[128];
+				_snprintf(scmd, 128, ".p %g %g %g %g %g %g\0", vSrc[0], vSrc[1], vSrc[2], vEnd[0], vEnd[1], vEnd[2]);
+				SERVER_COMMAND(scmd);
+			}
+		}
+		else if (button == 1)// MOUSE2: move
+		{
+			if (g_pPickedEntity && g_pPickedEntity->index > 0)
+			{
+				if (state == 1)// pressed // same here
+				{
+					pmtrace_t pmtrace;
+					//pmtrace_t *ptrace = &pmtrace;
+					Vector vSrc;
+					if (TraceClick(mouse_x, mouse_y, PM_STUDIO_BOX|PM_WORLD_ONLY, &pmtrace, &vSrc))
+					{
+						gEngfuncs.pEfxAPI->R_BeamPoints(vSrc, pmtrace.endpos, g_iModelIndexLaser, 2.0f, 0.25, 0.0f, 1.0f, 10.0, 0, 30, 0,0,1);
+						_snprintf(str, 128, ".m %d \"%g %g %g\"", g_pPickedEntity->index, pmtrace.endpos.x, pmtrace.endpos.y, pmtrace.endpos.z);// XDM3038c
+						// BAD because doesn't use SetOrigin()! _snprintf(str, 128, "searchindex %d set origin \"%g %g %g\"", g_pPickedEntity->index, ptrace->endpos.x, ptrace->endpos.y, ptrace->endpos.z);
+						SERVER_COMMAND(str);
+						_snprintf(str, 128, "* Moving entity %d to %g %g %g\n", g_pPickedEntity->index, pmtrace.endpos.x, pmtrace.endpos.y, pmtrace.endpos.z);
+					}
+				}
+				else
+					str[0] = 0;
+			}
+			else
+				LocaliseTextString("#MMM_NOSELECTION", str, 128);//_snprintf(str, 128, "* Nothing is selected\n");
+		}
+	}
+	else if (g_iMouseManipulationMode == MMM_CREATE)
+	{
+		if (state == 1)// pressed // same here
+		{
+			if (button == 0)// MOUSE1: create
+			{
+				if (g_iEntityCreationRS != 0)// check for old/bogus/invalid entity
+				{
+					if (g_pRenderManager)
+					{
+						if (g_pRenderManager->FindSystem(g_iEntityCreationRS) == NULL)
+							g_iEntityCreationRS = 0;
+					}
+				}
+				if (g_iEntityCreationRS == 0)// if not in the process
+				{
+					pmtrace_t pmtrace;// trace new location
+					Vector vSrc;
+					if (TraceClick(mouse_x, mouse_y, PM_STUDIO_IGNORE|PM_STUDIO_BOX|PM_WORLD_ONLY, &pmtrace, &vSrc))// PM_WORLD_ONLY ignores func_walls, but otherwise trace hits the player himself
+					{
+						gEngfuncs.pEfxAPI->R_BeamPoints(vSrc, pmtrace.endpos, g_iModelIndexLaser, 2.0f, 0.25, 0.0f, 1.0f, 10.0, 0, 30, 0,0,1);
+						//gEngfuncs.pEfxAPI->R_TempSprite(pmtrace.endpos, (float *)g_vecZero, 0.5f, g_iModelIndexAnimglow01, kRenderGlow, kRenderFxNoDissipation, 1.0f, 2.0f, FTENT_FADEOUT);
+						if (g_pRenderManager)
+						{
+							CRenderSystem *pSystem = new CRSSprite(pmtrace.endpos, g_vecZero, g_pSpriteAnimGlow01, kRenderTransAdd, 255,191,255, 1.0f,-0.5f, 0.5f,0.0f, 10.0f, 0.0f);
+							if (g_pRenderManager->AddSystem(pSystem, RENDERSYSTEM_FLAG_NOCLIP|RENDERSYSTEM_FLAG_LOOPFRAMES) != RS_INDEX_INVALID)
+								strcpy(pSystem->m_szName, "MMM_CREATE_S");
+
+							int iModelIndex = 0;
+							model_t *pModel = gEngfuncs.CL_LoadModel("models/w_weaponbox.mdl", &iModelIndex);
+							ASSERT(iModelIndex > 0);
+							if (pModel)
+							{
+								Vector vEntOrigin(pmtrace.plane.normal);// = pmtrace.endpos + pmtrace.plane.normal*4
+								Vector vEntAngles;// = UTIL_VecToAngles(pmtrace.plane.normal);
+								vEntOrigin *= 4.0f; vEntOrigin += pmtrace.endpos;
+								VectorAngles(pmtrace.plane.normal, vEntAngles);
+#if defined (CORRECT_PITCH)
+								vEntAngles.x += 90.0f;
+#else
+								vEntAngles.x += 270.0f;
+#endif
+								NormalizeAngles(vEntAngles);
+								//vEntAngles[YAW] = g_vecViewAngles[YAW];// only works for horizontal surface
+								pSystem = new CRSModel(vEntOrigin, vEntAngles, g_vecZero, 0, pModel, 0, 0, 0, kRenderTransTexture, kRenderFxStrobeFast, 191,191,255, 0.75f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+								g_iEntityCreationRS = g_pRenderManager->AddSystem(pSystem, RENDERSYSTEM_FLAG_NOCLIP|RENDERSYSTEM_FLAG_LOOPFRAMES);
+								if (g_iEntityCreationRS != RS_INDEX_INVALID)
+								{
+									strcpy(pSystem->m_szName, "MMM_CREATE_M");
+									CEntityEntryPanel *pPanel = new CEntityEntryPanel(-1,-1, XRES(EEP_WIDTH), YRES(EEP_HEIGHT));
+									if (pPanel)
+									{
+										pPanel->m_vTargetOrigin = vEntOrigin;
+										pPanel->m_vTargetAngles = vEntAngles;
+										pPanel->m_iRenderSystemIndex = g_iEntityCreationRS;
+										gViewPort->ShowMenuPanel(pPanel, false);
+									}
+								}
+							}
+						}
+						g_iMouseManipulationMode = MMM_NONE;// WARNING! Disallow clicking!
+					}
+					else
+						LocaliseTextString("#MMM_UNREACHABLE", str, 128);//sprintf(str, "* Unreachable location\n");
+				}
+			}
+			else if (button == 1)// MOUSE2: UNDONE: edit
+			{
+				// TODO: send cmd, pick entity on server, return msg here, open key/value dialog. But we can't retrieve existing KV pairs!
+			}
+		}// pressed
+	}
+	else if (g_iMouseManipulationMode == MMM_MEASURE)// XDM3038c
+	{
+		if (state == 1)// pressed //UNDONE: event should be triggered when the button is released
+		{
+			pmtrace_t pmtrace;
+			Vector vSrc;
+			if (TraceClick(mouse_x, mouse_y, PM_STUDIO_IGNORE|PM_STUDIO_BOX|PM_WORLD_ONLY, &pmtrace, &vSrc))// PM_WORLD_ONLY ignores func_walls, but otherwise trace hits the player himself
+			{
+				Vector vDelta(pmtrace.endpos); vDelta -= vSrc;
+				gEngfuncs.pEfxAPI->R_BeamPoints(vSrc, pmtrace.endpos, g_iModelIndexLaser, 2.0f, 0.5, 0.0f, 1.0f, 10.0, 0, 30, 0,1,0);
+				//gEngfuncs.pEfxAPI->R_TempSprite(pmtrace.endpos, (float *)g_vecZero, 0.25f, g_iModelIndexAnimglow01, kRenderTransAdd, (button == 1)?kRenderFxStrobeFaster:kRenderFxNone, 1.0f, 2.0f, FTENT_FADEOUT);
+				if (g_pRenderManager)
+				{
+					CRenderSystem *pSystem = new CRSSprite(pmtrace.endpos, g_vecZero, g_pSpriteAnimGlow01, kRenderTransAdd, 255,191,255, 1.0f,-0.5f, 0.5f,0.0f, 10.0f, 0.0f);
+					if (g_pRenderManager->AddSystem(pSystem, RENDERSYSTEM_FLAG_NOCLIP|RENDERSYSTEM_FLAG_LOOPFRAMES, -1, RENDERSYSTEM_FFLAG_DONTFOLLOW) != RS_INDEX_INVALID)
+						strcpy(pSystem->m_szName, "MMM_MEASURE");
+				}
+				vec_t fLen1 = vDelta.Length();
+				vDelta = pmtrace.endpos;vDelta -= g_vecViewOrigin;//gHUD.m_vecOrigin;
+				if (button == 1)// MOUSE2: remember
+				{
+					_snprintf(str, 128, "mycoordedit %g %g %g", pmtrace.endpos.x, pmtrace.endpos.y, pmtrace.endpos.z);// z + HULL_MAX??
+					SERVER_COMMAND(str);
+				}
+				_snprintf(str, 128, "* %g %g %g, dist:%g (%g to view point)\n", pmtrace.endpos.x, pmtrace.endpos.y, pmtrace.endpos.z, fLen1, vDelta.Length());
+			}
+			else
+				LocaliseTextString("#MMM_UNREACHABLE", str, 128);//sprintf(str, "* Unreachable location\n");
+		}
+	}
+
+	if (str[0] != '\0')
+	{
+		CenterPrint(str);
+		ConsolePrint(str);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: A reply from server arrives: entity picked
+// Input  : entindex - 
+//			&hitpoint - 
+//-----------------------------------------------------------------------------
+void CL_EntitySelected(int entindex, const vec3_t &hitpoint)
+{
+	if (entindex <= 0)
+	{
+		//CenterPrint("CL_EntitySelected: server missed\n");
+		//?g_pPickedEntity = NULL;
+		return;
+	}
+	cl_entity_t *pEntity = gEngfuncs.GetEntityByIndex(entindex);
+	if (pEntity == NULL)
+	{
+		conprintf(0, "CL_EntitySelected(%d): error getting entity by index!\n", entindex);
+		return;
+	}
+	//gEngfuncs.pEfxAPI->R_TempSprite(hitpoint, (float *)g_vecZero, 0.1f, g_iModelIndexAnimglow01, kRenderTransAdd, kRenderFxNone, 1.0f, 2.0f, FTENT_FADEOUT);
+	if (g_pRenderManager)
+	{
+		CRenderSystem *pSystem = new CRSSprite(hitpoint, g_vecZero, g_pSpriteAnimGlow01, kRenderTransAdd, 191,255,191, 1.0f,-0.5f, 0.1f,0.0f, 10.0f, 0.0f);
+		if (g_pRenderManager->AddSystem(pSystem, RENDERSYSTEM_FLAG_NOCLIP|RENDERSYSTEM_FLAG_LOOPFRAMES, -1, RENDERSYSTEM_FFLAG_DONTFOLLOW) != RS_INDEX_INVALID)
+			strcpy(pSystem->m_szName, "CL_EntitySelected");
+	}
+	char str[128];
+	// if (g_iMouseManipulationMode == MMM_PICK)
+	//{
+		if (pEntity == g_pPickedEntity)
+		{
+			LocaliseTextString("#MMM_RELEASED", str, 128);//_snprintf(str, 128, "* Released %d\n", g_pPickedEntity->index);
+			g_pPickedEntity = NULL;
+		}
+		else
+		{
+			g_pPickedEntity = pEntity;
+			const char *strname = NULL;
+			// EV_GetPhysent returns NULL in multiplayer
+			//physent_t *pe = gEngfuncs.pEventAPI->EV_GetPhysent(ptrace->ent);
+			//if (pe)
+			//	strname = pe->name;
+			//else
+			if (IsActivePlayer(entindex))
+				strname = g_PlayerInfoList[g_iUser2].name;
+			else if (pEntity->model)
+				strname = pEntity->model->name;
+			else
+				strname = BufferedLocaliseTextString("#NOINFO");//"no info";
+
+			LocaliseTextString("#MMM_PICKED", str, 128);
+			char str2[64];
+			_snprintf(str2, 64, " %d (%s) @ (%g %g %g)\n", pEntity->index, strname, pEntity->origin[0], pEntity->origin[1], pEntity->origin[2]);
+			str2[63] = '\0';
+			strncat(str, str2, min(128-strlen(str),64));
+		}
+	/*}
+	else if (g_iMouseManipulationMode == MMM_CREATE)
+	{
+		ShowEntEditDialog();
+	}*/
+	if (str[0] != '\0')
+	{
+		CenterPrint(str);
+		ConsolePrint(str);
+	}
 }

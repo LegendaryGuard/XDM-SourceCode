@@ -22,23 +22,23 @@ class VGUIAPI Scheme
 public:
 	enum SchemeColor
 	{
-		sc_user=0,
-		sc_black,
-		sc_white,
-		sc_primary1,
-		sc_primary2,
-		sc_primary3,
-		sc_secondary1,
-		sc_secondary2,
-		sc_secondary3,
+		sc_user=0,// XDM: clicked fg
+		sc_black,// XDM: border dark
+		sc_white,// XDM: border bright
+		sc_primary1,// XDM: fg
+		sc_primary2,// XDM: bg
+		sc_primary3,// XDM: bd
+		sc_secondary1,// XDM: afg
+		sc_secondary2,// XDM: abg
+		sc_secondary3,// XDM: abd
 		sc_last,
 	};
 	enum SchemeFont
 	{
 		sf_user=0,
-		sf_primary1,
-		sf_primary2,
-		sf_primary3,
+		sf_primary1,// XDM: Basic Text
+		sf_primary2,// XDM: Scoreboard Text
+		sf_primary3,// XDM: CommandMenu Text
 		sf_secondary1,
 		sf_last,
 	};

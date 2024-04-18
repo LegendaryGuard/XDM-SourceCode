@@ -7,7 +7,9 @@
 
 #if !defined( DEMOH )
 #define DEMOH
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 
 // Types of demo messages we can write/parse
 enum

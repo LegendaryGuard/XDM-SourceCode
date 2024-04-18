@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ShowAllFiles>false</ShowAllFiles>
+    <LocalDebuggerCommand Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(HLROOT)\hlds.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">-nomaster -insecure -game XDM -console -dev -32bpp -particles 65536 -num_edicts 4096 -heapsize 72000 -gl -32bpp -nosteam -appid 70 -anyaspect +developer 2 +sv_lan 0 +sv_lognotice 1 +mapchangecfgfile "mapchange.cfg" +maxplayers 32</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(HLROOT)</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommand Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(HLROOT)\hlds.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommandArguments Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">-nomaster -insecure -game XDM -console -dev -32bpp -particles 65536 -num_edicts 4096 -heapsize 72000 -gl -32bpp -nosteam -appid 70 -anyaspect +developer 2 +sv_lan 0 +sv_lognotice 1 +mapchangecfgfile "mapchange.cfg" +maxplayers 32</LocalDebuggerCommandArguments>
+    <LocalDebuggerWorkingDirectory Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(HLROOT)</LocalDebuggerWorkingDirectory>
+    <DebuggerFlavor Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WindowsLocalDebugger</DebuggerFlavor>
+    <DebuggerFlavor Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+</Project>

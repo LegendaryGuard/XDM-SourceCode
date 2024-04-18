@@ -8,16 +8,17 @@
 #ifndef VOICE_LISTBOX_H
 #define VOICE_LISTBOX_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 
 #include "VGUI_Panel.h"
 #include "VGUI_IntChangeSignal.h"
 
-#include "vgui_slider2.h"
+//#include "vgui_slider2.h"
 #include "vgui_scrollbar2.h"
-
 
 namespace vgui
 {
@@ -32,8 +33,8 @@ class CListBox : public Panel
 {
 public:
 	
-					CListBox();
-					~CListBox();
+	CListBox();
+	virtual ~CListBox();// XDM3037
 
 	void			Init();
 	void			Term();
@@ -58,6 +59,8 @@ public:
 
 	// returns the maximum value the scrollbar can scroll to
 	int				GetScrollMax();
+
+	ScrollBar2		*GetScrollBar(void) { return &m_ScrollBar; }// XDM3038a
 
 // vgui overrides.
 public:
@@ -98,14 +101,11 @@ protected:
 
 	// All the items..
 	LBItem			m_Items;
-
 	Panel			m_ItemsPanel;
-
 	int				m_ItemOffset;	// where we're scrolled to
-	Slider2			m_Slider;
+//	Slider2			m_Slider;// XDM: why create an external, while ScrollBar2 already has one? // XDM: LOL: original Slider and ScrollBar really don't work!
 	ScrollBar2		m_ScrollBar;
 	ListBoxSignal	m_Signal;
-
 	int				m_iScrollMax;
 };
 

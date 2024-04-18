@@ -5,9 +5,9 @@
 #include "netadr.h"
 #include "Sequence.h"
 
-#ifndef _WIN32
-#include "enums.h"
-#endif
+//#ifndef _WIN32
+//#include "enums.h"
+//#endif
 
 #define	MAX_ALIAS_NAME	32
 
@@ -218,11 +218,11 @@ typedef struct
 // ********************************************************
 
 // Function type declarations for engine exports
-typedef HSPRITE						(*pfnEngSrc_pfnSPR_Load_t )			( const char *szPicName );
-typedef int							(*pfnEngSrc_pfnSPR_Frames_t )			( HSPRITE hPic );
-typedef int							(*pfnEngSrc_pfnSPR_Height_t )			( HSPRITE hPic, int frame );
-typedef int							(*pfnEngSrc_pfnSPR_Width_t )			( HSPRITE hPic, int frame );
-typedef void						(*pfnEngSrc_pfnSPR_Set_t )				( HSPRITE hPic, int r, int g, int b );
+typedef HLSPRITE						(*pfnEngSrc_pfnSPR_Load_t )			( const char *szPicName );
+typedef int							(*pfnEngSrc_pfnSPR_Frames_t )			( HLSPRITE hPic );
+typedef int							(*pfnEngSrc_pfnSPR_Height_t )			( HLSPRITE hPic, int frame );
+typedef int							(*pfnEngSrc_pfnSPR_Width_t )			( HLSPRITE hPic, int frame );
+typedef void						(*pfnEngSrc_pfnSPR_Set_t )				( HLSPRITE hPic, int r, int g, int b );
 typedef void						(*pfnEngSrc_pfnSPR_Draw_t )			( int frame, int x, int y, const struct rect_s *prc );
 typedef void						(*pfnEngSrc_pfnSPR_DrawHoles_t )		( int frame, int x, int y, const struct rect_s *prc );
 typedef void						(*pfnEngSrc_pfnSPR_DrawAdditive_t )	( int frame, int x, int y, const struct rect_s *prc );
@@ -231,7 +231,7 @@ typedef void						(*pfnEngSrc_pfnSPR_DisableScissor_t )	( void );
 typedef struct client_sprite_s	*	(*pfnEngSrc_pfnSPR_GetList_t )			( char *psz, int *piCount );
 typedef void						(*pfnEngSrc_pfnFillRGBA_t )			( int x, int y, int width, int height, int r, int g, int b, int a );
 typedef int							(*pfnEngSrc_pfnGetScreenInfo_t ) 		( struct SCREENINFO_s *pscrinfo );
-typedef void						(*pfnEngSrc_pfnSetCrosshair_t )		( HSPRITE hspr, wrect_t rc, int r, int g, int b );
+typedef void						(*pfnEngSrc_pfnSetCrosshair_t )		( HLSPRITE hspr, wrect_t rc, int r, int g, int b );
 typedef struct cvar_s *				(*pfnEngSrc_pfnRegisterVariable_t )	( char *szName, char *szValue, int flags );
 typedef float						(*pfnEngSrc_pfnGetCvarFloat_t )		( char *szName );
 typedef char*						(*pfnEngSrc_pfnGetCvarString_t )		( char *szName );
@@ -255,8 +255,8 @@ typedef void						(*pfnEngSrc_pfnConsolePrint_t )		( const char *string );
 typedef void						(*pfnEngSrc_pfnCenterPrint_t )			( const char *string );
 typedef int							(*pfnEngSrc_GetWindowCenterX_t )		( void );
 typedef int							(*pfnEngSrc_GetWindowCenterY_t )		( void );
-typedef void						(*pfnEngSrc_GetViewAngles_t )			( float * );
-typedef void						(*pfnEngSrc_SetViewAngles_t )			( float * );
+typedef void						(*pfnEngSrc_GetViewAngles_t )			( float * );// from client refdef structure
+typedef void						(*pfnEngSrc_SetViewAngles_t )			( float * );// to client refdef structure
 typedef int							(*pfnEngSrc_GetMaxClients_t )			( void );
 typedef void						(*pfnEngSrc_Cvar_SetValue_t )			( char *cvar, float value );
 typedef int       					(*pfnEngSrc_Cmd_Argc_t)					(void);	
@@ -283,7 +283,7 @@ typedef int							(*pfnEngSrc_PM_WaterEntity_t )			( float *p );
 typedef struct pmtrace_s *			(*pfnEngSrc_PM_TraceLine_t )			( float *start, float *end, int flags, int usehull, int ignore_pe );
 typedef struct model_s *			(*pfnEngSrc_CL_LoadModel_t )			( const char *modelname, int *index );
 typedef int							(*pfnEngSrc_CL_CreateVisibleEntity_t )	( int type, struct cl_entity_s *ent );
-typedef const struct model_s *		(*pfnEngSrc_GetSpritePointer_t )		( HSPRITE hSprite );
+typedef const struct model_s *		(*pfnEngSrc_GetSpritePointer_t )		( HLSPRITE hSprite );
 typedef void						(*pfnEngSrc_pfnPlaySoundByNameAtLocation_t )	( char *szSound, float volume, float *origin );
 typedef unsigned short				(*pfnEngSrc_pfnPrecacheEvent_t )		( int type, const char* psz );
 typedef void						(*pfnEngSrc_pfnPlaybackEvent_t )		( int flags, const struct edict_s *pInvoker, unsigned short eventindex, float delay, float *origin, float *angles, float fparam1, float fparam2, int iparam1, int iparam2, int bparam1, int bparam2 );
@@ -322,6 +322,7 @@ typedef int							(*pfnEngSrc_pfnServerCmdUnreliable_t )( char *szCmdString );
 typedef void						(*pfnEngSrc_GetMousePos_t )(struct tagPOINT *ppt);
 typedef void						(*pfnEngSrc_SetMousePos_t )(int x, int y);
 typedef void						(*pfnEngSrc_SetMouseEnable_t)(qboolean fEnable);
+#if defined (CLDLL_NEWFUNCTIONS)
 typedef struct cvar_s *				(*pfnEngSrc_GetFirstCVarPtr_t)();
 typedef unsigned int				(*pfnEngSrc_GetFirstCmdFunctionHandle_t)();
 typedef unsigned int				(*pfnEngSrc_GetNextCmdFunctionHandle_t)(unsigned int cmdhandle);
@@ -353,6 +354,7 @@ typedef void						(*pfnEngSrc_pfnFillRGBABlend_t )			( int x, int y, int width, 
 typedef int						(*pfnEngSrc_pfnGetAppID_t)			( void );
 typedef cmdalias_t*				(*pfnEngSrc_pfnGetAliases_t)		( void );
 typedef void					(*pfnEngSrc_pfnVguiWrap2_GetMouseDelta_t) ( int *x, int *y );
+#endif
 
 // Pointers to the exported engine functions themselves
 typedef struct cl_enginefuncs_s
@@ -381,7 +383,7 @@ typedef struct cl_enginefuncs_s
 	pfnEngSrc_pfnGetPlayerInfo_t			pfnGetPlayerInfo;
 	pfnEngSrc_pfnPlaySoundByName_t			pfnPlaySoundByName;
 	pfnEngSrc_pfnPlaySoundByIndex_t			pfnPlaySoundByIndex;
-	pfnEngSrc_pfnAngleVectors_t				pfnAngleVectors;
+	pfnEngSrc_pfnAngleVectors_t				pfnAngleVectorsHL;
 	pfnEngSrc_pfnTextMessageGet_t			pfnTextMessageGet;
 	pfnEngSrc_pfnDrawCharacter_t			pfnDrawCharacter;
 	pfnEngSrc_pfnDrawConsoleString_t		pfnDrawConsoleString;
@@ -458,6 +460,7 @@ typedef struct cl_enginefuncs_s
 	pfnEngSrc_GetMousePos_t					pfnGetMousePos;
 	pfnEngSrc_SetMousePos_t					pfnSetMousePos;
 	pfnEngSrc_SetMouseEnable_t				pfnSetMouseEnable;
+#if defined (CLDLL_NEWFUNCTIONS)
 	pfnEngSrc_GetFirstCVarPtr_t				GetFirstCvarPtr;
 	pfnEngSrc_GetFirstCmdFunctionHandle_t	GetFirstCmdFunctionHandle;
 	pfnEngSrc_GetNextCmdFunctionHandle_t	GetNextCmdFunctionHandle;
@@ -491,14 +494,15 @@ typedef struct cl_enginefuncs_s
 	pfnEngSrc_pfnGetAppID_t					pfnGetAppID;
 	pfnEngSrc_pfnGetAliases_t				pfnGetAliasList;
 	pfnEngSrc_pfnVguiWrap2_GetMouseDelta_t pfnVguiWrap2_GetMouseDelta;
+#endif
 } cl_enginefunc_t;
 
 // Function type declarations for engine destination functions
 typedef void	(*pfnEngDst_pfnSPR_Load_t )				( const char ** );
-typedef void	(*pfnEngDst_pfnSPR_Frames_t )			( HSPRITE * );
-typedef void	(*pfnEngDst_pfnSPR_Height_t )			( HSPRITE *, int * );
-typedef void	(*pfnEngDst_pfnSPR_Width_t )			( HSPRITE *, int * );
-typedef void	(*pfnEngDst_pfnSPR_Set_t )				( HSPRITE *, int *, int *, int * );
+typedef void	(*pfnEngDst_pfnSPR_Frames_t )			( HLSPRITE * );
+typedef void	(*pfnEngDst_pfnSPR_Height_t )			( HLSPRITE *, int * );
+typedef void	(*pfnEngDst_pfnSPR_Width_t )			( HLSPRITE *, int * );
+typedef void	(*pfnEngDst_pfnSPR_Set_t )				( HLSPRITE *, int *, int *, int * );
 typedef void	(*pfnEngDst_pfnSPR_Draw_t )				( int *, int *, int *, const struct rect_s ** );
 typedef void	(*pfnEngDst_pfnSPR_DrawHoles_t )		( int *, int *, int *, const struct rect_s ** );
 typedef void	(*pfnEngDst_pfnSPR_DrawAdditive_t )		( int *, int *, int *, const struct rect_s ** );
@@ -507,7 +511,7 @@ typedef void	(*pfnEngDst_pfnSPR_DisableScissor_t )	( void );
 typedef void	(*pfnEngDst_pfnSPR_GetList_t )			( char **, int ** );
 typedef void	(*pfnEngDst_pfnFillRGBA_t )				( int *, int *, int *, int *, int *, int *, int *, int * );
 typedef void	(*pfnEngDst_pfnGetScreenInfo_t ) 		( struct SCREENINFO_s ** );
-typedef void	(*pfnEngDst_pfnSetCrosshair_t )			( HSPRITE *, struct rect_s *, int *, int *, int * );
+typedef void	(*pfnEngDst_pfnSetCrosshair_t )			( HLSPRITE *, struct rect_s *, int *, int *, int * );
 typedef void	(*pfnEngDst_pfnRegisterVariable_t )		( char **, char **, int * );
 typedef void	(*pfnEngDst_pfnGetCvarFloat_t )			( char ** );
 typedef void	(*pfnEngDst_pfnGetCvarString_t )		( char ** );
@@ -559,7 +563,7 @@ typedef void	(*pfnEngDst_PM_WaterEntity_t )			( float ** );
 typedef void	(*pfnEngDst_PM_TraceLine_t )			( float **, float **, int *, int *, int * );
 typedef void	(*pfnEngDst_CL_LoadModel_t )			( const char **, int ** );
 typedef void	(*pfnEngDst_CL_CreateVisibleEntity_t )	( int *, struct cl_entity_s ** );
-typedef void	(*pfnEngDst_GetSpritePointer_t )		( HSPRITE * );
+typedef void	(*pfnEngDst_GetSpritePointer_t )		( HLSPRITE * );
 typedef void	(*pfnEngDst_pfnPlaySoundByNameAtLocation_t )	( char **, float *, float ** );
 typedef void	(*pfnEngDst_pfnPrecacheEvent_t )		( int *, const char* * );
 typedef void	(*pfnEngDst_pfnPlaybackEvent_t )		( int *, const struct edict_s **, unsigned short *, float *, float **, float **, float *, float *, int *, int *, int *, int * );
@@ -592,6 +596,7 @@ typedef void	(*pfnEngDst_pfnServerCmdUnreliable_t )	( char ** );
 typedef void	(*pfnEngDst_GetMousePos_t )				(struct tagPOINT **);
 typedef void	(*pfnEngDst_SetMousePos_t )				(int *, int *);
 typedef void	(*pfnEngDst_SetMouseEnable_t )			(qboolean *);
+//#if defined (CLDLL_NEWFUNCTIONS)
 typedef void	(*pfnEngDst_pfnSetFilterMode_t)			( int * );
 typedef void	(*pfnEngDst_pfnSetFilterColor_t)		( float *, float *, float * );
 typedef void	(*pfnEngDst_pfnSetFilterBrightness_t)	( float * );
@@ -610,6 +615,7 @@ typedef void	(*pfnEngDst_pfnFillRGBABlend_t )				( int *, int *, int *, int *, i
 typedef void	(*pfnEngDst_pfnGetAppID_t )				( void );
 typedef void	(*pfnEngDst_pfnGetAliases_t )				( void );
 typedef void	(*pfnEngDst_pfnVguiWrap2_GetMouseDelta_t) ( int *x, int *y );
+//#endif
 
 
 // Pointers to the engine destination functions
@@ -803,7 +809,7 @@ typedef struct engdata_s
 	struct client_static_s *pcls;			// &cls
 	void (*pfnSV_DropClient)(struct client_s *, qboolean, char *, ...);	// pointer to SV_DropClient
 	void (*pfnNetchan_Transmit)(struct netchan_s *, int, byte *);		// pointer to Netchan_Transmit
-	void (*pfnNET_SendPacket)(enum netsrc_s sock, int length, void *data, netadr_t to); // &NET_SendPacket
+	void (*pfnNET_SendPacket)(/*enum netsrc_s*/int sock, int length, void *data, netadr_t to); // &NET_SendPacket
 	struct cvar_s *(*pfnCvarFindVar)(const char *pchName);				// pointer to Cvar_FindVar
 	int *phinstOpenGlEarly;					// &g_hinstOpenGlEarly
 

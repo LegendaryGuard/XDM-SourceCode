@@ -1,0 +1,267 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="CBasePlayer" Collapsed="true">
+    <Position X="14.75" Y="0.5" Width="1.5" />
+    <Compartments>
+      <Compartment Name="Fields" Collapsed="true" />
+      <Compartment Name="Methods" Collapsed="true" />
+    </Compartments>
+    <TypeIdentifier>
+      <HashCode>pinyRIdBe43oKZH0tCcTIcWsBWtMY3C9q7+9stLolts=</HashCode>
+      <FileName>player.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseMonster" Collapsed="true">
+    <Position X="10.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>23d6a+szv+luuHdo9zl35fZpX8L+VVd9aHgPkrGWf0c=</HashCode>
+      <FileName>basemonster.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseToggle" Collapsed="true">
+    <Position X="7.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BKABAIAAAIACAgBAAAAKAgFgBAAUAEAAAKACIAUAREA=</HashCode>
+      <FileName>cbase.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseAnimating" Collapsed="true">
+    <Position X="4.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AwAAAIABABCIAhESAAEKAAooAAAEAAiAiAAAEBBABEA=</HashCode>
+      <FileName>cbase.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseDelay" Collapsed="true">
+    <Position X="2.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAABMAgACACAAAQQAECAAAgAgAAAAAAQBAAAATCRCA=</HashCode>
+      <FileName>cbase.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseEntity" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>w2SPAudgMoFvGUhGwRvTR0RuhmZEGkst59yb5HHo3LE=</HashCode>
+      <FileName>cbase.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBasePlayerItem" Collapsed="true">
+    <Position X="5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>KAgCEKAqEEMJAcACIwMTwgQxgJAEIAElSgCAiGGKxBQ=</HashCode>
+      <FileName>D:\dev\src\XHL\SourceCode\game_shared\weapons\weapons.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBasePlayerWeapon" Collapsed="true">
+    <Position X="5" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>JDgAAKEIhMkAAQAIIIEyYwEyAQAAIJM1SoCAAGAAxhI=</HashCode>
+      <FileName>D:\dev\src\XHL\SourceCode\game_shared\weapons\weapons.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseProjectile" Collapsed="true">
+    <Position X="3.25" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAAAIAAAAAAAAAAAQFSBQAgAEAAAAMIAAAAIREAAAA=</HashCode>
+      <FileName>projectiles\projectile.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseTrigger" Collapsed="true">
+    <Position X="7.25" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAwAMAAAAECgAAAAAACqRAgAAAAAAAQAABAACEoAEA=</HashCode>
+      <FileName>triggers.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CFuncTank" Collapsed="true">
+    <Position X="1.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AgGBC4gAAAVKgQAAEFkCUEAmwEgWQQhUCAhAIgAEAA4=</HashCode>
+      <FileName>func_tank.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CTalkMonster" Collapsed="true">
+    <Position X="15" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>hAAKAcQhUYCCICKkQCATAAMgKAJCkAAEAkKAhRIBBoI=</HashCode>
+      <FileName>talkmonster.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CSquadMonster" Collapsed="true">
+    <Position X="13.25" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QAACBIEGQAggIAAAggMDgAAgAAwSAAIAAACAgCCojAI=</HashCode>
+      <FileName>squadmonster.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CHGrunt" Collapsed="true">
+    <Position X="13.25" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AwAIUYIBAMAqNAEiMKESAIYoQEBGAAAEECEQiQAACgA=</HashCode>
+      <FileName>monsters\hgrunt.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CScientist" Collapsed="true">
+    <Position X="15" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AARIQMAAAEMKIACkkAEDAAYoAUBCAABAAAYAgQAAAgA=</HashCode>
+      <FileName>monsters\scientist.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CAGrenade" Collapsed="true">
+    <Position X="3.25" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>CAQCAYCEAAQIACAAAAUCBAAgAAAAAAIAAAAQgAAAAgA=</HashCode>
+      <FileName>D:\dev\src\XHL\SourceCode\game_shared\weapons\weapons.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CGrenade" Collapsed="true">
+    <Position X="3.25" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACRQEAQFAIAAAQUQEEAAhAAAQgAAIRgAAAgAAIAAA=</HashCode>
+      <FileName>D:\dev\src\XHL\SourceCode\game_shared\weapons\weapons.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CHeadCrab" Collapsed="true">
+    <Position X="11.5" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAIQSIBAAAIKAAgIAEAAIoIAEAGAAABAAAAgRAIFkA=</HashCode>
+      <FileName>monsters.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBabyCrab" Collapsed="true">
+    <Position X="11.5" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAQAAAAAAIIAAAIAEAAIAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>monsters.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CFuncTankLaser" Collapsed="true">
+    <Position X="1.5" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEBAAIAAAAACAARAAAACAAAgAAAEAAAAAAAAIAAAAAA=</HashCode>
+      <FileName>func_tank.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBasePlayerAmmo" Collapsed="true">
+    <Position X="0.5" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAACAIEAAAIKABAAAQECAAAgBIAAAAAAAACEAGAIAAA=</HashCode>
+      <FileName>D:\dev\src\XHL\SourceCode\game_shared\weapons\weapons.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBasePlatTrain" Collapsed="true">
+    <Position X="8.5" Y="5.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AIAAAICAAAFKAgAAAAACEAIgAAAUABJABQAAAAAAAAA=</HashCode>
+      <FileName>trains.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseDoor" Collapsed="true">
+    <Position X="6.25" Y="5.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAIAAICAAAFOAAAAKAFCAAI2gAAcEAICBQAABAAAABA=</HashCode>
+      <FileName>doors.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseButton" Collapsed="true">
+    <Position X="11.5" Y="5.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIACAAFKAAAAEAFCEAAgCECoEQICEAAChEAAACA=</HashCode>
+      <FileName>buttons.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CRotDoor" Collapsed="true">
+    <Position X="6.25" Y="6.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAIAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABA=</HashCode>
+      <FileName>doors.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CAmmoPython" Collapsed="true">
+    <Position X="0.5" Y="5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ammo.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CRoboGrunt" Collapsed="true">
+    <Position X="13.25" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAEAKAAAAAAEAAAAIAEAAAAAEAAAAgAAAAgA=</HashCode>
+      <FileName>monsters\hgrunt.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CTriggerMultiple" Collapsed="true">
+    <Position X="7.25" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAgAAAAAAAIAAAAAAEAAAAAAAAAAAAAAAAAABAIAAA=</HashCode>
+      <FileName>triggers.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CTurret" Collapsed="true">
+    <Position X="9.75" Y="3" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAYAAAAAIBAAAAAECAAAgAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>monsters\turret.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CBaseTurret" Collapsed="true">
+    <Position X="9.75" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AEQCI6AEYEIKBWACBcHGAIQpkUgAQQAADAAAoIUgAwM=</HashCode>
+      <FileName>monsters\turret.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CSentry" Collapsed="true">
+    <Position X="9.75" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAACAAAAAAEIAAgAAQFAAAABAAAAAAAAAAAAgAAAgAA=</HashCode>
+      <FileName>monsters\turret.cpp</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CFuncPlat" Collapsed="true">
+    <Position X="9.75" Y="6.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAIAAAAACAAIAAABAAHAAEAAAUAAAAAAAAAAABAAAAA=</HashCode>
+      <FileName>trains.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CFuncPlatRot" Collapsed="true">
+    <Position X="9.75" Y="7.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAIAAICAAAAAAAABAAMCAAAgAEAAAAAQAAAAAAAAAAA=</HashCode>
+      <FileName>trains.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CFuncTrain" Collapsed="true">
+    <Position X="8" Y="6.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AwAAEIAAAAACAABAAAFCAAAgAgQEAAAAAAACAAAABAA=</HashCode>
+      <FileName>trains.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CWeaponAcidLauncher" Collapsed="true">
+    <Position X="5" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAIAAAAQIAEAAAIASQAAhAAAEAAAAAAAAACAAAAQ=</HashCode>
+      <FileName>D:\dev\src\XHL\SourceCode\game_shared\weapons\weapons.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CMomentaryDoor" Collapsed="true">
+    <Position X="4.75" Y="6.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAEAAAAAAAAEAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>doors.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="CTriggerOnce" Collapsed="true">
+    <Position X="7.25" Y="4" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>triggers.h</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Tahoma" Size="8.25" />
+</ClassDiagram>

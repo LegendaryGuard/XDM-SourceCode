@@ -24,9 +24,9 @@
 #endif // !HLDEMO_BUILD
 
 #include <stdio.h>
-#include "custom.h"
+//#include "custom.h"
 #include "cvardef.h"
-#include "Sequence.h"
+//#include "Sequence.h"
 //
 // Defines entity interface between engine and DLLs.
 // This header file included by engine files and DLL files.
@@ -35,24 +35,29 @@
 //		include progdefs.h
 // This is conveniently done for them in extdll.h
 //
-
-/*
+#if 0// XDM: Some baka came and wrote these lines. Ignore them!
 #ifdef _WIN32
 #define DLLEXPORT __stdcall
 #else
-#define DLLEXPORT  __attribute__ ((visibility("default")))
+#define DLLEXPORT /* */
 #endif
-*/
+#endif
 
 typedef enum
 	{
 	at_notice,
 	at_console,		// same as at_notice, but forces a ConPrintf, not a message box
 	at_aiconsole,	// same as at_console, but only shown if developer level is 2!
-	at_warning,
-	at_error,
+	at_warning,		// adds "warning" to the message and causes sw.dll to shut down
+	at_error,		// adds "error" to the message and causes sw.dll to shut down
 	at_logged		// Server print to console ( only in multiplayer games ).
 	} ALERT_TYPE;
+
+#if defined (_DEBUG)
+#define at_debug at_console
+#else// less annoying in release build
+#define at_debug at_aiconsole
+#endif
 
 // 4-22-98  JOHN: added for use in pfnClientPrintf
 typedef enum
@@ -70,6 +75,20 @@ typedef enum
 	force_model_specifybounds,			// For model files only, the geometry must fit in the specified bbox
 	force_model_specifybounds_if_avail,	// For Steam model files only, the geometry must fit in the specified bbox (if the file is available)
 } FORCE_TYPE;
+
+// XDM3038: pfnTraceLine flags
+#define TRACE_IGNORE_NOTHING	0x0000
+#define TRACE_IGNORE_MONSTERS	0x0001
+#define TRACE_IGNORE_GLASS		0x0100
+
+// XDM3038: pfnTraceHull
+typedef enum
+{
+	point_hull = 0,
+	human_hull,
+	large_hull,
+	head_hull
+} HULLTYPES;
 
 // Returned by TraceLine
 typedef struct
@@ -116,7 +135,7 @@ typedef struct enginefuncs_s
 	void		(*pfnGetSpawnParms)			(edict_t *ent);
 	void		(*pfnSaveSpawnParms)		(edict_t *ent);
 	float		(*pfnVecToYaw)				(const float *rgflVector);
-	void		(*pfnVecToAngles)			(const float *rgflVectorIn, float *rgflVectorOut);
+	void		(*pfnVecToAnglesHL)			(const float *rgflVectorIn, float *rgflVectorOut);
 	void		(*pfnMoveToOrigin)			(edict_t *ent, const float *pflGoal, float dist, int iMoveType);
 	void		(*pfnChangeYaw)				(edict_t* ent);
 	void		(*pfnChangePitch)			(edict_t* ent);
@@ -268,34 +287,36 @@ typedef struct enginefuncs_s
 
 	const char *(*pfnGetPlayerAuthId)		( edict_t *e );
 
+#if defined (SVDLL_NEWFUNCTIONS)
 	// PSV: Added for CZ training map
-//	const char *(*pfnKeyNameForBinding)		( const char* pBinding );
-	
-	sequenceEntry_s*	(*pfnSequenceGet)			( const char* fileName, const char* entryName );
-	sentenceEntry_s*	(*pfnSequencePickSentence)	( const char* groupName, int pickMethod, int *picked );
+//	const char *(*pfnKeyNameForBinding)					( const char* pBinding );
+
+	struct sequenceEntry_*	(*pfnSequenceGet)			( const char* fileName, const char* entryName );
+	struct sentenceEntry_*	(*pfnSequencePickSentence)	( const char* groupName, int pickMethod, int *picked );
 
 	// LH: Give access to filesize via filesystem
-	int			(*pfnGetFileSize)			( char *filename );
+	int			(*pfnGetFileSize)						( char *filename );
 
-	unsigned int (*pfnGetApproxWavePlayLen) (const char *filepath);
+	unsigned int (*pfnGetApproxWavePlayLen) 			(const char *filepath);
 	// MDC: Added for CZ career-mode
-	int			(*pfnIsCareerMatch)			( void );
+	int			(*pfnIsCareerMatch)						( void );
 
 	// BGC: return the number of characters of the localized string referenced by using "label"
-	int			(*pfnGetLocalizedStringLength)(const char *label);
+	int			(*pfnGetLocalizedStringLength)			(const char *label);
 
 	// BGC: added to facilitate persistent storage of tutor message decay values for
 	// different career game profiles.  Also needs to persist regardless of mp.dll being
 	// destroyed and recreated.
-	void (*pfnRegisterTutorMessageShown)(int mid);
-	int (*pfnGetTimesTutorMessageShown)(int mid);
-	void (*ProcessTutorMessageDecayBuffer)(int *buffer, int bufferLength);
-	void (*ConstructTutorMessageDecayBuffer)(int *buffer, int bufferLength);
-	void (*ResetTutorMessageDecayData)( void );
+	void		(*pfnRegisterTutorMessageShown)			(int mid);
+	int 		(*pfnGetTimesTutorMessageShown)			(int mid);
+	void		(*ProcessTutorMessageDecayBuffer)(int *buffer, int bufferLength);
+	void		(*ConstructTutorMessageDecayBuffer)(int *buffer, int bufferLength);
+	void		(*ResetTutorMessageDecayData)( void );
 
-	void (*pfnQueryClientCvarValue)( const edict_t *player, const char *cvarName );
-	void (*pfnQueryClientCvarValue2)( const edict_t *player, const char *cvarName, int requestID );
-	int (*pfnCheckParm)( const char *pchCmdLineToken, char **ppnext );
+	void		(*pfnQueryClientCvarValue)				( const edict_t *player, const char *cvarName );
+    void        (*pfnQueryClientCvarValue2)             ( const edict_t *player, const char *cvarName, int requestID );
+	int			(*pfnCheckParm)( const char *pchCmdLineToken, char **ppnext );
+#endif // SVDLL_NEWFUNCTIONS
 } enginefuncs_t;
 
 
@@ -390,13 +411,18 @@ typedef enum _fieldtypes
 	FIELD_TIME,				// a floating point time (these are fixed up automatically too!)
 	FIELD_MODELNAME,		// Engine string that is a model name (needs precache)
 	FIELD_SOUNDNAME,		// Engine string that is a sound name (needs precache)
-
+	FIELD_UINT8,			// XDM3038c: tired of that boolsheet
+	FIELD_UINT16,
+	FIELD_UINT32,
 	FIELD_TYPECOUNT,		// MUST BE LAST
 } FIELDTYPE;
 
+/* XDM3037a: stddef.h
 #if !defined(offsetof)  && !defined(GNUC)
 #define offsetof(s,m)	(size_t)&(((s *)0)->m)
-#endif
+#endif*/
+#define FTYPEDESC_GLOBAL			0x0001		// This field is masked for global entity save/restore
+#define FTYPEDESC_STD_VECTOR		0x0002		// XDM3038c: this field is std::vector of elements
 
 #define _FIELD(type,name,fieldtype,count,flags)		{ fieldtype, #name, offsetof(type, name), count, flags }
 #define DEFINE_FIELD(type,name,fieldtype)			_FIELD(type, name, fieldtype, 1, 0)
@@ -404,20 +430,19 @@ typedef enum _fieldtypes
 #define DEFINE_ENTITY_FIELD(name,fieldtype)			_FIELD(entvars_t, name, fieldtype, 1, 0 )
 #define DEFINE_ENTITY_GLOBAL_FIELD(name,fieldtype)	_FIELD(entvars_t, name, fieldtype, 1, FTYPEDESC_GLOBAL )
 #define DEFINE_GLOBAL_FIELD(type,name,fieldtype)	_FIELD(type, name, fieldtype, 1, FTYPEDESC_GLOBAL )
+#define DEFINE_DYNARRAY(type,name,fieldtype)		_FIELD(type, name, fieldtype, 0, FTYPEDESC_STD_VECTOR)
 
-
-#define FTYPEDESC_GLOBAL			0x0001		// This field is masked for global entity save/restore
 
 typedef struct 
 {
 	FIELDTYPE		fieldType;
 	char			*fieldName;
 	int				fieldOffset;
-	short			fieldSize;
+	short			fieldSize;// number of elements in an array
 	short			flags;
 } TYPEDESCRIPTION;
 
-#define ARRAYSIZE(p)		(sizeof(p)/sizeof(p[0]))
+//#define ARRAYSIZE(p)		(sizeof(p)/sizeof(p[0]))
 
 typedef struct 
 {
@@ -462,7 +487,7 @@ typedef struct
 	const char     *(*pfnGetGameDescription)( void );     
 
 	// Notify dll about a player customization.
-	void            (*pfnPlayerCustomization) ( edict_t *pEntity, customization_t *pCustom );  
+	void            (*pfnPlayerCustomization) ( edict_t *pEntity, struct customization_s *pCustom );  
 
 	// Spectator funcs
 	void			(*pfnSpectatorConnect)		( edict_t *pEntity );
@@ -519,7 +544,7 @@ typedef struct
 	void			(*pfnGameShutdown)(void);
 	int				(*pfnShouldCollide)( edict_t *pentTouched, edict_t *pentOther );
 	void			(*pfnCvarValue)( const edict_t *pEnt, const char *value );
-	void			(*pfnCvarValue2)( const edict_t *pEnt, int requestID, const char *cvarName, const char *value );
+    void            (*pfnCvarValue2)( const edict_t *pEnt, int requestID, const char *cvarName, const char *value );
 } NEW_DLL_FUNCTIONS;
 typedef int	(*NEW_DLL_FUNCTIONS_FN)( NEW_DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion );
 
@@ -529,4 +554,4 @@ extern NEW_DLL_FUNCTIONS	gNewDLLFunctions;
 typedef int	(*APIFUNCTION)( DLL_FUNCTIONS *pFunctionTable, int interfaceVersion );
 typedef int	(*APIFUNCTION2)( DLL_FUNCTIONS *pFunctionTable, int *interfaceVersion );
 
-#endif EIFACE_H
+#endif // EIFACE_H

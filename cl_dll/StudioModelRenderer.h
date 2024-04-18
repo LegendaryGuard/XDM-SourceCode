@@ -8,7 +8,9 @@
 #if !defined ( STUDIOMODELRENDERER_H )
 #define STUDIOMODELRENDERER_H
 #if defined( _WIN32 )
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 /*
@@ -58,13 +60,14 @@ public:
 	virtual float StudioEstimateInterpolant( void );
 
 	// Determine current frame for rendering
-	virtual float StudioEstimateFrame ( mstudioseqdesc_t *pseqdesc );
+	virtual double StudioEstimateFrame(mstudioseqdesc_t *pseqdesc);// XDM
 
 	// Apply special effects to transform matrix
 	virtual void StudioFxTransform( cl_entity_t *ent, float transform[3][4] );
 
 	// Spherical interpolation of bones
 	virtual void StudioSlerpBones ( vec4_t q1[], float pos1[][3], vec4_t q2[], float pos2[][3], float s );
+//	virtual void StudioSlerpBones(Vector4D q1[], float pos1[][3], Vector4D q2[], float pos2[][3], float s);
 
 	// Compute bone adjustments ( bone controllers )
 	virtual void StudioCalcBoneAdj ( float dadt, float *adj, const byte *pcontroller1, const byte *pcontroller2, byte mouthopen );
@@ -77,6 +80,7 @@ public:
 
 	// Compute rotations
 	virtual void StudioCalcRotations ( float pos[][3], vec4_t *q, mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f );
+//	virtual void StudioCalcRotations(float pos[][3], Vector4D q[], mstudioseqdesc_t *pseqdesc, mstudioanim_t *panim, float f);
 
 	// Send bones and verts to renderer
 	virtual void StudioRenderModel ( void );
@@ -116,9 +120,9 @@ public:
 	// Cvars that studio model code needs to reference
 	//
 	// Use high quality models?
-	cvar_t			*m_pCvarHiModels;	
+	cvar_t			*m_pCvarHiModels;
 	// Developer debug output desired?
-	cvar_t			*m_pCvarDeveloper;
+// XDM: moved to CHud	cvar_t			*m_pCvarDeveloper;
 	// Draw entities bone hit boxes, etc?
 	cvar_t			*m_pCvarDrawEntities;
 
@@ -145,8 +149,8 @@ public:
 	mstudiomodel_t	*m_pSubModel;
 
 	// Palette substition for top and bottom of model
-	int				m_nTopColor;			
-	int				m_nBottomColor;
+// XDM3037a: we don't use these	int				m_nTopColor;			
+//	int				m_nBottomColor;
 
 	//
 	// Sprite model used for drawing studio model chrome
@@ -165,11 +169,15 @@ public:
 	float			m_fSoftwareXScale, m_fSoftwareYScale;
 
 	// Current view vectors and render origin
-	float			m_vUp[ 3 ];
-	float			m_vRight[ 3 ];
-	float			m_vNormal[ 3 ];
+//	float			m_vUp[ 3 ];
+//	float			m_vRight[ 3 ];
+//	float			m_vNormal[ 3 ];
+	Vector			m_vUp;
+	Vector			m_vRight;
+	Vector			m_vNormal;
 
-	float			m_vRenderOrigin[ 3 ];
+//	float			m_vRenderOrigin[ 3 ];
+	Vector			m_vRenderOrigin;
 	
 	// Model render counters ( from engine )
 	int				*m_pStudioModelCount;

@@ -6,6 +6,12 @@
 //=============================================================================
 
 
+
+#include "../cl_dll/hud.h"
+#include "../cl_dll/cl_util.h"
+#include "../cl_dll/vgui_Viewport.h"
+#include "../cl_dll/vgui_CustomObjects.h"
+
 #include "vgui_scrollbar2.h"
 #include "vgui_slider2.h"
 #include "vgui_loadtga.h"
@@ -14,7 +20,6 @@
 #include<VGUI_Button.h>
 #include<VGUI_ActionSignal.h>
 #include<VGUI_LineBorder.h>
-
 using namespace vgui;
 
 
@@ -59,7 +64,7 @@ public:
 // Purpose: Default scrollbar button
 //			Draws in new scoreboard style
 //-----------------------------------------------------------------------------
-class ScrollBarButton : public Button
+/*class ScrollBarButton : public Button
 {
 private:
 	LineBorder m_Border;
@@ -86,7 +91,7 @@ public:
 		drawSetColor(0, 0, 0, 0);
 		drawFilledRect(0, 0, wide, tall);
 	}
-};
+};*/
 
 
 
@@ -104,19 +109,19 @@ ScrollBar2::ScrollBar2(int x,int y,int wide,int tall,bool vertical) : Panel(x,y,
 	_slider=null;
 	_button[0]=null;
 	_button[1]=null;
-	
+
 	if(vertical)
 	{
 		setSlider(new Slider2(0,wide-1,wide,(tall-(wide*2))+2,true));
-		setButton(new ScrollBarButton("gfx/vgui/arrowup.tga",0,0,wide,wide),0);
-		setButton(new ScrollBarButton("gfx/vgui/arrowdown.tga",0,tall-wide,wide,wide),1);
+		setButton(new CCustomScrollButton(ARROW_UP, "", 0,0,wide,wide),0);
+		setButton(new CCustomScrollButton(ARROW_DOWN, "", 0,tall-wide,wide,wide),1);
 	}
 	else
 	{
 		// untested code
 		setSlider(new Slider2(tall,0,wide-(tall*2),tall,false));
-		setButton(new ScrollBarButton("gfx/vgui/320_arrowlt.tga",0,0,tall+1,tall+1),0);
-		setButton(new ScrollBarButton("gfx/vgui/320_arrowrt.tga",wide-tall,0,tall+1,tall+1),1);
+		setButton(new CCustomScrollButton(ARROW_LEFT, "", 0,0,tall+1,tall+1),0);
+		setButton(new CCustomScrollButton(ARROW_RIGHT, "", wide-tall,0,tall+1,tall+1),1);
 	}
 
 	setPaintBorderEnabled(true);
@@ -125,26 +130,20 @@ ScrollBar2::ScrollBar2(int x,int y,int wide,int tall,bool vertical) : Panel(x,y,
 	setButtonPressedScrollValue(15);
 
 	validate();
- }
+}
 
 void ScrollBar2::setSize(int wide,int tall)
 {
 	Panel::setSize(wide,tall);
 
 	if(_slider==null)
-	{
 		return;
-	}
 
 	if(_button[0]==null)
-	{
 		return;
-	}
 
 	if(_button[1]==null)
-	{
 		return;
-	}
 
 	getPaintSize(wide,tall);
 
@@ -207,12 +206,14 @@ bool ScrollBar2::hasFullRange()
 	return _slider->hasFullRange();
 }
 
-//LEAK: new and old slider will leak
-void ScrollBar2::setButton(Button* button,int index)
+//LEAK: new and old button will leak
+void ScrollBar2::setButton(Button *button, int index)
 {
-	if(_button[index]!=null)
+	if (_button[index] != null && button != _button[index])
 	{
+		CON_DPRINTF("ScrollBar2::setButton() leaky code called!!!\n");
 		removeChild(_button[index]);
+		// delete _button[index]; ?
 	}
 	_button[index]=button;
 	addChild(_button[index]);
@@ -232,9 +233,11 @@ Button* ScrollBar2::getButton(int index)
 //LEAK: new and old slider will leak
 void ScrollBar2::setSlider(Slider2 *slider)
 {
-	if(_slider!=null)
+	if (_slider != null && slider != _slider)
 	{
+		CON_DPRINTF("ScrollBar2::setSlider() leaky code called!!!\n");
 		removeChild(_slider);
+		// delete _slider; ?
 	}
 	_slider=slider;
 	addChild(_slider);
@@ -259,7 +262,6 @@ void ScrollBar2::doButtonPressed(int buttonIndex)
 	{
 		_slider->setValue(_slider->getValue()+_buttonPressedScrollValue);
 	}
-
 }
 
 void ScrollBar2::setButtonPressedScrollValue(int value)
@@ -282,7 +284,6 @@ void ScrollBar2::validate()
 	if(_slider!=null)
 	{
 		int buttonOffset=0;
-
 		for(int i=0;i<2;i++)
 		{
 			if(_button[i]!=null)
@@ -300,11 +301,32 @@ void ScrollBar2::validate()
 				}
 			}
 		}
-
 		_slider->setButtonOffset(buttonOffset);
 	}
 
 	int wide,tall;
 	getSize(wide,tall);
 	setSize(wide,tall);
+}
+
+
+extern cvar_t *sensitivity;
+
+//-----------------------------------------------------------------------------
+// Purpose: CMenuHandler_ScrollInput2
+//-----------------------------------------------------------------------------
+CMenuHandler_ScrollInput2::CMenuHandler_ScrollInput2(void):CDefaultInputSignal()
+{
+	m_pScrollBar2 = NULL;
+}
+
+CMenuHandler_ScrollInput2::CMenuHandler_ScrollInput2(ScrollBar2 *pScrollBar2):CDefaultInputSignal()
+{
+	m_pScrollBar2 = pScrollBar2;
+}
+
+void CMenuHandler_ScrollInput2::mouseWheeled(int delta, Panel *panel)
+{
+	if (m_pScrollBar2)
+		m_pScrollBar2->setValue(m_pScrollBar2->getValue() - delta * sensitivity->value);
 }

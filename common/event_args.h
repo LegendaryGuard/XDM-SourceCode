@@ -15,7 +15,9 @@
 #if !defined( EVENT_ARGSH )
 #define EVENT_ARGSH
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 // Event was invoked with stated origin
@@ -30,10 +32,14 @@ typedef struct event_args_s
 
 	// Transmitted
 	int		entindex;
-
+/*
 	float	origin[3];
 	float	angles[3];
 	float	velocity[3];
+*/
+	vec3_t	origin;
+	vec3_t	angles;
+	vec3_t	velocity;
 
 	int		ducking;
 

@@ -8,11 +8,11 @@
 *
 ****/
 
-#define VERSION "2.2"
+#define VERSION "2.3"
 #include "qlumpy.h"
 
 
-#define MAXLUMP		0x50000         // biggest possible lump
+#define MAXLUMP		0x60000         // XDM: biggest possible lump ++
 
 extern char qproject[];
 
@@ -146,22 +146,24 @@ LoadScreenBMP
 */
 void LoadScreenBMP(char *pszName)
 {
-	char	*pszExpanded;
+//	char	*pszExpanded;
 	char	basename[64];
-	
-	pszExpanded = ExpandPathAndArchive(pszName);
 
-	printf("grabbing from %s...\n", pszExpanded);
-	if (LoadBMP(pszExpanded, &byteimage, &lbmpalette))
-		Error ("Failed to load!", pszExpanded);
+	ExtractFileBase(pszName, basename);		// Files that start with '$' have color (0,0,255) transparent,
+//pszExpanded = ExpandPathAndArchive(pszName);
+	printf("grabbing from %s...\n", pszName);
+
+	if (LoadBMP(pszName, &byteimage, &lbmpalette))
+		Error("Failed to load %s!", pszName);
 
 	if ( byteimage == NULL || lbmpalette == NULL )
-		Error("FAIL!",pszExpanded);
+		Error("FAIL! %s", pszName);
+
 	byteimagewidth = bmhd.w;
 	byteimageheight = bmhd.h;
 
-	ExtractFileBase (token, basename);		// Files that start with '$' have color (0,0,255) transparent,
-	if ( basename[0] == '{' ) {				// move to last palette entry.
+	if ( basename[0] == '{' )
+	{				// move to last palette entry.
 		fTransparent255 = true;
 		TransparentByteImage();
 	}
@@ -194,6 +196,7 @@ void WriteLump (int type, int compression)
 	if (!outputcreated)
 		CreateOutput ();
 
+	printf("WriteLump: type: %d\n", type);
 //
 // dword align the size
 //

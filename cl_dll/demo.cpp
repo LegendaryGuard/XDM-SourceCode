@@ -17,7 +17,7 @@
 #include "demo.h"
 #include "demo_api.h"
 #include <memory.h>
-#include "Exports.h"
+#include "Exports.h"// HL20130901
 
 int g_demosniper = 0;
 int g_demosniperdamage = 0;
@@ -36,10 +36,11 @@ Write some data to the demo stream
 */
 void Demo_WriteBuffer( int type, int size, unsigned char *buffer )
 {
+	//unsigned char buf[ 32 * 1024 ]; warning C6262: Function uses '32784' bytes of stack: exceeds /analyze:stacksize'16384'. Consider moving some data to heap
+	unsigned char buf[16384-(sizeof(int)*CHAR_BIT)];// XDM3038c: avoid potential stack overflow. This function is never used with large buffers anyway
 	int pos = 0;
-	unsigned char buf[ 32 * 1024 ];
 	*( int * )&buf[pos] = type;
-	pos+=sizeof( int );
+	pos+=sizeof(int);
 
 	memcpy( &buf[pos], buffer, size );
 
@@ -56,12 +57,11 @@ Engine wants us to parse some data from the demo stream
 */
 void CL_DLLEXPORT Demo_ReadBuffer( int size, unsigned char *buffer )
 {
+	DBG_CL_PRINT("Demo_ReadBuffer(%d)\n", size);
 //	RecClReadDemoBuffer(size, buffer);
 
-	int type;
 	int i = 0;
-
-	type = *( int * )buffer;
+	int type = *( int * )buffer;
 	i += sizeof( int );
 	switch ( type )
 	{
@@ -73,7 +73,6 @@ void CL_DLLEXPORT Demo_ReadBuffer( int size, unsigned char *buffer )
 		{
 			g_demosniperdamage = *( int * )&buffer[ i ];
 			i += sizeof( int );
-
 			g_demosniperangles[ 0 ] = *(float *)&buffer[i];
 			i += sizeof( float );
 			g_demosniperangles[ 1 ] = *(float *)&buffer[i];

@@ -1,25 +1,11 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-****/
-
-/*
-
-
-*/
-
+#ifndef __STUDIOMDL_H__
+#define __STUDIOMDL_H__
 
 #define STUDIO_VERSION	10
-
 #define IDSTUDIOHEADER	(('T'<<24)+('S'<<16)+('D'<<8)+'I')
-														// little-endian "IDST"
+// little-endian "IDST"
 #define IDSTUDIOSEQHEADER	(('Q'<<24)+('S'<<16)+('D'<<8)+'I')
-														// little-endian "IDSQ"
+// little-endian "IDSQ"
 
 #ifndef EXTERN
 #define EXTERN extern
@@ -31,34 +17,25 @@ EXTERN	char		cdpartial[256];
 EXTERN	char		cddir[256];
 EXTERN	int			cdtextureset;
 EXTERN	char		cdtexture[16][256];
-
 EXTERN	char		pivotname[32][256];	// names of the pivot points
-
 EXTERN	float		default_scale;
 EXTERN	float		scale_up;
 EXTERN  float		defaultzrotation;
 EXTERN	float		zrotation;
-
-
 EXTERN	char		defaulttexture[16][256];
 EXTERN	char		sourcetexture[16][256];
-
 EXTERN	int			numrep;
-
 EXTERN	int			tag_reversed;
 EXTERN	int			tag_normals;
 EXTERN	int			flip_triangles;
 EXTERN	float		normal_blend;
 EXTERN	int			dump_hboxes;
 EXTERN	int			ignore_warnings;
-
 EXTERN	vec3_t		eyeposition;
 EXTERN	int			gflags;
 EXTERN	vec3_t		bbox[2];
 EXTERN	vec3_t		cbox[2];
-
 EXTERN	int			maxseqgroupsize;
-
 EXTERN	int			split_textures;
 EXTERN	int			clip_texcoords;
 
@@ -66,9 +43,7 @@ EXTERN	int			clip_texcoords;
 #define PITCH	0
 #define YAW		1
 
-
 extern vec_t Q_rint (vec_t in);
-
 extern void WriteFile (void);
 void *kalloc( int num, int size );
 
@@ -91,10 +66,6 @@ typedef struct
 	int					bone;		// bone transformation index
 	vec3_t				org;		// original position
 } s_normal_t;
-
-
-//============================================================================
-
 
 // dstudiobone_t bone[MAXSTUDIOBONES];
 typedef struct 
@@ -258,21 +229,20 @@ typedef struct
 
 	vec3_t 			bmin;
 	vec3_t			bmax;
-
 	int				entrynode;
 	int				exitnode;
 	int				nodeflags;
 } s_sequence_t;
+
 EXTERN	s_sequence_t sequence[MAXSTUDIOSEQUENCES];
-
-
 EXTERN int numseqgroups;
+
 typedef struct {
 	char	label[32];
 	char	name[64];
 } s_sequencegroup_t;
-EXTERN s_sequencegroup_t sequencegroup[MAXSTUDIOSEQUENCES];
 
+EXTERN s_sequencegroup_t sequencegroup[MAXSTUDIOSEQUENCES];
 EXTERN int numxnodes;
 EXTERN int xnode[100][100];
 
@@ -293,7 +263,6 @@ typedef struct
 	int		srcheight;
 	byte	*ppicture;
 	rgb_t 	*ppal;
-
 	float	max_s;
 	float   min_s;
 	float	max_t;
@@ -306,12 +275,13 @@ typedef struct
 	float	fskinleft;
 	float	fskinwidth;
 	float	fskinheight;
-
 	int		size;
 	void	*pdata;
-
 	int		parent;
 } s_texture_t;
+
+char	renametextures[MAXSTUDIOSKINS][64];// XDM
+
 EXTERN	s_texture_t texture[MAXSTUDIOSKINS];
 EXTERN	int numtextures;
 EXTERN  float gamma;
@@ -375,9 +345,6 @@ typedef struct s_model_s
 
 EXTERN	int nummodels;
 EXTERN	s_model_t *model[MAXSTUDIOMODELS];
-
-
-
 EXTERN	vec3_t adjust;
 EXTERN	vec3_t defaultadjust;
 
@@ -395,9 +362,4 @@ EXTERN	s_bodypart_t bodypart[MAXSTUDIOBODYPARTS];
 
 extern int BuildTris (s_trianglevert_t (*x)[3], s_mesh_t *y, byte **ppdata );
 
-
-
-
-
-
-
+#endif // __STUDIOMDL_H__

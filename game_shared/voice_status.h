@@ -7,7 +7,10 @@
 
 #ifndef VOICE_STATUS_H
 #define VOICE_STATUS_H
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
+
 
 #include "voice_common.h"
 #include "voice_banmgr.h"
@@ -112,7 +115,7 @@ public:
 	bool    IsPlayerAudible(int iPlayerIndex);
 
 	// blocks the target client from being heard
-	void	SetPlayerBlockedState(int iPlayerIndex, bool blocked);
+	bool	SetPlayerBlockedState(int iPlayerIndex, bool blocked);
 
 	void			UpdateServerState(bool bForce);
 
@@ -191,6 +194,8 @@ private:
 
 
 
+	cvar_t				*m_pCvarModEnable;// XDM
+	cvar_t				*m_pCvarClientDebug;
 };
 
 CVoiceStatus* GetClientVoice();

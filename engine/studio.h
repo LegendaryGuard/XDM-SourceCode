@@ -27,64 +27,65 @@ STUDIO MODELS
 Studio models are position independent, so the cache manager can move them.
 ==============================================================================
 */
- 
 
-#define MAXSTUDIOTRIANGLES	20000	// TODO: tune this
-#define MAXSTUDIOVERTS		2048	// TODO: tune this
+
+#define MAXSTUDIOTRIANGLES	32768	// TODO: tune this
+#define MAXSTUDIOVERTS		16386	// TODO: tune this XDM: was 2048, 4096 worked fine :)
 #define MAXSTUDIOSEQUENCES	2048	// total animation sequences -- KSH incremented
-#define MAXSTUDIOSKINS		100		// total textures
+#define MAXSTUDIOSKINS		127		// total textures
 #define MAXSTUDIOSRCBONES	512		// bones allowed at source movement
 #define MAXSTUDIOBONES		128		// total bones actually used
 #define MAXSTUDIOMODELS		32		// sub-models per model
 #define MAXSTUDIOBODYPARTS	32
 #define MAXSTUDIOGROUPS		16
-#define MAXSTUDIOANIMATIONS	2048		
+#define MAXSTUDIOANIMATIONS	2048
 #define MAXSTUDIOMESHES		256
 #define MAXSTUDIOEVENTS		1024
 #define MAXSTUDIOPIVOTS		256
-#define MAXSTUDIOCONTROLLERS 8
+#define MAXSTUDIOCONTROLLERS	8
+#define MAXSTUDIOATTACHMENTS	4// XDM: limited for the engine, not for models
 
 typedef struct 
 {
-	int					id;
-	int					version;
+	int					id;// ofs 0
+	int					version;// ofs 4
 
-	char				name[64];
-	int					length;
+	char				name[64];// ofs 8
+	int					length;// ofs 72
 
-	vec3_t				eyeposition;	// ideal eye position
-	vec3_t				min;			// ideal movement hull size
-	vec3_t				max;			
+	vec3_t				eyeposition;	// ideal eye position 76
+	vec3_t				min;			// ideal movement hull size 88
+	vec3_t				max;			// ofs 100
 
-	vec3_t				bbmin;			// clipping bounding box
-	vec3_t				bbmax;		
+	vec3_t				bbmin;			// clipping bounding box 112
+	vec3_t				bbmax;			// ofs 124
 
-	int					flags;
+	int					flags;// ofs 136
 
-	int					numbones;			// bones
-	int					boneindex;
+	int					numbones;			// bones 140
+	int					boneindex;// 144
 
 	int					numbonecontrollers;		// bone controllers
-	int					bonecontrollerindex;
+	int					bonecontrollerindex;// 148
 
 	int					numhitboxes;			// complex bounding boxes
-	int					hitboxindex;			
+	int					hitboxindex;			// 156
 	
 	int					numseq;				// animation sequences
-	int					seqindex;
+	int					seqindex;// 164
 
 	int					numseqgroups;		// demand loaded sequences
-	int					seqgroupindex;
+	int					seqgroupindex;// 172
 
 	int					numtextures;		// raw textures
-	int					textureindex;
-	int					texturedataindex;
+	int					textureindex;// 180
+	int					texturedataindex;// 184
 
 	int					numskinref;			// replaceable textures
 	int					numskinfamilies;
 	int					skinindex;
 
-	int					numbodyparts;		
+	int					numbodyparts;
 	int					bodypartindex;
 
 	int					numattachments;		// queryable attachable points
@@ -158,6 +159,8 @@ typedef struct
 	char				name[64];	// file name
     int32				unused1;    // was "cache"  - index pointer
 	int					unused2;    // was "data" -  hack for group 0
+//	cache_user_t		cache;		// cache index pointer
+//	int					data;		// hack for group 0
 } mstudioseqgroup_t;
 
 // sequence descriptions
@@ -258,9 +261,9 @@ typedef struct
 {
 	char				name[64];
 	int					nummodels;
-	int					base;
+	int					base;// bodypart[i].base = bodypart[i-1].base * bodypart[i-1].nummodels;
 	int					modelindex; // index into models array
-} mstudiobodyparts_t;
+} mstudiobodyparts_t;// sizeof = 76
 
 
 
@@ -271,8 +274,8 @@ typedef struct
 	int						flags;
 	int						width;
 	int						height;
-	int						index;
-} mstudiotexture_t;
+	int						index;// GL_Bind index
+} mstudiotexture_t;// sizeof = 80
 
 
 // skin families
@@ -329,10 +332,10 @@ typedef struct
 #define STUDIO_NF_FLATSHADE		0x0001
 #define STUDIO_NF_CHROME		0x0002
 #define STUDIO_NF_FULLBRIGHT	0x0004
-#define STUDIO_NF_NOMIPS        0x0008
-#define STUDIO_NF_ALPHA         0x0010
-#define STUDIO_NF_ADDITIVE      0x0020
-#define STUDIO_NF_MASKED        0x0040
+#define STUDIO_NF_NOMIPS		0x0008
+#define STUDIO_NF_ALPHA			0x0010
+#define STUDIO_NF_ADDITIVE		0x0020
+#define STUDIO_NF_MASKED		0x0040
 
 // motion flags
 #define STUDIO_X		0x0001

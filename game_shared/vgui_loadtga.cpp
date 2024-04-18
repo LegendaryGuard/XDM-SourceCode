@@ -5,7 +5,6 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include "../cl_dll/wrect.h"
 #include "../cl_dll/cl_dll.h"
 #include "VGUI.h"
 #include "vgui_loadtga.h"
@@ -64,8 +63,13 @@ public:
 
 vgui::BitmapTGA* vgui_LoadTGA(char const *pFilename)
 {
+	if (pFilename == NULL)
+		return NULL;
+
+	if (gEngfuncs.COM_LoadFile == NULL)// function may not exist
+		return NULL;
+
 	MemoryInputStream stream;
-	
 	stream.m_pData = gEngfuncs.COM_LoadFile((char*)pFilename, 5, &stream.m_DataLen);
 	if(!stream.m_pData)
 		return NULL;

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -29,7 +29,7 @@
 //=========================================================
 // These are the schedule types
 //=========================================================
-typedef enum 
+typedef enum schedule_types_e
 {
 		SCHED_NONE = 0,
 		SCHED_IDLE_STAND,
@@ -80,7 +80,7 @@ typedef enum
 //=========================================================
 // These are the shared tasks
 //=========================================================
-typedef enum 
+typedef enum tasks_e
 {
 		TASK_INVALID = 0,
 		TASK_WAIT,
@@ -177,7 +177,7 @@ typedef enum
 
 
 // These go in the flData member of the TASK_WALK_TO_TARGET, TASK_RUN_TO_TARGET
-enum 
+enum target_move_types_e
 {
 	TARGET_MOVE_NORMAL = 0,
 	TARGET_MOVE_SCRIPTED = 1,
@@ -188,7 +188,7 @@ enum
 // The goal index should indicate which schedule (ordinally) the monster is running.  
 // That way, when tasks fail, the AI can make decisions based on the context of the 
 // current goal and sequence rather than just the current schedule.
-enum
+enum goal_schedules_e
 {
 	GOAL_ATTACK_ENEMY,
 	GOAL_MOVE,

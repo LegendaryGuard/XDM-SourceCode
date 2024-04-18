@@ -7,7 +7,9 @@
 
 #ifndef VOICE_STATUS_H
 #define VOICE_STATUS_H
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 
 
 #include "VGUI_Label.h"
@@ -17,10 +19,12 @@
 #include "VGUI_InputSignal.h"
 #include "VGUI_Button.h"
 #include "voice_common.h"
-#include "cl_entity.h"
+//#include "cl_entity.h"
 #include "voice_banmgr.h"
 #include "vgui_checkbutton2.h"
 #include "vgui_defaultinputsignal.h"
+//#include "RenderSystem.h"
+//#include "RSSprite.h"
 
 
 class CVoiceStatus;
@@ -74,7 +78,8 @@ class VoiceImagePanel : public vgui::ImagePanel
 };
 
 
-class CVoiceStatus : public CHudBase, public vgui::CDefaultInputSignal
+// : public CHudBase XDM3037: NO!!!
+class CVoiceStatus : public vgui::CDefaultInputSignal
 {
 public:
 				CVoiceStatus();
@@ -107,7 +112,7 @@ public:
 	void	UpdateSpeakerImage(vgui::Label *pLabel, int iPlayer);
 
 	// Call from the HUD_CreateEntities function so it can add sprites above player heads.
-	void	CreateEntities();
+//	void	CreateEntities();
 
 	// Called when the server registers a change to who this client can hear.
 	void	HandleVoiceMaskMsg(int iSize, void *pbuf);
@@ -132,7 +137,7 @@ public:
 	bool    IsPlayerAudible(int iPlayerIndex);
 
 	// blocks the target client from being heard
-	void	SetPlayerBlockedState(int iPlayerIndex, bool blocked);
+	bool	SetPlayerBlockedState(int iPlayerIndex, bool blocked);// XDM: returns true on success
 
 public:
 
@@ -152,10 +157,10 @@ public:
 
 
 public:
-
 	enum			{MAX_VOICE_SPEAKERS=7};
 
 	float			m_LastUpdateServerState;		// Last time we called this function.
+	double			m_BlinkTimer;			// Blink scoreboard icons..
 	int				m_bServerModEnable;				// What we've sent to the server about our "voice_modenable" cvar.
 
 	vgui::Panel		**m_pParentPanel;
@@ -172,29 +177,22 @@ public:
 	// It is checked periodically, and the server is told to squelch or unsquelch the appropriate players.
 	CPlayerBitVec	m_ServerBannedPlayers;
 
-	cl_entity_s		m_VoiceHeadModels[VOICE_MAX_PLAYERS];			// These aren't necessarily in the order of players. They are just
+//	cl_entity_s		m_VoiceHeadModels[VOICE_MAX_PLAYERS];			// These aren't necessarily in the order of players. They are just
 																	// a place for it to put data in during CreateEntities.
+//	CRSSprite		*m_pVoiceHeadModels[VOICE_MAX_PLAYERS];// XDM3038a: now these are
 
 	IVoiceStatusHelper	*m_pHelper;		// Each mod provides an implementation of this.
 
 	
 	// Scoreboard icons.
-	double			m_BlinkTimer;			// Blink scoreboard icons..
 	vgui::BitmapTGA	*m_pScoreboardNeverSpoken;
 	vgui::BitmapTGA	*m_pScoreboardNotSpeaking;
 	vgui::BitmapTGA	*m_pScoreboardSpeaking;
 	vgui::BitmapTGA	*m_pScoreboardSpeaking2;
 	vgui::BitmapTGA	*m_pScoreboardSquelch;
 	vgui::BitmapTGA	*m_pScoreboardBanned;
-	
+
 	vgui::Label		   *m_pBanButtons[VOICE_MAX_PLAYERS];		// scoreboard buttons.
-
-	// Squelch mode stuff.
-	bool				m_bInSquelchMode;
-	
-	HSPRITE				m_VoiceHeadModel;		// Voice head model (goes above players who are speaking).
-	float				m_VoiceHeadModelHeight;	// Height above their head to place the model.
-
 	vgui::Image			*m_pSpeakerLabelIcon;	// Icon next to speaker labels.
 
 	// Lower-right icons telling when the local player is talking..
@@ -202,22 +200,20 @@ public:
 	vgui::BitmapTGA		*m_pAckBitmap;			// Represents the server ack'ing the client talking.
 	vgui::ImagePanel	*m_pLocalLabel;			// Represents the local client talking.
 
+	// Cache the game directory for use when we shut down
+	char				m_pchGameDir[MAX_PATH];
+	cvar_t				*m_pCvarModEnable;// XDM
+	cvar_t				*m_pCvarClientDebug;
+
+	// Squelch mode stuff.
+	bool				m_bInSquelchMode;
 	bool				m_bTalking;				// Set to true when the client thinks it's talking.
 	bool				m_bServerAcked;			// Set to true when the server knows the client is talking.
-
-public:
-	
-	CVoiceBanMgr		m_BanMgr;				// Tracks which users we have squelched and don't want to hear.
-
-public:
-
 	bool				m_bBanMgrInitialized;
 
 	// Labels telling who is speaking.
 	CVoiceLabel			m_Labels[MAX_VOICE_SPEAKERS];
-
-	// Cache the game directory for use when we shut down
-	char *				m_pchGameDir;
+	CVoiceBanMgr		m_BanMgr;				// Tracks which users we have squelched and don't want to hear.
 };
 
 

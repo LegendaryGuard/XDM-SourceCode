@@ -7,7 +7,9 @@
 
 #if !defined( HUD_SERVERS_PRIVH )
 #define HUD_SERVERS_PRIVH
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 
 #include "netadr.h"
 

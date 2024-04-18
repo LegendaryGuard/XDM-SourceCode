@@ -1,0 +1,475 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>XDM</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseOfMfc>false</UseOfMfc>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>PGInstrument</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.Cpp.UpgradeFromVC60.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>3.0.3.7</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IntDir>R:\COMPILER/sv/$(Configuration)/intermediate\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IntDir>R:\COMPILER/sv/$(Configuration)/intermediate\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <GenerateManifest>false</GenerateManifest>
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+    <OutDir>$(ProjectDir)$(Configuration)\</OutDir>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <InlineFunctionExpansion>Default</InlineFunctionExpansion>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <Optimization>MaxSpeed</Optimization>
+      <WarningLevel>Level4</WarningLevel>
+      <AdditionalIncludeDirectories>.;$(IncludePath);gamerules;projectiles;..\engine;..\common;..\pm_shared;..\game_shared;..\game_shared\weapons;..\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;SERVER_DLL;SVDLL_NEWFUNCTIONS;NOSQB;USE_EXCEPTIONS;USE_WEAPONBITS;OLD_DEATHMSG;SV_NO_PITCH_CORRECTION;WIN32;_WINDOWS;_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName)_vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <UndefinePreprocessorDefinitions>_DEBUG</UndefinePreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnablePREfast>true</EnablePREfast>
+      <ExceptionHandling>Async</ExceptionHandling>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\release\XDM.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.\res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <LinkDLL>true</LinkDLL>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <Version>3.3</Version>
+      <ModuleDefinitionFile>.\XDM.def</ModuleDefinitionFile>
+      <LinkErrorReporting>PromptImmediately</LinkErrorReporting>
+      <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+    <CustomBuildStep>
+      <Command>echo signtool sign /a "$(TargetPath)" 
+copy $(TargetPath) %HLROOT%\XDM\dlls\</Command>
+      <Message>Copying to dlls</Message>
+      <Outputs>%HLROOT%\XDM\dlls\$(TargetName);%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>.;$(IncludePath);gamerules;projectiles;..\engine;..\common;..\pm_shared;..\game_shared;..\game_shared\weapons;..\public;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;SERVER_DLL;SVDLL_NEWFUNCTIONS;NOSQB;USE_EXCEPTIONS;USE_WEAPONBITS;OLD_DEATHMSG;SV_NO_PITCH_CORRECTION;WIN32;_WINDOWS;_WINDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BrowseInformation>true</BrowseInformation>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <FloatingPointExceptions>true</FloatingPointExceptions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <ErrorReporting>Prompt</ErrorReporting>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ProgramDataBaseFileName>$(OutDir)$(ProjectName)_vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <UndefinePreprocessorDefinitions>NDEBUG</UndefinePreprocessorDefinitions>
+      <SmallerTypeCheck>true</SmallerTypeCheck>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <EnablePREfast>true</EnablePREfast>
+      <MinimalRebuild>false</MinimalRebuild>
+    </ClCompile>
+    <Midl>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <TypeLibraryName>.\debug\XDM.tlb</TypeLibraryName>
+      <MkTypLibCompatible>true</MkTypLibCompatible>
+      <TargetEnvironment>Win32</TargetEnvironment>
+    </Midl>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>.\res;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Bscmake>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Bscmake>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <LinkDLL>true</LinkDLL>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <Version>3.3</Version>
+      <ModuleDefinitionFile>.\XDM.def</ModuleDefinitionFile>
+      <LinkErrorReporting>PromptImmediately</LinkErrorReporting>
+      <OptimizeReferences>false</OptimizeReferences>
+      <AssemblyDebug>true</AssemblyDebug>
+    </Link>
+    <CustomBuildStep>
+      <Command>copy $(TargetPath) %HLROOT%\XDM\dlls\</Command>
+      <Message>Copying to dlls</Message>
+      <Outputs>%HLROOT%\XDM\dlls\$(TargetName);%(Outputs)</Outputs>
+    </CustomBuildStep>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\common\util_common.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponAcidLauncher.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponBeamRifle.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponBHG.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponChemGun.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponCrossbow.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponCrowbar.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponCustom.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponDiskLauncher.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponDisplacer.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponEgon.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponFlame.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponGauss.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponGlock.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponGrenadeLauncher.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponHandGrenade.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponHornetGun.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponMP5.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponPlasma.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponPython.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponRPG.cpp" />
+    <ClCompile Include="..\game_shared\weapons\weapons.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSatchel.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponShotgun.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSniperRifle.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSqueak.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponStrikeTarget.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponSword.cpp" />
+    <ClCompile Include="..\game_shared\weapons\WeaponTripmine.cpp" />
+    <ClCompile Include="..\pm_shared\pm_debug.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\pm_shared\pm_shared.cpp" />
+    <ClCompile Include="monsters\aflock.cpp" />
+    <ClCompile Include="monsters\agrunt.cpp" />
+    <ClCompile Include="monsters\ai_basenpc_schedule.cpp" />
+    <ClCompile Include="monsters\apache.cpp" />
+    <ClCompile Include="monsters\barnacle.cpp" />
+    <ClCompile Include="monsters\barney.cpp" />
+    <ClCompile Include="monsters\bigmomma.cpp" />
+    <ClCompile Include="monsters\bloater.cpp" />
+    <ClCompile Include="monsters\bullsquid.cpp" />
+    <ClCompile Include="monsters\controller.cpp" />
+    <ClCompile Include="monsters\flyingmonster.cpp" />
+    <ClCompile Include="monsters\gargantua.cpp" />
+    <ClCompile Include="monsters\genericmonster.cpp" />
+    <ClCompile Include="monsters\gman.cpp" />
+    <ClCompile Include="monsters\hassassin.cpp" />
+    <ClCompile Include="monsters\headcrab.cpp" />
+    <ClCompile Include="monsters\hgrunt.cpp" />
+    <ClCompile Include="monsters\houndeye.cpp" />
+    <ClCompile Include="monsters\ichthyosaur.cpp" />
+    <ClCompile Include="monsters\islave.cpp" />
+    <ClCompile Include="monsters\leech.cpp" />
+    <ClCompile Include="monsters\massassin.cpp" />
+    <ClCompile Include="monsters\monsters.cpp" />
+    <ClCompile Include="monsters\monsterstate.cpp" />
+    <ClCompile Include="monsters\nihilanth.cpp" />
+    <ClCompile Include="monsters\osprey.cpp" />
+    <ClCompile Include="monsters\pitdrone.cpp" />
+    <ClCompile Include="monsters\playermonster.cpp" />
+    <ClCompile Include="monsters\rat.cpp" />
+    <ClCompile Include="monsters\roach.cpp" />
+    <ClCompile Include="monsters\scientist.cpp" />
+    <ClCompile Include="monsters\shocktrooper.cpp" />
+    <ClCompile Include="monsters\squadmonster.cpp" />
+    <ClCompile Include="monsters\talkmonster.cpp" />
+    <ClCompile Include="monsters\tentacle.cpp" />
+    <ClCompile Include="monsters\turret.cpp" />
+    <ClCompile Include="monsters\voltigore.cpp" />
+    <ClCompile Include="monsters\zombie.cpp" />
+    <ClCompile Include="items.cpp" />
+    <ClCompile Include="gamerules\coop_gamerules.cpp" />
+    <ClCompile Include="gamerules\ctf_gamerules.cpp" />
+    <ClCompile Include="gamerules\dom_gamerules.cpp" />
+    <ClCompile Include="gamerules\gamerules.cpp" />
+    <ClCompile Include="gamerules\lms_gamerules.cpp" />
+    <ClCompile Include="gamerules\maprules.cpp" />
+    <ClCompile Include="gamerules\multiplay_gamerules.cpp" />
+    <ClCompile Include="gamerules\round_gamerules.cpp" />
+    <ClCompile Include="gamerules\singleplay_gamerules.cpp" />
+    <ClCompile Include="gamerules\teamplay_gamerules.cpp" />
+    <ClCompile Include="animating.cpp" />
+    <ClCompile Include="bmodels.cpp" />
+    <ClCompile Include="buttons.cpp" />
+    <ClCompile Include="doors.cpp" />
+    <ClCompile Include="effects.cpp" />
+    <ClCompile Include="effects_new.cpp" />
+    <ClCompile Include="ent_alias.cpp" />
+    <ClCompile Include="ent_functional.cpp" />
+    <ClCompile Include="ent_locus.cpp" />
+    <ClCompile Include="environment.cpp" />
+    <ClCompile Include="explode.cpp" />
+    <ClCompile Include="func_break.cpp" />
+    <ClCompile Include="func_tank.cpp" />
+    <ClCompile Include="gibs.cpp" />
+    <ClCompile Include="h_cycler.cpp" />
+    <ClCompile Include="lights.cpp" />
+    <ClCompile Include="monstermaker.cpp" />
+    <ClCompile Include="mortar.cpp" />
+    <ClCompile Include="pathcorner.cpp" />
+    <ClCompile Include="plats.cpp" />
+    <ClCompile Include="projectiles\argrenade.cpp" />
+    <ClCompile Include="projectiles\blackball.cpp" />
+    <ClCompile Include="projectiles\lightp.cpp" />
+    <ClCompile Include="projectiles\mortartarget.cpp" />
+    <ClCompile Include="projectiles\nucleardevice.cpp" />
+    <ClCompile Include="projectiles\razordisk.cpp" />
+    <ClCompile Include="projectiles\squeakgrenade.cpp" />
+    <ClCompile Include="scripted.cpp" />
+    <ClCompile Include="sound.cpp" />
+    <ClCompile Include="soundent.cpp" />
+    <ClCompile Include="subs.cpp" />
+    <ClCompile Include="triggers.cpp" />
+    <ClCompile Include="triggers_new.cpp" />
+    <ClCompile Include="wallcharger.cpp" />
+    <ClCompile Include="weaponbox.cpp" />
+    <ClCompile Include="xen.cpp" />
+    <ClCompile Include="projectiles\agrenade.cpp" />
+    <ClCompile Include="projectiles\crossbowbolt.cpp" />
+    <ClCompile Include="projectiles\customprojectile.cpp" />
+    <ClCompile Include="projectiles\flamecloud.cpp" />
+    <ClCompile Include="projectiles\ggrenade.cpp" />
+    <ClCompile Include="projectiles\hornet.cpp" />
+    <ClCompile Include="projectiles\lgrenade.cpp" />
+    <ClCompile Include="projectiles\plasmaball.cpp" />
+    <ClCompile Include="projectiles\projectile.cpp" />
+    <ClCompile Include="projectiles\rpgrocket.cpp" />
+    <ClCompile Include="projectiles\satchelcharge.cpp" />
+    <ClCompile Include="projectiles\teleporter.cpp" />
+    <ClCompile Include="projectiles\tripminegrenade.cpp" />
+    <ClCompile Include="..\game_shared\voice_banmgr.cpp" />
+    <ClCompile Include="..\game_shared\voice_gamemgr.cpp" />
+    <ClCompile Include="..\common\color.cpp" />
+    <ClCompile Include="..\common\materials.cpp" />
+    <ClCompile Include="..\common\shared_resources.cpp" />
+    <ClCompile Include="..\common\util_vector.cpp" />
+    <ClCompile Include="..\common\vector.cpp" />
+    <ClCompile Include="ammo.cpp" />
+    <ClCompile Include="animation.cpp" />
+    <ClCompile Include="cbase.cpp" />
+    <ClCompile Include="client.cpp" />
+    <ClCompile Include="combat.cpp" />
+    <ClCompile Include="defaultai.cpp" />
+    <ClCompile Include="entconfig.cpp" />
+    <ClCompile Include="game.cpp" />
+    <ClCompile Include="globals.cpp" />
+    <ClCompile Include="h_ai.cpp" />
+    <ClCompile Include="h_export.cpp" />
+    <ClCompile Include="mapcycle.cpp" />
+    <ClCompile Include="movewith.cpp" />
+    <ClCompile Include="nodes.cpp" />
+    <ClCompile Include="observer.cpp" />
+    <ClCompile Include="plane.cpp" />
+    <ClCompile Include="player.cpp" />
+    <ClCompile Include="saverestore.cpp" />
+    <ClCompile Include="skill.cpp" />
+    <ClCompile Include="spectator.cpp" />
+    <ClCompile Include="util.cpp" />
+    <ClCompile Include="util_xhl.cpp" />
+    <ClCompile Include="world.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\common\cl_entity.h" />
+    <ClInclude Include="..\common\particledef.h" />
+    <ClInclude Include="..\common\util_common.h" />
+    <ClInclude Include="..\engine\progs.h" />
+    <ClInclude Include="..\game_shared\weapons\weapons.h" />
+    <ClInclude Include="..\pm_shared\pm_debug.h" />
+    <ClInclude Include="..\pm_shared\pm_defs.h" />
+    <ClInclude Include="..\pm_shared\pm_info.h" />
+    <ClInclude Include="..\pm_shared\pm_materials.h" />
+    <ClInclude Include="..\pm_shared\pm_movevars.h" />
+    <ClInclude Include="..\pm_shared\pm_shared.h" />
+    <ClInclude Include="..\common\activity.h" />
+    <ClInclude Include="..\common\beamdef.h" />
+    <ClInclude Include="..\common\bspfile.h" />
+    <ClInclude Include="..\common\cdll_dll.h" />
+    <ClInclude Include="..\common\color.h" />
+    <ClInclude Include="..\common\colors.h" />
+    <ClInclude Include="..\common\com_model.h" />
+    <ClInclude Include="..\common\const.h" />
+    <ClInclude Include="..\common\crc.h" />
+    <ClInclude Include="..\engine\custom.h" />
+    <ClInclude Include="..\engine\customentity.h" />
+    <ClInclude Include="..\common\cvardef.h" />
+    <ClInclude Include="..\common\damage.h" />
+    <ClInclude Include="..\common\decals.h" />
+    <ClInclude Include="..\common\demo_api.h" />
+    <ClInclude Include="..\common\dlight.h" />
+    <ClInclude Include="..\common\entity_state.h" />
+    <ClInclude Include="..\common\entity_types.h" />
+    <ClInclude Include="..\common\event_api.h" />
+    <ClInclude Include="..\common\event_args.h" />
+    <ClInclude Include="..\common\event_flags.h" />
+    <ClInclude Include="..\common\gamedefs.h" />
+    <ClInclude Include="..\common\hltv.h" />
+    <ClInclude Include="..\common\in_buttons.h" />
+    <ClInclude Include="..\common\netadr.h" />
+    <ClInclude Include="..\common\nowin.h" />
+    <ClInclude Include="..\common\platform.h" />
+    <ClInclude Include="..\common\playerstats.h" />
+    <ClInclude Include="..\common\pmtrace.h" />
+    <ClInclude Include="..\engine\progdefs.h" />
+    <ClInclude Include="..\common\protocol.h" />
+    <ClInclude Include="..\common\r_efx.h" />
+    <ClInclude Include="..\common\ref_params.h" />
+    <ClInclude Include="..\common\Sequence.h" />
+    <ClInclude Include="..\common\shared_resources.h" />
+    <ClInclude Include="..\common\studio_event.h" />
+    <ClInclude Include="..\common\usercmd.h" />
+    <ClInclude Include="..\common\util_vector.h" />
+    <ClInclude Include="..\common\vector.h" />
+    <ClInclude Include="..\common\weapondef.h" />
+    <ClInclude Include="..\common\weaponinfo.h" />
+    <ClInclude Include="..\common\weaponslots.h" />
+    <ClInclude Include="..\engine\edict.h" />
+    <ClInclude Include="..\engine\eiface.h" />
+    <ClInclude Include="..\engine\shake.h" />
+    <ClInclude Include="..\engine\studio.h" />
+    <ClInclude Include="..\common\basetsd.h" />
+    <ClInclude Include="effects.h" />
+    <ClInclude Include="environment.h" />
+    <ClInclude Include="explode.h" />
+    <ClInclude Include="gamerules\coop_gamerules.h" />
+    <ClInclude Include="gamerules\ctf_gamerules.h" />
+    <ClInclude Include="gamerules\dom_gamerules.h" />
+    <ClInclude Include="gamerules\gamerules.h" />
+    <ClInclude Include="gamerules\lms_gamerules.h" />
+    <ClInclude Include="gamerules\maprules.h" />
+    <ClInclude Include="gamerules\round_gamerules.h" />
+    <ClInclude Include="gamerules\teamplay_gamerules.h" />
+    <ClInclude Include="..\utils\common\bspfile.h" />
+    <ClInclude Include="..\game_shared\bitvec.h" />
+    <ClInclude Include="..\game_shared\voice_banmgr.h" />
+    <ClInclude Include="..\game_shared\voice_common.h" />
+    <ClInclude Include="..\game_shared\voice_gamemgr.h" />
+    <ClInclude Include="projectiles\blackball.h" />
+    <ClInclude Include="projectiles\crossbowbolt.h" />
+    <ClInclude Include="projectiles\customprojectile.h" />
+    <ClInclude Include="projectiles\flamecloud.h" />
+    <ClInclude Include="projectiles\hornet.h" />
+    <ClInclude Include="projectiles\lightp.h" />
+    <ClInclude Include="projectiles\plasmaball.h" />
+    <ClInclude Include="projectiles\projectile.h" />
+    <ClInclude Include="projectiles\razordisk.h" />
+    <ClInclude Include="projectiles\sqkgrenade.h" />
+    <ClInclude Include="projectiles\teleporter.h" />
+    <ClInclude Include="basemonster.h" />
+    <ClInclude Include="doors.h" />
+    <ClInclude Include="ent_alias.h" />
+    <ClInclude Include="ent_functional.h" />
+    <ClInclude Include="ent_locus.h" />
+    <ClInclude Include="flyingmonster.h" />
+    <ClInclude Include="func_break.h" />
+    <ClInclude Include="monsters.h" />
+    <ClInclude Include="scripted.h" />
+    <ClInclude Include="soundent.h" />
+    <ClInclude Include="trains.h" />
+    <ClInclude Include="triggers.h" />
+    <ClInclude Include="..\public\archtypes.h" />
+    <ClInclude Include="..\public\steam\steamtypes.h" />
+    <ClInclude Include="activitymap.h" />
+    <ClInclude Include="animation.h" />
+    <ClInclude Include="cbase.h" />
+    <ClInclude Include="client.h" />
+    <ClInclude Include="defaultai.h" />
+    <ClInclude Include="enginecallback.h" />
+    <ClInclude Include="entconfig.h" />
+    <ClInclude Include="extdll.h" />
+    <ClInclude Include="game.h" />
+    <ClInclude Include="globals.h" />
+    <ClInclude Include="items.h" />
+    <ClInclude Include="mapcycle.h" />
+    <ClInclude Include="maprules.h" />
+    <ClInclude Include="monsterevent.h" />
+    <ClInclude Include="movewith.h" />
+    <ClInclude Include="nodes.h" />
+    <ClInclude Include="plane.h" />
+    <ClInclude Include="player.h" />
+    <ClInclude Include="saverestore.h" />
+    <ClInclude Include="schedule.h" />
+    <ClInclude Include="scriptevent.h" />
+    <ClInclude Include="skill.h" />
+    <ClInclude Include="sound.h" />
+    <ClInclude Include="spectator.h" />
+    <ClInclude Include="squad.h" />
+    <ClInclude Include="squadmonster.h" />
+    <ClInclude Include="talkmonster.h" />
+    <ClInclude Include="util.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="XDM.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\common\res\xhl.ico" />
+    <CustomBuild Include="..\common\comments.txt" />
+    <CustomBuild Include="XDM.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Makefile" />
+    <None Include="XDM.cd" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

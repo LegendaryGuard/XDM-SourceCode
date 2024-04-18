@@ -11,6 +11,14 @@
 typedef unsigned char byte;
 #endif
 
+// XDM
+enum textmessage_effects_e
+{
+	TEXTMSG_FX_FADE = 0,
+	TEXTMSG_FX_FLICKER,
+	TEXTMSG_FX_WRITEOUT
+};
+
 //---------------------------------------------------------------------------
 // client_textmessage_t
 //---------------------------------------------------------------------------

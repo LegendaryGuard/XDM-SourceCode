@@ -7,7 +7,9 @@
 
 #if !defined( HUD_SERVERSH )
 #define HUD_SERVERSH
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 
 #define NET_CALLBACK /* */
 

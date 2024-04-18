@@ -1,55 +1,29 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-****/
-
-//
-// write.c: writes a studio .mdl file
-//
-
-
-
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4237 )
 #pragma warning( disable : 4305 )
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-
-#include "archtypes.h"
+#include "../../public/archtypes.h"
+#include "mathlib.h"
 #include "cmdlib.h"
+#include "../../engine/studio.h"
+#include "studiomdl.h"
 #include "lbmlib.h"
 #include "scriplib.h"
-#include "mathlib.h"
-#include "..\..\engine\studio.h"
-#include "studiomdl.h"
-
 
 int totalframes = 0;
 float totalseconds = 0;
 extern int numcommandnodes;
 
-
-
-/*
-============
-WriteModel
-============
-*/
 byte *pData;
 byte *pStart;
 studiohdr_t *phdr;
 studioseqhdr_t *pseqhdr;
 
 #define ALIGN( a ) a = (byte *)((int)((byte *)a + 3) & ~ 3)
-void WriteBoneInfo( )
+void WriteBoneInfo(void)
 {
 	int i, j;
 	mstudiobone_t *pbone;
@@ -164,7 +138,7 @@ void WriteBoneInfo( )
 }
 
 
-void WriteSequenceInfo( )
+void WriteSequenceInfo(void)
 {
 	int i, j;
 
@@ -332,7 +306,7 @@ byte *WriteAnimations( byte *pData, byte *pStart, int group )
 	return pData;
 }
 	
-void WriteTextures( )
+void WriteTextures(void)
 {
 	int i, j;
 	mstudiotexture_t *ptexture;
@@ -363,8 +337,16 @@ void WriteTextures( )
 
 	phdr->texturedataindex = (pData - pStart); 	// must be the end of the file!
 
-	for (i = 0; i < numtextures; i++) {
-		strcpy( ptexture[i].name, texture[i].name );
+	for (i = 0; i < numtextures; i++)
+	{
+		if (renametextures[i][0])// XDM
+		{
+			printf(" renaming '%s' to '%s'\n", texture[i].name, renametextures[i]);
+			strcpy(ptexture[i].name, renametextures[i]);
+		}
+		else
+			strcpy(ptexture[i].name, texture[i].name);
+
 		ptexture[i].flags		= texture[i].flags;
 		ptexture[i].width		= texture[i].skinwidth;
 		ptexture[i].height		= texture[i].skinheight;
@@ -376,7 +358,7 @@ void WriteTextures( )
 }
 
 
-void WriteModel( )
+void WriteModel(void)
 {
 	int i, j, k;
 
@@ -521,7 +503,7 @@ void WriteModel( )
 
 
 
-#define FILEBUFFER ( 16 * 1024 * 1024)
+#define FILEBUFFER (16 * 1024 * 1024)
 	
 
 void WriteFile (void)
@@ -645,6 +627,3 @@ void WriteFile (void)
 
 	fclose (modelouthandle);
 }
-
-
-

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -34,8 +34,20 @@ enum SS_INTERRUPT
 {
 	SS_INTERRUPT_IDLE = 0,
 	SS_INTERRUPT_BY_NAME,
-	SS_INTERRUPT_AI,
+	SS_INTERRUPT_AI
 };
+
+enum SS_MOVETO
+{
+	SS_MOVETO_NOMOVE = 0,
+	SS_MOVETO_WALK,
+	SS_MOVETO_RUN,
+	SS_MOVETO_3,
+	SS_MOVETO_INSTANT,
+	SS_MOVETO_ONLYTURN
+};
+
+#define SSCLASSNAME "scripted_sequence"
 
 // when a monster finishes an AI scripted sequence, we can choose
 // a schedule to place them in. These defines are the aliases to
@@ -46,40 +58,41 @@ enum SS_INTERRUPT
 class CCineMonster : public CBaseMonster
 {
 public:
-	void Spawn( void );
-	virtual void KeyValue( KeyValueData *pkvd );
-	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-	virtual void Blocked( CBaseEntity *pOther );
-	virtual void Touch( CBaseEntity *pOther );
-	virtual int	 ObjectCaps( void ) { return (CBaseMonster :: ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
-	virtual void Activate( void );
+	virtual void Spawn(void);
+	virtual void KeyValue(KeyValueData *pkvd);
+	virtual void Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	virtual void Blocked(CBaseEntity *pOther);
+	virtual void Touch(CBaseEntity *pOther);
+	virtual int ObjectCaps(void) { return (CBaseMonster::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
+	virtual void Activate(void);
+	virtual void Killed(CBaseEntity *pInflictor, CBaseEntity *pAttacker, int iGib);
 
-	virtual int		Save( CSave &save );
-	virtual int		Restore( CRestore &restore );
-	
+	virtual int Save(CSave &save);
+	virtual int Restore(CRestore &restore);
+
 	static	TYPEDESCRIPTION m_SaveData[];
 
-	// void EXPORT CineSpawnThink( void );
-	void EXPORT CineThink( void );
-	void Pain( void );
-	void Die( void );
-	void DelayStart( int state );
-	BOOL FindEntity( void );
-	virtual void PossessEntity( void );
+	// void EXPORT CineSpawnThink(void);
+	void EXPORT CineThink(void);
+//	void Pain(void);
+//	void Die(void);
+	void DelayStart(int state);
+	BOOL FindEntity(void);
+	virtual void PossessEntity(void);
 
-	void ReleaseEntity( CBaseMonster *pEntity );
-	void CancelScript( void );
-	virtual BOOL StartSequence( CBaseMonster *pTarget, int iszSeq, BOOL completeOnEmpty );
-	virtual BOOL FCanOverrideState ( void );
-	void SequenceDone ( CBaseMonster *pMonster );
-	virtual void FixScriptMonsterSchedule( CBaseMonster *pMonster );
-	BOOL	CanInterrupt( void );
-	void	AllowInterrupt( BOOL fAllow );
-	int		IgnoreConditions( void );
+	void ReleaseEntity(CBaseMonster *pEntity);
+	void CancelScript(void);
+	virtual BOOL StartSequence(CBaseMonster *pTarget, string_t iszSeq, BOOL completeOnEmpty);
+	virtual BOOL FCanOverrideState (void);
+	void SequenceDone(CBaseMonster *pMonster);
+	virtual void FixScriptMonsterSchedule(CBaseMonster *pMonster);
+	BOOL	CanInterrupt(void);
+	void	AllowInterrupt(BOOL fAllow);
+	int		IgnoreConditions(void);
 
-	int	m_iszIdle;		// string index for idle animation
-	int	m_iszPlay;		// string index for scripted animation
-	int m_iszEntity;	// entity that is wanted for this script
+	string_t	m_iszIdle;		// string index for idle animation
+	string_t	m_iszPlay;		// string index for scripted animation
+	string_t	m_iszEntity;	// entity that is wanted for this script
 	int m_fMoveTo;
 	int m_iFinishSchedule;
 	float m_flRadius;		// range to search
@@ -95,13 +108,59 @@ public:
 	BOOL m_interruptable;
 };
 
+
 class CCineAI : public CCineMonster
 {
-	BOOL StartSequence( CBaseMonster *pTarget, int iszSeq, BOOL completeOnEmpty );
-	void PossessEntity( void );
-	BOOL FCanOverrideState ( void );
-	virtual void FixScriptMonsterSchedule( CBaseMonster *pMonster );
+	virtual BOOL StartSequence(CBaseMonster *pTarget, string_t iszSeq, BOOL completeOnEmpty);
+	virtual void PossessEntity(void);
+	virtual BOOL FCanOverrideState(void);
+	virtual void FixScriptMonsterSchedule(CBaseMonster *pMonster);
 };
 
+
+#define SF_SENTENCE_ONCE		0x0001
+#define SF_SENTENCE_FOLLOWERS	0x0002	// only say if following player
+#define SF_SENTENCE_INTERRUPT	0x0004	// force talking except when dead
+#define SF_SENTENCE_CONCURRENT	0x0008	// allow other people to keep talking
+
+class CScriptedSentence : public CBaseToggle
+{
+public:
+	virtual void Spawn(void);
+	virtual void KeyValue(KeyValueData *pkvd);
+	virtual void Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value);
+	virtual int ObjectCaps(void) { return (CBaseToggle::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
+	virtual int Save(CSave &save);
+	virtual int Restore(CRestore &restore);
+	void EXPORT FindThink(void);
+	void EXPORT DelayThink(void);
+
+	static	TYPEDESCRIPTION m_SaveData[];
+
+	CBaseMonster *FindEntity(void);
+	BOOL AcceptableSpeaker(CBaseMonster *pMonster);
+	BOOL StartSentence(CBaseMonster *pTarget);
+
+private:
+	string_t		m_iszSentence;		// string index for idle animation
+	string_t		m_iszEntity;	// entity that is wanted for this sentence
+	float	m_flRadius;		// range to search
+	float	m_flDuration;	// How long the sentence lasts
+	float	m_flRepeat;	// repeat rate
+	float	m_flAttenuation;
+	float	m_flVolume;
+	BOOL	m_active;
+	string_t		m_iszListener;	// name of entity to look at while talking
+};
+
+
+class CFurniture : public CBaseMonster
+{
+public:
+	virtual void Spawn(void);
+	virtual void Killed(CBaseEntity *pInflictor, CBaseEntity *pAttacker, int iGib);
+	virtual int Classify(void);
+	virtual int	ObjectCaps(void) { return (CBaseMonster::ObjectCaps() & ~FCAP_ACROSS_TRANSITION); }
+};
 
 #endif		//SCRIPTED_H

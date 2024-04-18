@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -12,6 +12,10 @@
 #include "mathlib.h"
 #include "bspfile.h"
 #include "scriplib.h"
+
+#pragma warning( disable : 4244 )
+#pragma warning( disable : 4237 )
+#pragma warning( disable : 4305 )
 
 //=============================================================================
 
@@ -707,3 +711,56 @@ void 	GetVectorForKey (entity_t *ent, char *key, vec3_t vec)
 	vec[2] = v3;
 }
 
+
+
+void LoadENTFile(char *filename)// XDM
+{
+	FILE *pFile;
+	pFile = fopen(filename, "r");
+	if(!pFile)
+	{
+		Error("Unable to open %s!\n", filename);
+		return;
+	}
+
+	entdatasize = flen(pFile);
+	fread(dentdata, sizeof(char), entdatasize, pFile);
+	fclose(pFile);
+
+
+	printf("dentdata:\n%s\nentdatasize: %d\n", dentdata, entdatasize);
+
+	ParseFromMemory(dentdata, entdatasize);
+	while(1)
+	{
+		epair_t		*e;
+		entity_t	*mapent;
+
+		if (!GetToken(true))
+			break;
+
+		if (strcmp (token, "{"))
+			Error("ParseEntity: { not found");
+		
+		if (num_entities == MAX_MAP_ENTITIES)
+			Error("num_entities == MAX_MAP_ENTITIES");
+
+		mapent = &entities[num_entities];
+		num_entities++;
+
+		do
+		{
+			if (!GetToken (true))
+				Error("ParseEntity: EOF without closing brace");
+			if (!strcmp (token, "}"))
+				break;
+			e = ParseEpair();
+			e->next = mapent->epairs;
+			mapent->epairs = e;
+			printf("key: %s, value: %s\n", e->key, e->value);
+
+		}
+		while (1);
+		printf("new entity\n");
+	}	
+}

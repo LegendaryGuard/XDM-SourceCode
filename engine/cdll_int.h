@@ -35,7 +35,7 @@ extern "C" {
 // this file is included by both the engine and the client-dll,
 // so make sure engine declarations aren't done twice
 
-typedef int HSPRITE;	// handle to a graphic
+typedef int HLSPRITE;	// handle to a graphic
 
 #define SCRINFO_SCREENFLASH 1
 #define SCRINFO_STRETCHED	2
@@ -62,6 +62,13 @@ typedef struct client_data_s
 //	int		iAccessoryBits;
 	float	fov;	// field of view
 } client_data_t;
+
+// XDM: all of these are absolute pixel coordinates of a rectangular image region (left, top) - (right, bottom)
+typedef struct rect_s
+{
+	int				left, right, top, bottom;
+} wrect_t;
+
 
 typedef struct client_sprite_s
 {
@@ -166,6 +173,7 @@ extern void ClientDLL_ChatInputPosition( int *x, int *y );
 extern cldll_func_t	cl_funcs;
 extern cl_enginefunc_t cl_engsrcProxies;
 extern cl_enginefunc_dst_t g_engdstAddrs;
+extern cl_enginefunc_t gEngfuncs;// XDM3037a
 
 // Module exports
 extern modfuncs_t g_modfuncs;

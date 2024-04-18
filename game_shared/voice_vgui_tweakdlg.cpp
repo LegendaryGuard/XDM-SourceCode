@@ -7,19 +7,16 @@
 
 #include "../cl_dll/hud.h"
 #include "../cl_dll/cl_util.h"
-#include "../cl_dll/vgui_teamfortressviewport.h"
-
-
-#include "vgui_actionsignal.h"
-#include "voice_vgui_tweakdlg.h"
-#include "voice_vgui_tweakdlg.h"
-#include "vgui_panel.h"
-#include "vgui_scrollbar.h"
-#include "vgui_slider.h"
-#include "ivoicetweak.h"
-#include "vgui_button.h"
+#include "../cl_dll/vgui_Viewport.h"
+#include "VGUI_ActionSignal.h"
+#include "VGUI_Panel.h"
+#include "VGUI_Button.h"
 #include "vgui_checkbutton2.h"
-#include "vgui_helpers.h"
+#include "VGUI_ScrollBar.h"
+#include "VGUI_Slider.h"
+//#include "vgui_helpers.h"
+#include "ivoicetweak.h"
+#include "voice_vgui_tweakdlg.h"
 
 
 #define ITEM_BORDER					40	// Border between text and scrollbars on left and right.
@@ -29,9 +26,8 @@
 class TweakScroller
 {
 public:
-						TweakScroller();
+	TweakScroller();
 	void				Init(Panel *pParent, char *pText, int yPos);
-
 	// Get/set value. Values are 0-1.
 	float				GetValue();
 	void				SetValue(float val);
@@ -45,49 +41,34 @@ public:
 
 class CVoiceVGUITweakDlg : public CMenuPanel, public ICheckButton2Handler
 {
-typedef CMenuPanel BaseClass;
-
 public:
-						CVoiceVGUITweakDlg();
-						~CVoiceVGUITweakDlg();
-
+typedef CMenuPanel BaseClass;
+	CVoiceVGUITweakDlg();
+	~CVoiceVGUITweakDlg();
 // CMenuPanel overrides.
 public:
 	virtual void		Open();
 	virtual void		Close();
-
-
 // ICheckButton2Handler overrides.
-public:
-
 	virtual void		StateChanged(CCheckButton2 *pButton);
-
-
-
 // Panel overrides.
-public:
 	virtual void		paintBackground();
 
-
 private:
-
 	int					m_DlgWidth;
 	int					m_DlgHeight;
-
 	Label				m_Label;		
-	
 	IVoiceTweak			*m_pVoiceTweak;		// Engine voice tweak API.
-
 	TweakScroller		m_MicVolume;
 	TweakScroller		m_SpeakerVolume;
-
 	CCheckButton2		m_VoiceModEnable;
-	
 	Button				m_Button_OK;
 };
 
 
-
+// ------------------------------------------------------------------------ //
+// Global functions.
+// ------------------------------------------------------------------------ //
 bool g_bTweakDlgOpen = false;
 
 bool IsTweakDlgOpen()
@@ -95,13 +76,8 @@ bool IsTweakDlgOpen()
 	return g_bTweakDlgOpen;
 }
 
-
-
-// ------------------------------------------------------------------------ //
-// Global functions.
-// ------------------------------------------------------------------------ //
-
 static CVoiceVGUITweakDlg g_VoiceTweakDlg;
+
 CMenuPanel* GetVoiceTweakDlg()
 {
 	return &g_VoiceTweakDlg;
@@ -131,9 +107,11 @@ TweakScroller::TweakScroller() :
 {
 }
 
-
 void TweakScroller::Init(Panel *pParent, char *pText, int yPos)
 {
+	if (pParent == NULL)
+		return;
+
 	int parentWidth, parentHeight;
 	pParent->getSize(parentWidth, parentHeight);
 
@@ -150,7 +128,7 @@ void TweakScroller::Init(Panel *pParent, char *pText, int yPos)
 
 	m_Slider.setRangeWindow(10);
 	m_Slider.setRangeWindowEnabled(true);
-	
+
 	m_Scroll.setPos(parentWidth/2+ITEM_BORDER, yPos);
 	m_Scroll.setSize(parentWidth/2-ITEM_BORDER*2, 20);
 	m_Scroll.setSlider(&m_Slider);
@@ -160,12 +138,10 @@ void TweakScroller::Init(Panel *pParent, char *pText, int yPos)
 	m_Scroll.setBgColor(255,255,255,0);
 }
 
-
 float TweakScroller::GetValue()
 {
 	return m_Scroll.getValue() / 100.0f;
 }
-
 
 void TweakScroller::SetValue(float val)
 {
@@ -176,29 +152,29 @@ void TweakScroller::SetValue(float val)
 // ------------------------------------------------------------------------ //
 // CVoiceVGUITweakDlg implementation.
 // ------------------------------------------------------------------------ //
-
-CVoiceVGUITweakDlg::CVoiceVGUITweakDlg()
-	: CMenuPanel(VOICETWEAK_TRANSPARENCY, false, 0, 0, 0, 0),
+// XRES/YRES macros do not work yet
+CVoiceVGUITweakDlg::CVoiceVGUITweakDlg(): CMenuPanel(false, -1, -1, (320), (200)),
 	m_Button_OK("",0,0),
 	m_Label("")
 {
+	setBgColor(0,0,0,VOICETWEAK_TRANSPARENCY);
 	m_pVoiceTweak = NULL;
 	m_Button_OK.addActionSignal(&g_OKButtonSignal);
 	m_Label.setBgColor(255,255,255,200);
 }
 
-
 CVoiceVGUITweakDlg::~CVoiceVGUITweakDlg()
 {
 }
-
 
 void CVoiceVGUITweakDlg::Open()
 {
 	if(g_bTweakDlgOpen)
 		return;
-	
+
 	g_bTweakDlgOpen = true;
+	m_bShowCursor = true;// XDM3035a
+	setDragEnabled(true);// XDM3035a
 
 	m_DlgWidth = ScreenWidth;
 	m_DlgHeight = ScreenHeight;
@@ -213,13 +189,18 @@ void CVoiceVGUITweakDlg::Open()
 	setSize(m_DlgWidth, m_DlgHeight);
 
 	int curY = ITEM_BORDER;
-	m_MicVolume.Init(this, gHUD.m_TextMessage.BufferedLocaliseTextString("#Mic_Volume"), curY);
+	m_MicVolume.Init(this, BufferedLocaliseTextString("#Mic_Volume"), curY);
 	m_MicVolume.SetValue(m_pVoiceTweak->GetControlFloat(MicrophoneVolume));
-	curY = PanelBottom(&m_MicVolume.m_Label);
+//	curY = PanelBottom(&m_MicVolume.m_Label);
+	int px;
+	m_MicVolume.m_Label.getPos(px, curY);
+	curY += m_MicVolume.m_Label.getTall();
 
-	m_SpeakerVolume.Init(this, gHUD.m_TextMessage.BufferedLocaliseTextString("#Speaker_Volume"), curY);
+	m_SpeakerVolume.Init(this, BufferedLocaliseTextString("#Speaker_Volume"), curY);
 	m_SpeakerVolume.SetValue(m_pVoiceTweak->GetControlFloat(OtherSpeakerScale));
-	curY = PanelBottom(&m_SpeakerVolume.m_Label);
+//	curY = PanelBottom(&m_SpeakerVolume.m_Label);
+	m_SpeakerVolume.m_Label.getPos(px, curY);
+	curY += m_SpeakerVolume.m_Label.getTall();
 
 	m_VoiceModEnable.setParent(this);
 	m_VoiceModEnable.SetImages("gfx/vgui/checked.tga", "gfx/vgui/unchecked.tga");
@@ -231,7 +212,7 @@ void CVoiceVGUITweakDlg::Open()
 
 	// Setup the OK button.
 	int buttonWidth, buttonHeight;
-	m_Button_OK.setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Menu_OK"));
+	m_Button_OK.setText(BufferedLocaliseTextString("#Menu_OK"));
 	m_Button_OK.getSize(buttonWidth, buttonHeight);
 	m_Button_OK.setPos((m_DlgWidth - buttonWidth) / 2, m_DlgHeight - buttonHeight - 3);
 	m_Button_OK.setParent(this);
@@ -239,28 +220,26 @@ void CVoiceVGUITweakDlg::Open()
 	// Put the label on the top.
 	m_Label.setBgColor(0, 0, 0, 255);
 	m_Label.setFgColor(255,255,255,0);
-	m_Label.setText(gHUD.m_TextMessage.BufferedLocaliseTextString("#Voice_Properties"));
+	m_Label.setText(BufferedLocaliseTextString("#Voice_Properties"));
 	int labelWidth, labelHeight;
 	m_Label.getSize(labelWidth, labelHeight);
 	m_Label.setPos((m_DlgWidth - labelWidth) / 2, 5);
 	m_Label.setParent(this);
 
-	BaseClass::Open();
+	CVoiceVGUITweakDlg::BaseClass::Open();
 }
-
 
 void CVoiceVGUITweakDlg::Close()
 {
 	m_pVoiceTweak->EndVoiceTweakMode();
 	g_bTweakDlgOpen = false;
 
-	BaseClass::Close();
+	CVoiceVGUITweakDlg::BaseClass::Close();
 }
-
 
 void CVoiceVGUITweakDlg::paintBackground()
 {
-	BaseClass::paintBackground();
+	CMenuPanel::BaseClass::paintBackground();
 
 	// Draw our border.
 	int w,h;
@@ -275,10 +254,9 @@ void CVoiceVGUITweakDlg::paintBackground()
 	m_pVoiceTweak->SetControlFloat(OtherSpeakerScale, m_SpeakerVolume.GetValue());
 }
 
-
 void CVoiceVGUITweakDlg::StateChanged(CCheckButton2 *pButton)
 {
-	if(pButton == &m_VoiceModEnable)
+	if (pButton == &m_VoiceModEnable)
 	{
 		if(pButton->IsChecked())
 			gEngfuncs.pfnClientCmd("voice_modenable 1");
@@ -286,4 +264,3 @@ void CVoiceVGUITweakDlg::StateChanged(CCheckButton2 *pButton)
 			gEngfuncs.pfnClientCmd("voice_modenable 0");
 	}
 }
-

@@ -18,8 +18,7 @@ char	**ppszFiles = NULL;
 int		nFiles = 0;
 int		nMaxFiles = 0;
 
-int
-string_comparator( const void *string1, const void *string2 )
+int string_comparator( const void *string1, const void *string2 )
 {
 	char	*s1 = *(char **)string1;
 	char	*s2 = *(char **)string2;
@@ -44,7 +43,7 @@ int main(int argc, void **argv)
 	BOOL fContinue = TRUE;
 	DWORD dwWritten;
 
-	printf("makels Copyright (c) 1998 Valve L.L.C., %s\n", __DATE__ );
+	printf("makels Copyright (c) 2004 Valve L.L.C., %s\n", __DATE__ );
 
 	pszdir = (char *)argv[1];
 
@@ -60,12 +59,11 @@ int main(int argc, void **argv)
 
 	pszWadName = (char *)malloc(strlen((char *)argv[2]) + 5);
 	strcpy(pszWadName, (char *)argv[2]);
-	strcat(pszWadName, ".WAD");
+	strcat(pszWadName, ".wad");
 
 	pszScriptName = (char *)malloc(strlen((char *)argv[3]));
 	strcpy(pszScriptName, (char *)argv[3]);
-	hScriptFile = CreateFile(pszScriptName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 
-			FILE_ATTRIBUTE_NORMAL, NULL);
+	hScriptFile = CreateFile(pszScriptName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (hScriptFile == INVALID_HANDLE_VALUE)
 	{
@@ -86,16 +84,13 @@ write_error:
 		CloseHandle(hScriptFile);
 		exit(EXIT_FAILURE);
 	}
-	
-	
-	hFile = FindFirstFile(pszdir, &FindData);
 
+	hFile = FindFirstFile(pszdir, &FindData);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
 		while (fContinue)
 		{
-			if (!(FindData.dwFileAttributes &
-					(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_HIDDEN)))
+			if (!(FindData.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_HIDDEN)))
 			{
 				char szShort[MAX_PATH];
 
@@ -105,11 +100,10 @@ write_error:
 
 				if ((szShort[1] == '_') && ((szShort[0] == 'N') || (szShort[0] == 'F')))
 				{
-
 					printf("Skipping %s.\n", FindData.cFileName);
-
-				} else {
-				
+				}
+				else
+				{
 					if ( nFiles >= nMaxFiles )
 					{
 						nMaxFiles += 1000;
@@ -128,7 +122,6 @@ write_error:
 			fContinue = FindNextFile(hFile, &FindData);
 		}	
 	}
-
 
 	if (nFiles > 0)
 	{
@@ -151,7 +144,6 @@ write_error:
 			if (!fWrite || (dwWritten != strlen(szBuf)))
 				goto write_error;
 
-
 			p = strchr(ppszFiles[i], '.');
 			*p = '\0';
 
@@ -163,11 +155,9 @@ write_error:
 			free( ppszFiles[i] );
 		}
 	}
-	
-	printf("Processed %d files specified by %s\n", nFiles, pszdir );
-
 	CloseHandle(hScriptFile);
 	free(pszdir);
+	printf("Processed %d files specified by %s\n", nFiles, pszdir);
 	exit(0);
 	return 0;
 }

@@ -1,43 +1,78 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-*   Use, distribution, and modification of this source code and/or resulting
-*   object code is restricted to non-commercial enhancements to products from
-*   Valve LLC.  All other use, distribution, or modification is prohibited
-*   without written permission from Valve LLC.
-*
-****/
-//
-//  cl_dll.h
-//
-
-// 4-23-98  JOHN
-
-//
-//  This DLL is linked by the client when they first initialize.
-// This DLL is responsible for the following tasks:
-//		- Loading the HUD graphics upon initialization
-//		- Drawing the HUD graphics every frame
-//		- Handling the custum HUD-update packets
-//
-typedef unsigned char byte;
-typedef unsigned short word;
-typedef float vec_t;
-typedef int (*pfnUserMsgHook)(const char *pszName, int iSize, void *pbuf);
-
-#include "util_vector.h"
+#ifndef CL_DLL_H
+#define CL_DLL_H
 #ifdef _WIN32
-#define EXPORT	_declspec( dllexport )
-#else
-#define EXPORT	__attribute__ ((visibility("default")))
+#if !defined (__MINGW32__)
+#pragma once
+#endif /* not __MINGW32__ */
 #endif
 
-#include "../engine/cdll_int.h"
-#include "../dlls/cdll_dll.h"
+typedef int (*pfnUserMsgHook)(const char *pszName, int iSize, void *pbuf);
 
-extern cl_enginefunc_t gEngfuncs;
+#include "../common/platform.h"
+#include "../common/vector.h"
+#include "../common/cdll_dll.h"
+#include "../engine/cdll_int.h"
+#include "../engine/eiface.h"
+
+#if defined (_DEBUG_CLIENTDLL)
+#define DBG_CL_PRINT	DBG_PrintF
+#else
+#define DBG_CL_PRINT
+#endif
+
+// Global Client-DLL functions
+void CL_Precache(void);
+void CL_RegisterVariables(void);
+void CL_RegisterCommands(void);
+void CL_RegisterMessages(void);
+void CL_TempEntPlaySound(struct tempent_s *pTemp, float damp);
+
+void EV_HookEvents(void);
+
+float HUD_GetFOV(void);
+
+
+// Global Client-DLL variables
+extern float g_lastFOV;
+
+// Console variables
+extern cvar_t *g_pCvarLW;
+extern cvar_t *g_pCvarSuitVolume;
+extern cvar_t *g_pCvarDeveloper;
+extern cvar_t *g_pCvarServerZMax;
+extern cvar_t *g_pCvarParticles;
+extern cvar_t *g_pCvarEffects;
+extern cvar_t *g_pCvarEffectsDLight;
+extern cvar_t *g_pCvarScheme;
+extern cvar_t *g_pCvarTFX;
+extern cvar_t *g_pCvarDeathView;
+extern cvar_t *g_pCvarPickupVoice;
+extern cvar_t *g_pCvarAmmoVoice;
+extern cvar_t *g_pCvarAnnouncer;
+extern cvar_t *g_pCvarAnnouncerEvents;
+extern cvar_t *g_pCvarAnnouncerLCombo;
+extern cvar_t *g_pCvarHLPlayers;
+extern cvar_t *g_pCvarViewDistance;
+extern cvar_t *g_pCvarFlashLightMode;
+extern cvar_t *g_pCvarDefaultFOV;
+extern cvar_t *g_pCvarZSR;
+extern cvar_t *g_pCvarCameraAngles;
+extern cvar_t *g_pCvarLogStats;
+extern cvar_t *g_pCvarLODDist;
+extern cvar_t *g_pCvarRenderSystem;
+extern cvar_t *g_pCvarPSAutoRate;
+extern cvar_t *g_pCvarVoiceIconOffset;
+extern cvar_t *g_pCvarMasterServerFile;
+extern cvar_t *g_pCvarTmp;
+#if defined (_DEBUG_ANGLES)
+extern cvar_t *g_pCvarDbgAngles;
+extern cvar_t *g_pCvarDbgAnglesClient;
+extern cvar_t *g_pCvarDbgAnglesMult;
+#endif
+#if defined (_DEBUG)
+extern cvar_t *cl_test1;
+extern cvar_t *cl_test2;
+extern cvar_t *cl_test3;
+#endif
+
+#endif // CL_DLL_H

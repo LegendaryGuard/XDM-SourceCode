@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -12,11 +12,22 @@
 *   use or distribution of this code by or to any unlicensed person is illegal.
 *
 ****/
+#ifndef SQUADMONSTER_H
+#define SQUADMONSTER_H
+#if defined (_WIN32)
+#if !defined (__MINGW32__)
+#pragma once
+#endif /* not __MINGW32__ */
+#endif
+
+#include "basemonster.h"
+
 //=========================================================
 // CSquadMonster - all the extra data for monsters that
 // form squads.
 //=========================================================
 
+// Must not conflict with basemonster flags!
 #define	SF_SQUADMONSTER_LEADER	32
 
 
@@ -66,55 +77,48 @@ public:
 	// squad member info
 	int		m_iMySlot;// this is the behaviour slot that the monster currently holds in the squad. 
 
-	int  CheckEnemy ( CBaseEntity *pEnemy );
-	void StartMonster ( void );
-	void VacateSlot( void );
-	void ScheduleChange( void );
-	void Killed( entvars_t *pevAttacker, int iGib );
-	BOOL OccupySlot( int iDesiredSlot );
-	BOOL NoFriendlyFire( void );
+	virtual int  CheckEnemy ( CBaseEntity *pEnemy );
+	virtual void StartMonster (void);
+	virtual void ScheduleChange(void);
+	virtual void Killed(CBaseEntity *pInflictor, CBaseEntity *pAttacker, int iGib);
+	virtual bool NoFriendlyFire(bool playerAlly = false);// XDM
+	virtual void ReportState(int printlevel);// XDM3038c
+
+	virtual BOOL OccupySlot(int iDesiredSlot);
+	virtual void VacateSlot(void);
 
 	// squad functions still left in base class
-	CSquadMonster *MySquadLeader( ) 
-	{ 
-		CSquadMonster *pSquadLeader = (CSquadMonster *)((CBaseEntity *)m_hSquadLeader); 
-		if (pSquadLeader != NULL)
-			return pSquadLeader;
-		return this;
-	}
-	CSquadMonster *MySquadMember( int i ) 
-	{ 
-		if (i >= MAX_SQUAD_MEMBERS-1)
-			return this;
-		else
-			return (CSquadMonster *)((CBaseEntity *)m_hSquadMember[i]); 
-	}
-	int	InSquad ( void ) { return m_hSquadLeader != NULL; }
-	int IsLeader ( void ) { return m_hSquadLeader == this; }
-	int SquadJoin ( int searchRadius );
-	int SquadRecruit ( int searchRadius, int maxMembers );
-	int	SquadCount( void );
-	void SquadRemove( CSquadMonster *pRemove );
-	void SquadUnlink( void );
-	BOOL SquadAdd( CSquadMonster *pAdd );
-	void SquadDisband( void );
-	void SquadAddConditions ( int iConditions );
-	void SquadMakeEnemy ( CBaseEntity *pEnemy );
-	void SquadPasteEnemyInfo ( void );
-	void SquadCopyEnemyInfo ( void );
-	BOOL SquadEnemySplit ( void );
-	BOOL SquadMemberInRange( const Vector &vecLocation, float flDist );
+	CSquadMonster *MySquadLeader(void) ;
+	CSquadMonster *MySquadMember(int i);
 
-	virtual CSquadMonster *MySquadMonsterPointer( void ) { return this; }
+	virtual bool InSquad(void) { return m_hSquadLeader != NULL; }
+	virtual bool IsLeader(void) { return m_hSquadLeader == this; }
+//	virtual int SquadJoin ( int searchRadius );
+	virtual int SquadRecruit ( int searchRadius, int maxMembers );
+	virtual int	SquadCount(void);
+	virtual void SquadRemove( CSquadMonster *pRemove );
+	virtual void SquadUnlink(void);
+	virtual BOOL SquadAdd( CSquadMonster *pAdd );
+	virtual void SquadDisband(void);
+//	virtual void SquadAddConditions ( int iConditions );
+	virtual void SquadMakeEnemy ( CBaseEntity *pEnemy );
+	virtual void SquadPasteEnemyInfo (void);
+	virtual void SquadCopyEnemyInfo (void);
+	virtual BOOL SquadEnemySplit (void);
+	virtual BOOL SquadMemberInRange( const Vector &vecLocation, float flDist );
+
+	virtual CSquadMonster *MySquadMonsterPointer(void) { return this; }
 
 	static TYPEDESCRIPTION m_SaveData[];
 
-	int	Save( CSave &save ); 
-	int Restore( CRestore &restore );
+	virtual int	Save(CSave &save); 
+	virtual int Restore(CRestore &restore);
 
-	BOOL FValidateCover ( const Vector &vecCoverLocation );
+	virtual bool FValidateCover ( const Vector &vecCoverLocation );
 
-	MONSTERSTATE GetIdealState ( void );
-	Schedule_t	*GetScheduleOfType ( int iType );
+	virtual MONSTERSTATE GetIdealState (void);
+	virtual Schedule_t	*GetScheduleOfType ( int iType );
 };
 
+
+#endif // SQUADMONSTER_H

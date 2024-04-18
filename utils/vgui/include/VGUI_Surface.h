@@ -31,7 +31,9 @@ public:
 	virtual void createPopup(Panel* embeddedPanel);
 	virtual bool hasFocus();
 	virtual bool isWithin(int x,int y);
+#if defined (VGUI_20130901)// HL20130901
 	virtual void GetMousePos( int &x, int &y );
+#endif
 protected:
 	virtual int  createNewTextureID(void);
 	virtual void drawSetColor(int r,int g,int b,int a);

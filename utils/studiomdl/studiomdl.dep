@@ -1,0 +1,67 @@
+# Microsoft Developer Studio Generated Dependency File, included by studiomdl.mak
+
+.\bmpread.c : \
+	"..\..\common\basetsd.h"\
+	
+
+.\cmdlib.c : \
+	".\cmdlib.h"\
+	
+
+.\lbmlib.c : \
+	"..\..\common\basetsd.h"\
+	".\cmdlib.h"\
+	".\lbmlib.h"\
+	
+
+.\mathlib.c : \
+	".\cmdlib.h"\
+	".\mathlib.h"\
+	
+
+.\scriplib.c : \
+	".\cmdlib.h"\
+	".\scriplib.h"\
+	
+
+.\studiomdl.c : \
+	"..\..\common\studio_event.h"\
+	"..\..\dlls\activity.h"\
+	"..\..\dlls\activitymap.h"\
+	"..\..\engine\studio.h"\
+	".\cmdlib.h"\
+	".\lbmlib.h"\
+	".\mathlib.h"\
+	".\scriplib.h"\
+	".\studiomdl.h"\
+	
+
+.\trilib.c : \
+	".\cmdlib.h"\
+	".\mathlib.h"\
+	".\trilib.h"\
+	
+
+.\tristrip.c : \
+	"..\..\common\studio_event.h"\
+	"..\..\engine\studio.h"\
+	".\cmdlib.h"\
+	".\lbmlib.h"\
+	".\mathlib.h"\
+	".\scriplib.h"\
+	".\studiomdl.h"\
+	
+
+.\write.c : \
+	"..\..\common\studio_event.h"\
+	"..\..\engine\studio.h"\
+	".\cmdlib.h"\
+	".\lbmlib.h"\
+	".\mathlib.h"\
+	".\scriplib.h"\
+	".\studiomdl.h"\
+	
+
+.\studiomdl.rc : \
+	".\studiomdl.ico"\
+	

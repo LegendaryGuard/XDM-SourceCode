@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -22,21 +22,6 @@
 #include "trains.h"
 #include "saverestore.h"
 
-class CPathCorner : public CPointEntity
-{
-public:
-	void Spawn( );
-	void KeyValue( KeyValueData* pkvd );
-	float GetDelay( void ) { return m_flWait; }
-//	void Touch( CBaseEntity *pOther );
-	virtual int		Save( CSave &save );
-	virtual int		Restore( CRestore &restore );
-	
-	static	TYPEDESCRIPTION m_SaveData[];
-
-private:
-	float	m_flWait;
-};
 
 LINK_ENTITY_TO_CLASS( path_corner, CPathCorner );
 
@@ -46,75 +31,66 @@ TYPEDESCRIPTION	CPathCorner::m_SaveData[] =
 	DEFINE_FIELD( CPathCorner, m_flWait, FIELD_FLOAT ),
 };
 
-IMPLEMENT_SAVERESTORE( CPathCorner, CPointEntity );
+IMPLEMENT_SAVERESTORE(CPathCorner, CBaseDelay);// XDM3038c: to use KillTarget
 
 //
 // Cache user-entity-field values until spawn is called.
 //
-void CPathCorner :: KeyValue( KeyValueData *pkvd )
+void CPathCorner::KeyValue(KeyValueData *pkvd)
 {
 	if (FStrEq(pkvd->szKeyName, "wait"))
 	{
 		m_flWait = atof(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "turnspeed")) // SHL
+	{
+		if (pkvd->szValue[0]) // if the field is blank, don't set the spawnflag.
+		{
+			SetBits(pev->spawnflags, SF_CORNER_AVELOCITY);
+			//UTIL_StringToVector( (float*)pev->avelocity, pkvd->szValue);
+			if (StringToVec(pkvd->szValue, pev->avelocity) == FALSE)
+				pkvd->fHandled = 2;// XDM3037
+				//ALERT(at_console, "Error: %s has bad value %s == \"%s\"!\n", pkvd->szClassName, pkvd->szKeyName, pkvd->szValue);
+		}
+		pkvd->fHandled = TRUE;
+	}
 	else 
-		CPointEntity::KeyValue( pkvd );
+		CBaseDelay::KeyValue(pkvd);
 }
 
-
-void CPathCorner :: Spawn( )
+void CPathCorner::Spawn(void)
 {
-	ASSERTSZ(!FStringNull(pev->targetname), "path_corner without a targetname");
+	//ASSERTSZ(!FStringNull(pev->targetname), "path_corner without a targetname");
+	if (FStringNull(pev->targetname))
+	{
+		ALERT(at_console, "Error: %s[%d] without a targetname!\n", STRING(pev->classname), entindex());
+		pev->flags = FL_KILLME;//Destroy();
+	}
+	CBaseDelay::Spawn();
 }
 
-#if 0
-void CPathCorner :: Touch( CBaseEntity *pOther )
+// XDM3038c: now Use() funciton is called from here
+void CPathCorner::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
 {
-	entvars_t*		pevToucher = pOther->pev;
-		
-	if ( FBitSet ( pevToucher->flags, FL_MONSTER ) )
-	{// monsters don't navigate path corners based on touch anymore
-		return;
-	}
-
-	// If OTHER isn't explicitly looking for this path_corner, bail out
-	if ( pOther->m_pGoalEnt != this )
+	DBG_PRINT_ENT_USE(Use);
+	//if (pCaller == m_hOwner)
+	if (!FStringNull(pev->message))
 	{
-		return;
+		UseTargets(pev->message, m_iszKillTarget, pActivator, pCaller, USE_TOGGLE, 0);// this includes killtarget
+		if (FBitSet(pev->spawnflags, SF_CORNER_FIREONCE))
+			pev->message = iStringNull;
 	}
-
-	// If OTHER has an enemy, this touch is incidental, ignore
-	if ( !FNullEnt(pevToucher->enemy) )
-	{
-		return;		// fighting, not following a path
-	}
-	
-	// UNDONE: support non-zero flWait
-	/*
-	if (m_flWait != 0)
-		ALERT(at_warning, "Non-zero path-cornder waits NYI");
-	*/
-
-	// Find the next "stop" on the path, make it the goal of the "toucher".
-	if (FStringNull(pev->target))
-	{
-		ALERT(at_warning, "PathCornerTouch: no next stop specified");
-	}
-
-	pOther->m_pGoalEnt = CBaseEntity::Instance( FIND_ENTITY_BY_TARGETNAME ( NULL, STRING(pev->target) ) );
-
-	// If "next spot" was not found (does not exist - level design error)
-	if ( !pOther->m_pGoalEnt )
-	{
-		ALERT(at_console, "PathCornerTouch--%s couldn't find next stop in path: %s", STRING(pev->classname), STRING(pev->target));
-		return;
-	}
-
-	// Turn towards the next stop in the path.
-	pevToucher->ideal_yaw = UTIL_VecToYaw ( pOther->m_pGoalEnt->pev->origin - pevToucher->origin );
 }
-#endif
+
+// XDM3038c
+void CPathCorner::FireOnPass(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
+{
+	DBG_PRINT_ENT_USE(FireOnPass);
+	Use(pActivator, pCaller, useType, value);// this includes killtarget
+}
+
+
 
 
 
@@ -127,178 +103,193 @@ TYPEDESCRIPTION	CPathTrack::m_SaveData[] =
 	DEFINE_FIELD( CPathTrack, m_altName, FIELD_STRING ),
 };
 
-IMPLEMENT_SAVERESTORE( CPathTrack, CBaseEntity );
+IMPLEMENT_SAVERESTORE(CPathTrack, CBaseDelay);//CPointEntity );// XDM3038c: FIXED
+
 LINK_ENTITY_TO_CLASS( path_track, CPathTrack );
 
-//
 // Cache user-entity-field values until spawn is called.
-//
-void CPathTrack :: KeyValue( KeyValueData *pkvd )
+void CPathTrack::KeyValue(KeyValueData *pkvd)
 {
 	if (FStrEq(pkvd->szKeyName, "altpath"))
 	{
 		m_altName = ALLOC_STRING(pkvd->szValue);
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "turnspeed"))// SHL
+	{
+		if (pkvd->szValue[0]) // if the field is blank, don't set the spawnflag.
+		{
+			SetBits(pev->spawnflags, SF_PATH_AVELOCITY);
+			//UTIL_StringToVector( (float*)pev->avelocity, pkvd->szValue);
+			if (StringToVec(pkvd->szValue, pev->avelocity) == FALSE)
+				pkvd->fHandled = 2;// XDM3037
+				//ALERT(at_console, "Error: %s has bad value %s == \"%s\"!\n", pkvd->szClassName, pkvd->szKeyName, pkvd->szValue);
+		}
+		pkvd->fHandled = TRUE;
+	}
 	else
-		CPointEntity::KeyValue( pkvd );
+		CBaseDelay::KeyValue(pkvd);
 }
 
-void CPathTrack :: Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+void CPathTrack::Spawn(void)
 {
-	int on;
+	//CPathCorner::Spawn();
+	pev->solid = SOLID_TRIGGER;
+	UTIL_SetSize(this, Vector(-8, -8, -8), Vector(8, 8, 8));
+	m_pnext = NULL;
+	m_pprevious = NULL;
+// DEBUGGING CODE
+#if PATH_SPARKLE_DEBUG
+	SetThink(&CPathTrack::Sparkle);
+	SetNextThink((0.5);
+#endif
+}
 
+void CPathTrack::Activate(void)
+{
+	if (!FStringNull(pev->targetname))// Link to next, and back-link
+		Link();
+}
+
+void CPathTrack::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)
+{
+	DBG_PRINT_ENT_USE(Use);
+	bool on;
 	// Use toggles between two paths
-	if ( m_paltpath )
+	if (m_paltpath)
 	{
-		on = !FBitSet( pev->spawnflags, SF_PATH_ALTERNATE );
-		if ( ShouldToggle( useType, on ) )
+		on = !FBitSet(pev->spawnflags, SF_PATH_ALTERNATE);
+		if (ShouldToggle(useType, on))
 		{
-			if ( on )
-				SetBits( pev->spawnflags, SF_PATH_ALTERNATE );
+			conprintf(2, "%s[%d] \"%s\" (target: \"%s\") changing to %s path\n", STRING(pev->classname), entindex(), STRING(pev->targetname), STRING(pev->target), on?"ALTERNATE":"PRIMARY");
+			if (on)
+				SetBits(pev->spawnflags, SF_PATH_ALTERNATE);
 			else
-				ClearBits( pev->spawnflags, SF_PATH_ALTERNATE );
+				ClearBits(pev->spawnflags, SF_PATH_ALTERNATE);
 		}
 	}
-	else	// Use toggles between enabled/disabled
+	else// Use toggles between enabled/disabled
 	{
-		on = !FBitSet( pev->spawnflags, SF_PATH_DISABLED );
-
-		if ( ShouldToggle( useType, on ) )
+		on = !FBitSet(pev->spawnflags, SF_PATH_DISABLED);
+		if (ShouldToggle(useType, on))
 		{
-			if ( on )
-				SetBits( pev->spawnflags, SF_PATH_DISABLED );
+			conprintf(2, "%s[%d] \"%s\" (target: \"%s\") changing to %s state\n", STRING(pev->classname), entindex(), STRING(pev->targetname), STRING(pev->target), on?"ENABLED":"DISABLED");
+			if (on)
+				SetBits(pev->spawnflags, SF_PATH_DISABLED);
 			else
-				ClearBits( pev->spawnflags, SF_PATH_DISABLED );
+				ClearBits(pev->spawnflags, SF_PATH_DISABLED);
 		}
 	}
 }
 
-
-void CPathTrack :: Link( void  )
+void CPathTrack::FireOnPass(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value)// XDM3038c
 {
-	edict_t *pentTarget;
-
-	if ( !FStringNull(pev->target) )
+	DBG_PRINT_ENT_USE(FireOnPass);
+	//if (pCaller == m_hOwner)
+	if (!FStringNull(pev->message))
 	{
-		pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(pev->target) );
-		if ( !FNullEnt(pentTarget) )
-		{
-			m_pnext = CPathTrack::Instance( pentTarget );
+		UseTargets(pev->message, m_iszKillTarget, pActivator, pCaller, USE_TOGGLE, 0);// this includes killtarget
+		if (FBitSet(pev->spawnflags, SF_CORNER_FIREONCE))
+			pev->message = iStringNull;
+	}
+}
 
-			if ( m_pnext )		// If no next pointer, this is the end of a path
-			{
-				m_pnext->SetPrevious( this );
-			}
+// XDM: target edict_t replaced with CBaseEntity
+void CPathTrack::Link(void)
+{
+	CBaseEntity *pTarget;
+	if (!FStringNull(pev->target))
+	{
+		pTarget = UTIL_FindEntityByTargetname(NULL, STRING(pev->target));
+
+		if (pTarget == this)
+		{
+			ALERT(at_error, "%s[%d] (%s) refers to itself as a target!\n", STRING(pev->classname), entindex(), STRING(pev->targetname));
+		}
+		else if (pTarget)
+		{
+			conprintf(1, "%s[%d]\"%s\": Link(): found next target: %s[%d]\"%s\"\n", ENTFMT_P, STRING(pTarget->pev->classname), pTarget->entindex(), STRING(pTarget->pev->targetname));
+			m_pnext = (CPathTrack *)pTarget;
+			if (m_pnext)		// If no next pointer, this is the end of a path
+				m_pnext->SetPrevious(this);
 		}
 		else
 			ALERT( at_console, "Dead end link %s\n", STRING(pev->target) );
 	}
 
 	// Find "alternate" path
-	if ( m_altName )
+	if (!FStringNull(m_altName))
 	{
-		pentTarget = FIND_ENTITY_BY_TARGETNAME( NULL, STRING(m_altName) );
-		if ( !FNullEnt(pentTarget) )
+		pTarget = UTIL_FindEntityByTargetname( NULL, STRING(m_altName) );
+		if (pTarget)// If no next pointer, this is the end of a path
 		{
-			m_paltpath = CPathTrack::Instance( pentTarget );
-
-			if ( m_paltpath )		// If no next pointer, this is the end of a path
-			{
-				m_paltpath->SetPrevious( this );
-			}
+			conprintf(1, "%s[%d]\"%s\": Link(): found next alternative target: %s[%d]\"%s\"\n", ENTFMT_P, STRING(pTarget->pev->classname), pTarget->entindex(), STRING(pTarget->pev->targetname));
+			m_paltpath = (CPathTrack *)pTarget;
+			if (m_paltpath)	// If no next pointer, this is the end of a path
+				m_paltpath->SetPrevious(this);
 		}
+		else
+			conprintf(1, "%s[%d]\"%s\": end of alternative path detected.\n", ENTFMT_P);
 	}
 }
 
-
-void CPathTrack :: Spawn( void )
+void CPathTrack::Project(CPathTrack *pStart, CPathTrack *pEnd, Vector *origin, float dist)
 {
-	pev->solid = SOLID_TRIGGER;
-	UTIL_SetSize(pev, Vector(-8, -8, -8), Vector(8, 8, 8));
-
-	m_pnext = NULL;
-	m_pprevious = NULL;
-// DEBUGGING CODE
-#if PATH_SPARKLE_DEBUG
-	SetThink( Sparkle );
-	pev->nextthink = gpGlobals->time + 0.5;
-#endif
-}
-
-
-void CPathTrack::Activate( void )
-{
-	if ( !FStringNull( pev->targetname ) )		// Link to next, and back-link
-		Link();
-}
-
-CPathTrack	*CPathTrack :: ValidPath( CPathTrack	*ppath, int testFlag )
-{
-	if ( !ppath )
-		return NULL;
-
-	if ( testFlag && FBitSet( ppath->pev->spawnflags, SF_PATH_DISABLED ) )
-		return NULL;
-
-	return ppath;
-}
-
-
-void CPathTrack :: Project( CPathTrack *pstart, CPathTrack *pend, Vector *origin, float dist )
-{
-	if ( pstart && pend )
+	if (pStart && pEnd)
 	{
-		Vector dir = (pend->pev->origin - pstart->pev->origin);
-		dir = dir.Normalize();
-		*origin = pend->pev->origin + dir * dist;
+		Vector dir(pEnd->pev->origin - pStart->pev->origin);// TODO: GetLocalOrigin()
+		dir.NormalizeSelf();
+		*origin = pEnd->pev->origin + dir * dist;// TODO: GetLocalOrigin()
 	}
 }
 
-CPathTrack *CPathTrack::GetNext( void )
+CPathTrack *CPathTrack::ValidPath(CPathTrack *pPath, int testFlag)
 {
-	if ( m_paltpath && FBitSet( pev->spawnflags, SF_PATH_ALTERNATE ) && !FBitSet( pev->spawnflags, SF_PATH_ALTREVERSE ) )
+	if (!pPath)
+		return NULL;
+
+	if (testFlag && FBitSet(pPath->pev->spawnflags, SF_PATH_DISABLED))
+		return NULL;
+
+	return pPath;
+}
+
+CPathTrack *CPathTrack::GetNext(void)
+{
+	if (m_paltpath && FBitSet(pev->spawnflags, SF_PATH_ALTERNATE) && !FBitSet(pev->spawnflags, SF_PATH_ALTREVERSE))
 		return m_paltpath;
-	
+
 	return m_pnext;
 }
 
-
-
-CPathTrack *CPathTrack::GetPrevious( void )
+CPathTrack *CPathTrack::GetPrevious(void)
 {
-	if ( m_paltpath && FBitSet( pev->spawnflags, SF_PATH_ALTERNATE ) && FBitSet( pev->spawnflags, SF_PATH_ALTREVERSE ) )
+	if (m_paltpath && FBitSetAll(pev->spawnflags, SF_PATH_ALTERNATE|SF_PATH_ALTREVERSE))// XDM3038c
 		return m_paltpath;
-	
+
 	return m_pprevious;
 }
 
-
-
-void CPathTrack::SetPrevious( CPathTrack *pprev )
+void CPathTrack::SetPrevious(CPathTrack *pprev)
 {
 	// Only set previous if this isn't my alternate path
-	if ( pprev && !FStrEq( STRING(pprev->pev->targetname), STRING(m_altName) ) )
+	if (pprev && !FStrEq(STRING(pprev->pev->targetname), STRING(m_altName)))
 		m_pprevious = pprev;
 }
 
-
 // Assumes this is ALWAYS enabled
-CPathTrack *CPathTrack :: LookAhead( Vector *origin, float dist, int move )
+CPathTrack *CPathTrack::LookAhead(Vector *origin, float dist, int move)
 {
-	CPathTrack *pcurrent;
+	CPathTrack *pcurrent = this;
 	float originalDist = dist;
-	
-	pcurrent = this;
 	Vector currentPos = *origin;
-
-	if ( dist < 0 )		// Travelling backwards through path
+	if (dist < 0)// Travelling backwards through path
 	{
 		dist = -dist;
 		while ( dist > 0 )
 		{
-			Vector dir = pcurrent->pev->origin - currentPos;
-			float length = dir.Length();
+			Vector dir = pcurrent->pev->origin - currentPos;// TODO: GetLocalOrigin()
+			vec_t length = dir.Length();
 			if ( !length )
 			{
 				if ( !ValidPath(pcurrent->GetPrevious(), move) ) 	// If there is no previous node, or it's disabled, return now.
@@ -317,7 +308,7 @@ CPathTrack *CPathTrack :: LookAhead( Vector *origin, float dist, int move )
 			else
 			{
 				dist -= length;
-				currentPos = pcurrent->pev->origin;
+				currentPos = pcurrent->pev->origin;// TODO: GetLocalOrigin()
 				*origin = currentPos;
 				if ( !ValidPath(pcurrent->GetPrevious(), move) )	// If there is no previous node, or it's disabled, return now.
 					return NULL;
@@ -338,8 +329,8 @@ CPathTrack *CPathTrack :: LookAhead( Vector *origin, float dist, int move )
 					Project( pcurrent->GetPrevious(), pcurrent, origin, dist );
 				return NULL;
 			}
-			Vector dir = pcurrent->GetNext()->pev->origin - currentPos;
-			float length = dir.Length();
+			Vector dir = pcurrent->GetNext()->pev->origin - currentPos;// TODO: GetLocalOrigin()
+			vec_t length = dir.Length();
 			if ( !length  && !ValidPath( pcurrent->GetNext()->GetNext(), move ) )
 			{
 				if ( dist == originalDist ) // HACK -- up against a dead end
@@ -354,28 +345,25 @@ CPathTrack *CPathTrack :: LookAhead( Vector *origin, float dist, int move )
 			else
 			{
 				dist -= length;
-				currentPos = pcurrent->GetNext()->pev->origin;
+				currentPos = pcurrent->GetNext()->pev->origin;// TODO: GetLocalOrigin()
 				pcurrent = pcurrent->GetNext();
 				*origin = currentPos;
 			}
 		}
 		*origin = currentPos;
 	}
-
 	return pcurrent;
 }
 
-	
 // Assumes this is ALWAYS enabled
-CPathTrack *CPathTrack :: Nearest( Vector origin )
+CPathTrack *CPathTrack::Nearest(const Vector &origin)
 {
 	int			deadCount;
-	float		minDist, dist;
+	vec_t		minDist, dist;
 	Vector		delta;
 	CPathTrack	*ppath, *pnearest;
 
-
-	delta = origin - pev->origin;
+	delta = origin - pev->origin;// TODO: GetLocalOrigin()
 	delta.z = 0;
 	minDist = delta.Length();
 	pnearest = this;
@@ -383,18 +371,18 @@ CPathTrack *CPathTrack :: Nearest( Vector origin )
 
 	// Hey, I could use the old 2 racing pointers solution to this, but I'm lazy :)
 	deadCount = 0;
-	while ( ppath && ppath != this )
+	while (ppath && ppath != this)
 	{
 		deadCount++;
-		if ( deadCount > 9999 )
+		if (deadCount > 9999)
 		{
 			ALERT( at_error, "Bad sequence of path_tracks from %s", STRING(pev->targetname) );
 			return NULL;
 		}
-		delta = origin - ppath->pev->origin;
+		delta = origin - ppath->pev->origin;// TODO: GetLocalOrigin()
 		delta.z = 0;
 		dist = delta.Length();
-		if ( dist < minDist )
+		if (dist < minDist)
 		{
 			minDist = dist;
 			pnearest = ppath;
@@ -405,24 +393,50 @@ CPathTrack *CPathTrack :: Nearest( Vector origin )
 }
 
 
-CPathTrack *CPathTrack::Instance( edict_t *pent )
-{ 
-	if ( FClassnameIs( pent, "path_track" ) )
+CPathTrack *CPathTrack::GetNextInDir(bool bForward)
+{
+	if (bForward)
+		return GetNext();
+
+	return GetPrevious();
+}
+
+Vector CPathTrack::GetOrientation(bool bForwardDir)
+{
+	CPathTrack *pPrev = this;
+	CPathTrack *pNext = GetNextInDir(bForwardDir);
+
+	if (!pNext)
+	{	
+		pPrev = GetNextInDir(!bForwardDir);
+		pNext = this;
+	}
+
+	Vector vecDir = pNext->pev->origin - pPrev->pev->origin;// TODO: pNext->GetLocalOrigin() - pPrev->GetLocalOrigin();
+	Vector angDir;// = UTIL_VecToAngles(vecDir);
+	VectorAngles(vecDir, angDir);
+	// The train actually points west
+	angDir.y += 180;// TODO: TESTME: SQB?
+	return angDir;
+}
+
+CPathTrack *CPathTrack::Instance(edict_t *pent)
+{
+	if (FClassnameIs(pent, "path_track"))
 		return (CPathTrack *)GET_PRIVATE(pent);
+
 	return NULL;
 }
 
-
 	// DEBUGGING CODE
 #if PATH_SPARKLE_DEBUG
-void CPathTrack :: Sparkle( void )
+void CPathTrack::Sparkle(void)
 {
 
-	pev->nextthink = gpGlobals->time + 0.2;
+	SetNextThink(0.2);
 	if ( FBitSet( pev->spawnflags, SF_PATH_DISABLED ) )
 		UTIL_ParticleEffect(pev->origin, Vector(0,0,100), 210, 10);
 	else
 		UTIL_ParticleEffect(pev->origin, Vector(0,0,100), 84, 10);
 }
 #endif
-

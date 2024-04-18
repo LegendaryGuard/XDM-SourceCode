@@ -15,12 +15,14 @@
 #if !defined( ENTITY_STATEH )
 #define ENTITY_STATEH
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 // For entityType below
-#define ENTITY_NORMAL		(1<<0)
-#define ENTITY_BEAM			(1<<1)
+#define ENTITY_NORMAL		1
+#define ENTITY_BEAM			2// XDM: all other values are useless
 
 // Entity state is used for the baseline and for delta compression of a packet of 
 //  entities that is sent to a client.
@@ -105,7 +107,7 @@ struct entity_state_s
 	vec3_t				startpos;
 	vec3_t				endpos;
 	float				impacttime;
-	float				starttime;
+	float				starttime;// used for movement, never set this carelessly!
 
 	// For mods
 	int			iuser1;
@@ -187,7 +189,11 @@ typedef struct local_state_s
 {
 	entity_state_t playerstate;
 	clientdata_t   client;
+#ifdef HL1122
 	weapon_data_t  weapondata[ 64 ];
+#else
+	weapon_data_t  weapondata[ 32 ];
+#endif
 } local_state_t;
 
 #endif // !ENTITY_STATEH

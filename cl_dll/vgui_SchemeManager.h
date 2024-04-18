@@ -4,16 +4,57 @@
 //
 // $NoKeywords: $
 //=============================================================================
+#ifndef VGUI_SCHEMEMANAGER_H
+#define VGUI_SCHEMEMANAGER_H
 
+#include "color.h"
 #include <VGUI_Font.h>
+#include <VGUI_Color.h>
 
 
 // handle to an individual scheme
-typedef int SchemeHandle_t;
+typedef uint32 SchemeHandle_t;// XDM3037: probably obsolete
 
 
 // Register console variables, etc..
 void Scheme_Init();
+
+#define SCHEME_NAME_LENGTH		32
+#define FONT_NAME_LENGTH		48
+#define FONT_FILENAME_LENGTH	64
+
+class CScheme
+{
+public:
+	// construction/destruction
+	CScheme();
+	~CScheme();
+
+	// name
+	char schemeName[SCHEME_NAME_LENGTH];
+	// font
+	char fontName[FONT_NAME_LENGTH];
+
+	int fontSize;
+	int fontWeight;
+
+	vgui::Font *font;
+
+	// scheme
+	::Color FgColor;// not vgui::Color
+	::Color BgColor;
+	::Color FgColorArmed;
+	::Color BgColorArmed; 
+	::Color FgColorClicked;
+	::Color BgColorClicked;
+	::Color BorderColor;
+	::Color BorderColorArmed;
+	::Color BrightColor;
+	::Color DarkColor;
+
+	int BorderThickness;
+	bool ownFontPointer; // true if the font is ours to delete
+};
 
 
 //-----------------------------------------------------------------------------
@@ -24,31 +65,24 @@ class CSchemeManager
 {
 public:
 	// initialization
-	CSchemeManager( int xRes, int yRes );
+	CSchemeManager(int xRes, int yRes);
 	virtual ~CSchemeManager();
 
 	// scheme handling
 	SchemeHandle_t getSchemeHandle( const char *schemeName );
+	CScheme *getScheme(const char *schemeName);
+	CScheme *getSafeScheme( SchemeHandle_t schemeHandle );
 
-	// getting info from schemes
-	vgui::Font *getFont( SchemeHandle_t schemeHandle );
-	void getFgColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
-	void getBgColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
-	void getFgArmedColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
-	void getBgArmedColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
-	void getFgMousedownColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
-	void getBgMousedownColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
-	void getBorderColor( SchemeHandle_t schemeHandle, int &r, int &g, int &b, int &a );
+	void LoadScheme(void);// XDM
 
 private:
-	class CScheme;
 	CScheme *m_pSchemeList;
-	int m_iNumSchemes;
+	size_t m_iNumSchemes;
 
 	// Resolution we were initted at.
 	int		m_xRes;
-
-	CScheme *getSafeScheme( SchemeHandle_t schemeHandle );
+	int		m_yRes;
 };
 
 
+#endif // VGUI_SCHEMEMANAGER_H

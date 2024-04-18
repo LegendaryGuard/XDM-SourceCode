@@ -7,7 +7,13 @@
 
 #if !defined( KBUTTONH )
 #define KBUTTONH
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
+
+#define BUTTONSTATE_DOWN			1
+#define BUTTONSTATE_IMPULSEDOWN		2
+#define BUTTONSTATE_IMPULSEUP		4
 
 typedef struct kbutton_s
 {

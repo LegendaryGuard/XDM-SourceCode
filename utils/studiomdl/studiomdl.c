@@ -1,53 +1,31 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-****/
-
-//
 // studiomdl.c: generates a studio .mdl file from a .qc script
 // models/<scriptname>.mdl.
-//
-
-
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4237 )
 #pragma warning( disable : 4305 )
-
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <math.h>
-
-#include "archtypes.h"
 #include "cmdlib.h"
-#include "lbmlib.h"
+//#include "lbmlib.h"
 #include "scriplib.h"
 #include "mathlib.h"
 #define EXTERN
+#include "../../public/archtypes.h"
 #include "../../engine/studio.h"
 #include "studiomdl.h"
-#include "../../dlls/activity.h"
+#include "../../common/activity.h"
 #include "../../dlls/activitymap.h"
 
+//#define _CRT_SECURE_NO_WARNINGS 1
 
-static int force_powerof2_textures = 0;
-
+int ReadBMP3(char *szFile, byte **ppbBits, rgb_t **pRGBAPalette256, int *width, int *height);
 void Sys_Error (char *error, ...) {};
-
 void clip_rotations( vec3_t rot );
 
 #define strcpyn( a, b ) strncpy( a, b, sizeof( a ) )
-
-/*
-=================
-=================
-*/
 
 int k_memtotal;
 void *kalloc( int num, int size )
@@ -65,19 +43,12 @@ void kmemset( void *ptr, int value, int size )
 	return;
 }
 
-
-/*
-=================
-=================
-*/
-
-
-void ClearModel (void)
+void ClearModel(void)
 {
-
+	memset(renametextures, 0, 64*MAXSTUDIOSKINS);
 }
 
-void ExtractMotion( )
+void ExtractMotion(void)
 { 
 	int i, j, k;
 	int	q;
@@ -131,7 +102,6 @@ void ExtractMotion( )
 		}
 	}
 
-
 	// extract unused motion
 	for (i = 0; i < numseq; i++)
 	{
@@ -172,7 +142,6 @@ void ExtractMotion( )
 			}
 		}
 	}
-	
 
 	// extract auto motion
 	for (i = 0; i < numseq; i++)
@@ -303,8 +272,7 @@ int findNode( char *name )
 	return -1;
 }
 
-
-void MatrixCopy (float in[3][4], float out[3][4])
+void MatrixCopy(float in[3][4], float out[3][4])
 {
 	int i, j;
 
@@ -317,9 +285,7 @@ void MatrixCopy (float in[3][4], float out[3][4])
 	}
 }
 
-
-
-void MakeTransitions( )
+void MakeTransitions(void)
 {
 	int i, j, k;
 	int iHit;
@@ -375,8 +341,6 @@ void MakeTransitions( )
 	}
 	while (iHit);
 }
-
-
 
 void SimplifyModel (void)
 {
@@ -573,7 +537,7 @@ void SimplifyModel (void)
 	{
 		for (j = 0; j < numbones; j++)
 		{
-			if (stricmp( bonecontroller[i].name, bonetable[j].name) == 0)
+			if (_stricmp( bonecontroller[i].name, bonetable[j].name) == 0)
 				break;
 		}
 		if (j >= numbones)
@@ -588,7 +552,7 @@ void SimplifyModel (void)
 	{
 		for (j = 0; j < numbones; j++)
 		{
-			if (stricmp( attachment[i].bonename, bonetable[j].name) == 0)
+			if (_stricmp( attachment[i].bonename, bonetable[j].name) == 0)
 				break;
 		}
 		if (j >= numbones)
@@ -620,7 +584,7 @@ void SimplifyModel (void)
 	{
 		for (k = 0; k < numbones; k++)
 		{
-			if (strcmpi( bonetable[k].name, hitgroup[j].name) == 0)
+			if (_strcmpi( bonetable[k].name, hitgroup[j].name) == 0)
 			{
 				bonetable[k].group = hitgroup[j].group;
 				break;
@@ -712,7 +676,7 @@ void SimplifyModel (void)
 		{
 			for (k = 0; k < numbones; k++)
 			{
-				if (strcmpi( bonetable[k].name, hitbox[j].name) == 0)
+				if (_strcmpi( bonetable[k].name, hitbox[j].name) == 0)
 				{
 					hitbox[j].bone = k;
 					break;
@@ -781,7 +745,7 @@ void SimplifyModel (void)
 				{
 					for (n = 0; n < sequence[i].numframes; n++)
 					{
-						float v;
+						float v = 0.0f;
 						switch(k)
 						{
 						case 0: 
@@ -1074,35 +1038,23 @@ void SimplifyModel (void)
 	}
 }
 
-
-
-
-
-/*
-=================
-=================
-*/
-
-
-
-
 int lookupControl( char *string )
 {
-	if (stricmp(string,"X")==0) return STUDIO_X;
-	if (stricmp(string,"Y")==0) return STUDIO_Y;
-	if (stricmp(string,"Z")==0) return STUDIO_Z;
-	if (stricmp(string,"XR")==0) return STUDIO_XR;
-	if (stricmp(string,"YR")==0) return STUDIO_YR;
-	if (stricmp(string,"ZR")==0) return STUDIO_ZR;
-	if (stricmp(string,"LX")==0) return STUDIO_LX;
-	if (stricmp(string,"LY")==0) return STUDIO_LY;
-	if (stricmp(string,"LZ")==0) return STUDIO_LZ;
-	if (stricmp(string,"AX")==0) return STUDIO_AX;
-	if (stricmp(string,"AY")==0) return STUDIO_AY;
-	if (stricmp(string,"AZ")==0) return STUDIO_AZ;
-	if (stricmp(string,"AXR")==0) return STUDIO_AXR;
-	if (stricmp(string,"AYR")==0) return STUDIO_AYR;
-	if (stricmp(string,"AZR")==0) return STUDIO_AZR;
+	if (_stricmp(string,"X")==0) return STUDIO_X;
+	if (_stricmp(string,"Y")==0) return STUDIO_Y;
+	if (_stricmp(string,"Z")==0) return STUDIO_Z;
+	if (_stricmp(string,"XR")==0) return STUDIO_XR;
+	if (_stricmp(string,"YR")==0) return STUDIO_YR;
+	if (_stricmp(string,"ZR")==0) return STUDIO_ZR;
+	if (_stricmp(string,"LX")==0) return STUDIO_LX;
+	if (_stricmp(string,"LY")==0) return STUDIO_LY;
+	if (_stricmp(string,"LZ")==0) return STUDIO_LZ;
+	if (_stricmp(string,"AX")==0) return STUDIO_AX;
+	if (_stricmp(string,"AY")==0) return STUDIO_AY;
+	if (_stricmp(string,"AZ")==0) return STUDIO_AZ;
+	if (_stricmp(string,"AXR")==0) return STUDIO_AXR;
+	if (_stricmp(string,"AYR")==0) return STUDIO_AYR;
+	if (_stricmp(string,"AZR")==0) return STUDIO_AZR;
 	return -1;
 }
 
@@ -1117,7 +1069,7 @@ char *stristr( const char *string, const char *string2 )
 	while (string) {
 		for (; *string && tolower( *string ) != c; string++);
 		if (*string) {
-			if (strnicmp( string, string2, len ) == 0) {
+			if (_strnicmp( string, string2, len ) == 0) {
 				break;
 			}
 			string++;
@@ -1129,30 +1081,26 @@ char *stristr( const char *string, const char *string2 )
 	return (char *)string;
 }
 
-/*
-=================
-=================
-*/
-
-
 int lookup_texture( char *texturename )
 {
 	int i;
 
 	for (i = 0; i < numtextures; i++) {
-		if (stricmp( texture[i].name, texturename ) == 0) {
+		if (_stricmp( texture[i].name, texturename ) == 0) {
 			return i;
 		}
 	}
 
 	strcpyn( texture[i].name, texturename );
 
-	if (stristr( texturename, "chrome" ) != NULL) {
+	// XDM: allow such names as "tex_chrome_bright" - chrome and full brightness effects
+	if (stristr( texturename, "chrome" ) != NULL)
 		texture[i].flags = STUDIO_NF_FLATSHADE | STUDIO_NF_CHROME;
-	}
-	else {
+	else if (stristr( texturename, "bright" ) != NULL)
+		texture[i].flags = STUDIO_NF_FLATSHADE | STUDIO_NF_FULLBRIGHT;
+	else
 		texture[i].flags = 0;
-	}
+
 	numtextures++;
 	return i;
 }
@@ -1164,14 +1112,14 @@ s_mesh_t *lookup_mesh( s_model_t *pmodel, char *texturename )
 
 	j = lookup_texture( texturename );
 
-	for (i = 0; i < pmodel->nummesh; i++) {
+	for (i = 0; i < pmodel->nummesh; ++i) {
 		if (pmodel->pmesh[i]->skinref == j) {
 			return pmodel->pmesh[i];
 		}
 	}
 	
 	if (i >= MAXSTUDIOMESHES) {
-		Error( "too many textures in model: \"%s\"\n", pmodel->name );
+		Error( "too many textures (%d) in model: \"%s\"\n", pmodel->nummesh, pmodel->name );
 	}
 
 	pmodel->nummesh = i + 1;
@@ -1205,7 +1153,7 @@ s_trianglevert_t *lookup_triangle( s_mesh_t *pmesh, int index )
 int lookup_normal( s_model_t *pmodel, s_normal_t *pnormal )
 {
 	int i;
-	for (i = 0; i < pmodel->numnorms; i++) {
+	for (i = 0; i < pmodel->numnorms; ++i) {
 		// if (VectorCompare( pmodel->normal[i].org, pnormal->org )
 		if (DotProduct( pmodel->normal[i].org, pnormal->org ) > normal_blend
 			&& pmodel->normal[i].bone == pnormal->bone
@@ -1214,7 +1162,7 @@ int lookup_normal( s_model_t *pmodel, s_normal_t *pnormal )
 		}
 	}
 	if (i >= MAXSTUDIOVERTS) {
-		Error( "too many normals in model: \"%s\"\n", pmodel->name);
+		Error( "too many normals (%d, max %d) in model: \"%s\"\n", pmodel->numnorms, MAXSTUDIOVERTS, pmodel->name);
 	}
 	VectorCopy( pnormal->org, pmodel->normal[i].org );
 	pmodel->normal[i].bone = pnormal->bone;
@@ -1233,14 +1181,14 @@ int lookup_vertex( s_model_t *pmodel, s_vertex_t *pv )
 	pv->org[1] = (int)(pv->org[1] * 100) / 100.0;
 	pv->org[2] = (int)(pv->org[2] * 100) / 100.0;
 
-	for (i = 0; i < pmodel->numverts; i++) {
+	for (i = 0; i < pmodel->numverts; ++i) {
 		if (VectorCompare( pmodel->vert[i].org, pv->org )
 			&& pmodel->vert[i].bone == pv->bone) {
 			return i;
 		}
 	}
 	if (i >= MAXSTUDIOVERTS) {
-		Error( "too many vertices in model: \"%s\"\n", pmodel->name);
+		Error( "too many vertices (%d, %d max) in model: \"%s\"\n", pmodel->numverts, MAXSTUDIOVERTS, pmodel->name);
 	}
 	VectorCopy( pv->org, pmodel->vert[i].org );
 	pmodel->vert[i].bone = pv->bone;
@@ -1258,33 +1206,28 @@ void adjust_vertex( float *org )
 
 void scale_vertex( float *org )
 {
-	float tmp = org[0];
+//?	float tmp = org[0];
 	org[0] = org[0] * scale_up;
 	org[1] = org[1] * scale_up;
 	org[2] = org[2] * scale_up;
 }
 
-
-
-/*
-============
-SetSkinValues
-
-Called for the base frame
-============
-*/
+//Called for the base frame
 void TextureCoordRanges( s_mesh_t *pmesh, s_texture_t *ptexture  )
 {
 	int			i, j;
 
-	if (ptexture->flags & STUDIO_NF_CHROME) {
+	if (ptexture->flags & STUDIO_NF_CHROME)
+	{
 		ptexture->skintop = 0;
 		ptexture->skinleft = 0;
 		ptexture->skinwidth = (ptexture->srcwidth + 3) & ~3;
 		ptexture->skinheight = ptexture->srcheight;
 
-		for (i=0 ; i<pmesh->numtris ; i++) {
-			for (j = 0; j < 3; j++) {
+		for (i=0 ; i<pmesh->numtris ; ++i)
+		{
+			for (j = 0; j < 3; ++j)
+			{
 				pmesh->triangle[i][j].s = 0;
 				pmesh->triangle[i][j].t = 0;
 			}
@@ -1324,7 +1267,7 @@ void TextureCoordRanges( s_mesh_t *pmesh, s_texture_t *ptexture  )
 		{
 			float min_u = 10;
 			float max_u = -10;
-			float k_max_u, n_min_u;
+			float k_max_u = 0.0f, n_min_u = 0.0f;
 			k = -1;
 			n = -1;
 			for (i=0 ; i<pmesh->numtris ; i++) 
@@ -1357,7 +1300,7 @@ void TextureCoordRanges( s_mesh_t *pmesh, s_texture_t *ptexture  )
 		{
 			float min_v = 10;
 			float max_v = -10;
-			float k_max_v, n_min_v;
+			float k_max_v = 0.0f, n_min_v = 0.0f;
 			k = -1;
 			n = -1;
 			for (i=0 ; i<pmesh->numtris ; i++) 
@@ -1438,7 +1381,7 @@ void ResetTextureCoordRanges( s_mesh_t *pmesh, s_texture_t *ptexture  )
 	int i, j;
 
 	// adjust top, left edge
-	for (i=0 ; i<pmesh->numtris ; i++) {
+	for (i=0 ; i<pmesh->numtris ; ++i) {
 		for (j = 0; j < 3; j++) {
 			pmesh->triangle[i][j].s -= ptexture->min_s;
 			// quake wants t inverted
@@ -1447,70 +1390,17 @@ void ResetTextureCoordRanges( s_mesh_t *pmesh, s_texture_t *ptexture  )
 	}
 }
 
-
-
-/*
-===============
-Grab_Skin
-===============
-*/
 void Grab_BMP ( char *filename, s_texture_t *ptexture )
 {
 	int		result;
 
-	if (result = LoadBMP(filename, &ptexture->ppicture, (byte **)&ptexture->ppal )) {
-		Error("error %d reading BMP image \"%s\"\n", result, filename );
+//	if (result = LoadBMP(filename, &ptexture->ppicture, (byte **)&ptexture->ppal )) {
+	if (result = ReadBMP3(filename, &ptexture->ppicture, &ptexture->ppal, &ptexture->srcwidth, &ptexture->srcheight)) {
+		Error("Error %d reading image \"%s\"\n", result, filename );
 	}
 
-	ptexture->srcwidth = bmhd.w;
-	ptexture->srcheight = bmhd.h;
-
-}
-
-#define MIN_DIMENSION 8
-#define MAX_DIMENSION 512
-
-int GetBestPowerOf2( int value )
-{
-	int i;
-	int power = MIN_DIMENSION;
-
-	for(i=0;i<32;i++)
-	{
-		if ( (1<<i) < MIN_DIMENSION )
-			continue;
-
-		if ( (1<<i) > MAX_DIMENSION )
-			continue;
-
-		power=(1<<i);
-		if(power>=value)
-		{
-			break;
-		}
-	}
-
-	return power;
-}
-
-int GetSkinWidth( int rawsize )
-{
-	if ( !force_powerof2_textures )
-	{
-		return (int)( rawsize + 3) & ~3;
-	}
-
-	return GetBestPowerOf2( rawsize );	
-}
-
-int GetSkinHeight( int rawsize )
-{
-	if ( !force_powerof2_textures )
-	{
-		return ( rawsize );
-	}
-
-	return GetBestPowerOf2( rawsize );	
+//	ptexture->srcwidth = bmhd.w;
+//	ptexture->srcheight = bmhd.h;
 }
 
 void ResizeTexture( s_texture_t *ptexture )
@@ -1524,9 +1414,8 @@ void ResizeTexture( s_texture_t *ptexture )
 
 	ptexture->skintop = ptexture->min_t;
 	ptexture->skinleft = ptexture->min_s;
-
-	ptexture->skinwidth = GetSkinWidth( ptexture->max_s - ptexture->min_s + 1);
-	ptexture->skinheight = GetSkinHeight(ptexture->max_t - ptexture->min_t + 1);
+	ptexture->skinwidth = (int)((ptexture->max_s - ptexture->min_s) + 1 + 3) & ~3;
+	ptexture->skinheight = (int)(ptexture->max_t - ptexture->min_t) + 1;
 
 	ptexture->size = ptexture->skinwidth * ptexture->skinheight + 256 * 3;
 
@@ -1534,7 +1423,7 @@ void ResizeTexture( s_texture_t *ptexture )
 		((ptexture->skinwidth * ptexture->skinheight) / (float)(ptexture->srcwidth * ptexture->srcheight)) * 100.0,
 		ptexture->size );
 	
-	if (ptexture->size > 640 * 480)
+	if (ptexture->size > 1024*1024 * 256 * 3)//640 * 480)
 	{
 		printf("%.0f %.0f %.0f %.0f\n", ptexture->min_s, ptexture->max_s, ptexture->min_t, ptexture->max_t );
 		Error("texture too large\n");
@@ -1563,7 +1452,7 @@ void ResizeTexture( s_texture_t *ptexture )
 		float g;
 		byte *psrc = (byte *)ptexture->ppal;
 		g = gamma / 1.8;
-		for (i = 0; i < 768; i++)
+		for (i = 0; i < 768; ++i)
 		{
 			pdest[i] = pow( psrc[i] / 255.0, g ) * 255;
 		}
@@ -1581,7 +1470,7 @@ void ResizeTexture( s_texture_t *ptexture )
 void Grab_Skin ( s_texture_t *ptexture )
 {
 	char	file1[1024];
-	int		time1;
+	int		time1 = 0;
 
 	sprintf (file1, "%s/%s", cdpartial, ptexture->name);
 	ExpandPathAndArchive (file1);
@@ -1604,7 +1493,8 @@ void Grab_Skin ( s_texture_t *ptexture )
 		sprintf (file1, "%s/%s", cddir, ptexture->name);
 	}
 	
-	if (stricmp( ".bmp", &file1[strlen(file1)-4]) == 0) {
+	if (_stricmp( ".bmp", &file1[strlen(file1)-4]) == 0) {
+		printf("Adding texture %s\n", file1);
 		Grab_BMP( file1, ptexture );
 	}
 	else {
@@ -1613,7 +1503,7 @@ void Grab_Skin ( s_texture_t *ptexture )
 
 }
 
-void SetSkinValues( )
+void SetSkinValues(void)
 {
 	int			i, j;
 	int			index;
@@ -1703,13 +1593,6 @@ void SetSkinValues( )
 	*/
 }
 
-
-
-/*
-=================
-=================
-*/
-
 char	filename[1024];
 FILE	*input;
 char	line[1024];
@@ -1783,8 +1666,8 @@ void Grab_Triangles( s_model_t *pmodel )
 		{
 			s_mesh_t *pmesh;
 			char texturename[64];
-			s_trianglevert_t	*ptriv;
-			int bone;
+			s_trianglevert_t	*ptriv = NULL;
+			int bone = 0;
 
 			vec3_t vert[3];
 			vec3_t norm[3];
@@ -1808,7 +1691,7 @@ void Grab_Triangles( s_model_t *pmodel )
 					strcpy( texturename, defaulttexture[i] );
 					break;
 				}
-				if (stricmp( texturename, sourcetexture[i]) == 0) 
+				if (_stricmp( texturename, sourcetexture[i]) == 0) 
 				{
 					strcpy( texturename, defaulttexture[i] );
 					break;
@@ -2123,60 +2006,33 @@ void clip_rotations( vec3_t rot )
 	}
 }
 
-
-
-
-/*
-=================
-Cmd_Eyeposition
-=================
-*/
-void Cmd_Eyeposition (void)
+void Cmd_Eyeposition(void)
 {
 // rotate points into frame of reference so model points down the positive x
 // axis
-	GetToken (false);
-	eyeposition[1] = atof (token);
+	GetToken(false);
+	eyeposition[1] = atof(token);
 
-	GetToken (false);
-	eyeposition[0] = -atof (token);
+	GetToken(false);
+	eyeposition[0] = -atof(token);
 
-	GetToken (false);
-	eyeposition[2] = atof (token);
+	GetToken(false);
+	eyeposition[2] = atof(token);
 }
 
-
-/*
-=================
-Cmd_Flags
-=================
-*/
 void Cmd_Flags (void)
 {
-	GetToken (false);
-	gflags = atoi (token);
+	GetToken(false);
+	gflags = atoi(token);
 }
 
-
-/*
-=================
-Cmd_Modelname
-=================
-*/
-void Cmd_Modelname (void)
+void Cmd_Modelname(void)
 {
-	GetToken (false);
-	strcpyn (outname, token);
+	GetToken(false);
+	strcpyn(outname, token);
 }
 
-
-/*
-===============
-===============
-*/
-
-
-void Option_Studio( )
+void Option_Studio(void)
 {
 	if (!GetToken (false)) return;
 
@@ -2192,11 +2048,11 @@ void Option_Studio( )
 	while (TokenAvailable())
 	{
 		GetToken(false);
-		if (stricmp( "reverse", token ) == 0)
+		if (_stricmp( "reverse", token ) == 0)
 		{
 			flip_triangles = 0;
 		}
-		else if (stricmp( "scale", token ) == 0)
+		else if (_stricmp( "scale", token ) == 0)
 		{
 			GetToken(false);
 			scale_up = atof( token );
@@ -2212,7 +2068,7 @@ void Option_Studio( )
 }
 
 
-int Option_Blank( )
+int Option_Blank(void)
 {
 	model[nummodels] = kalloc( 1, sizeof( s_model_t ) );
 	bodypart[numbodyparts].pmodel[bodypart[numbodyparts].nummodels] = model[nummodels];
@@ -2225,7 +2081,7 @@ int Option_Blank( )
 }
 
 
-void Cmd_Bodygroup( )
+void Cmd_Bodygroup(void)
 {
 	int is_started = 0;
 
@@ -2248,9 +2104,9 @@ void Cmd_Bodygroup( )
 			is_started = 1;
 		else if (token[0] == '}')
 			break;
-		else if (stricmp("studio", token ) == 0)
+		else if (_stricmp("studio", token ) == 0)
 			Option_Studio( );
-		else if (stricmp("blank", token ) == 0)
+		else if (_stricmp("blank", token ) == 0)
 			Option_Blank( );
 	} while (1);
 
@@ -2259,9 +2115,9 @@ void Cmd_Bodygroup( )
 }
 
 
-void Cmd_Body( )
+void Cmd_Body(void)
 {
-	int is_started = 0;
+//	int is_started = 0;
 
 	if (!GetToken(false)) return;
 
@@ -2277,13 +2133,6 @@ void Cmd_Body( )
 
 	numbodyparts++;
 }
-
-
-
-/*
-===============
-===============
-*/
 
 void Grab_Animation( s_animation_t *panim)
 {
@@ -2446,20 +2295,10 @@ void Option_Animation ( char *name, s_animation_t *panim )
 	fclose( input );
 }
 
-
 int Option_Deform ( s_sequence_t *psequence )
 {
 	return 0;
 }
-
-
-
-
-/*
-===============
-===============
-*/
-
 
 int Option_Motion ( s_sequence_t *psequence )
 {
@@ -2471,14 +2310,13 @@ int Option_Motion ( s_sequence_t *psequence )
 	return 0;
 }
 
-
 int Option_Event ( s_sequence_t *psequence )
 {
 	int event;
 
 	if (psequence->numevents + 1 >= MAXSTUDIOEVENTS)
 	{
-		printf("too many events\n");
+		printf("too many events (%d) in %s\n", psequence->numevents, psequence->name);
 		exit(0);
 	}
 
@@ -2518,7 +2356,7 @@ int Option_AddPivot ( s_sequence_t *psequence )
 {
 	if (psequence->numpivots + 1 >= MAXSTUDIOPIVOTS)
 	{
-		printf("too many pivot points\n");
+		printf("too many pivot points (%d) in %s\n", psequence->numpivots, psequence->name);
 		exit(0);
 	}
 
@@ -2537,13 +2375,6 @@ int Option_AddPivot ( s_sequence_t *psequence )
 	return 0;
 }
 
-
-
-/*
-=================
-Option_Origin
-=================
-*/
 void Cmd_Origin (void)
 {
 	GetToken (false);
@@ -2574,37 +2405,33 @@ void Option_Origin (void)
 	adjust[2] = atof (token);
 }
 
-void Option_Rotate(void )
+void Option_Rotate(void)
 {
 	GetToken (false);
 	zrotation = (atof( token ) + 90) * (Q_PI / 180.0);
 }
 
-/*
-=================
-=================
-*/
-void Cmd_ScaleUp (void)
+void Cmd_ScaleUp(void)
 {
 
 	GetToken (false);
 	default_scale = scale_up = atof (token);
 }
 
-void Option_ScaleUp (void)
+void Cmd_Rotate(void)// XDM
+{
+	if (!GetToken(false)) return;
+	zrotation = (atof(token) + 90) * (Q_PI / 180.0);
+}
+
+void Option_ScaleUp(void)
 {
 
 	GetToken (false);
 	scale_up = atof (token);
 }
 
-
-/*
-=================
-=================
-*/
-
-int Cmd_SequenceGroup( )
+int Cmd_SequenceGroup(void)
 {
 	GetToken (false);
 	strcpyn( sequencegroup[numseqgroups].label, token );
@@ -2613,8 +2440,7 @@ int Cmd_SequenceGroup( )
 	return 0;
 }
 
-
-int Cmd_SequenceGroupSize( )
+int Cmd_SequenceGroupSize(void)
 {
 	GetToken (false);
 	maxseqgroupsize = 1024 * atoi( token );
@@ -2627,22 +2453,21 @@ int lookupActivity( char *szActivity )
 
 	for (i = 0; activity_map[i].name; i++)
 	{
-		if (stricmp( szActivity, activity_map[i].name ) == 0)
+		if (_stricmp( szActivity, activity_map[i].name ) == 0)
 			return activity_map[i].type;
 	}
 	// match ACT_#
-	if (strnicmp( szActivity, "ACT_", 4 ) == 0)
+	if (_strnicmp( szActivity, "ACT_", 4 ) == 0)
 	{
 		return atoi( &szActivity[4] );
 	}
 	return 0;
 }
 
-
-int Cmd_Sequence( )
+int Cmd_Sequence(void)
 {
 	int depth = 0;
-	char smdfilename[MAXSTUDIOGROUPS][1024];
+	char smdfilename[4][1024];
 	int i;
 	int numblends = 0;
 	int start = 0;
@@ -2691,54 +2516,54 @@ int Cmd_Sequence( )
 			}
 			return 1;
 		}
-		if (stricmp("{", token ) == 0)
+		if (_stricmp("{", token ) == 0)
 		{
 			depth++;
 		}
-		else if (stricmp("}", token ) == 0)
+		else if (_stricmp("}", token ) == 0)
 		{
 			depth--;
 		}
-		else if (stricmp("deform", token ) == 0)
+		else if (_stricmp("deform", token ) == 0)
 		{
 			Option_Deform( &sequence[numseq] );
 		}
-		else if (stricmp("event", token ) == 0)
+		else if (_stricmp("event", token ) == 0)
 		{
 			depth -= Option_Event( &sequence[numseq] );
 		}
-		else if (stricmp("pivot", token ) == 0)
+		else if (_stricmp("pivot", token ) == 0)
 		{
 			Option_AddPivot( &sequence[numseq] );
 		}
-		else if (stricmp("fps", token ) == 0)
+		else if (_stricmp("fps", token ) == 0)
 		{
 			Option_Fps( &sequence[numseq] );
 		}
-		else if (stricmp("origin", token ) == 0)
+		else if (_stricmp("origin", token ) == 0)
 		{
 			Option_Origin( );
 		}
-		else if (stricmp("rotate", token ) == 0)
+		else if (_stricmp("rotate", token ) == 0)
 		{
 			Option_Rotate( );
 		}
-		else if (stricmp("scale", token ) == 0)
+		else if (_stricmp("scale", token ) == 0)
 		{
 			Option_ScaleUp( );
 		}
-		else if (strnicmp("loop", token, 4 ) == 0)
+		else if (_strnicmp("loop", token, 4 ) == 0)
 		{
 			sequence[numseq].flags |= STUDIO_LOOPING;
 		}
-		else if (strnicmp("frame", token, 5 ) == 0)
+		else if (_strnicmp("frame", token, 5 ) == 0)
 		{
 			GetToken( false );
 			start = atoi( token );
 			GetToken( false );
 			end = atoi( token );
 		}
-		else if (strnicmp("blend", token, 5 ) == 0)
+		else if (_strnicmp("blend", token, 5 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].blendtype[0] = lookupControl( token );
@@ -2747,19 +2572,19 @@ int Cmd_Sequence( )
 			GetToken( false );
 			sequence[numseq].blendend[0] = atof( token );
 		}
-		else if (strnicmp("node", token, 4 ) == 0)
+		else if (_strnicmp("node", token, 4 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].entrynode = sequence[numseq].exitnode = atoi( token );
 		}
-		else if (strnicmp("transition", token, 4 ) == 0)
+		else if (_strnicmp("transition", token, 4 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].entrynode = atoi( token );
 			GetToken( false );
 			sequence[numseq].exitnode = atoi( token );
 		}
-		else if (strnicmp("rtransition", token, 4 ) == 0)
+		else if (_strnicmp("rtransition", token, 4 ) == 0)
 		{
 			GetToken( false );
 			sequence[numseq].entrynode = atoi( token );
@@ -2771,7 +2596,7 @@ int Cmd_Sequence( )
 		{
 			sequence[numseq].motiontype |= lookupControl( token );
 		}
-		else if (stricmp("animation", token ) == 0)
+		else if (_stricmp("animation", token ) == 0)
 		{
 			GetToken(false);
 			strcpyn( smdfilename[numblends++], token );
@@ -2816,16 +2641,7 @@ int Cmd_Sequence( )
 	return 0;
 }
 
-
-
-
-
-
-/*
-=================
-=================
-*/
-int Cmd_Root (void)
+int Cmd_Root(void)
 {
 	if (GetToken (false))
 	{
@@ -2835,7 +2651,7 @@ int Cmd_Root (void)
 	return 1;
 }
 
-int Cmd_Pivot (void)
+int Cmd_Pivot(void)
 {
 	if (GetToken (false))
 	{
@@ -2850,11 +2666,11 @@ int Cmd_Pivot (void)
 }
 
 
-int Cmd_Controller (void)
+int Cmd_Controller(void)
 {
 	if (GetToken (false))
 	{
-		if (!strcmpi("mouth",token))
+		if (!_strcmpi("mouth",token))
 		{
 			bonecontroller[numbonecontrollers].index = 4;
 		}
@@ -2889,11 +2705,6 @@ int Cmd_Controller (void)
 	return 1;
 }
 
-
-/*
-=================
-=================
-*/
 void Cmd_BBox (void)
 {
 	GetToken (false);
@@ -2915,10 +2726,6 @@ void Cmd_BBox (void)
 	bbox[1][2] = atof( token );
 }
 
-/*
-=================
-=================
-*/
 void Cmd_CBox (void)
 {
 	GetToken (false);
@@ -2940,36 +2747,19 @@ void Cmd_CBox (void)
 	cbox[1][2] = atof( token );
 }
 
-
-/*
-=================
-=================
-*/
 void Cmd_Mirror (void)
 {
 	GetToken (false);
 	strcpyn( mirrored[nummirrored++], token );
 }
 
-/*
-=================
-=================
-*/
 void Cmd_Gamma (void)
 {
 	GetToken (false);
 	gamma = atof( token );
 }
 
-
-
-
-
-/*
-=================
-=================
-*/
-int Cmd_TextureGroup( )
+int Cmd_TextureGroup(void)
 {
 	int i;
 	int depth = 0;
@@ -3028,13 +2818,7 @@ int Cmd_TextureGroup( )
 	return 0;
 }
 
-
-
-/*
-=================
-=================
-*/
-int Cmd_Hitgroup( )
+int Cmd_Hitgroup(void)
 {
 	GetToken (false);
 	hitgroup[numhitgroups].group = atoi( token );
@@ -3045,8 +2829,7 @@ int Cmd_Hitgroup( )
 	return 0;
 }
 
-
-int Cmd_Hitbox( )
+int Cmd_Hitbox(void)
 {
 	GetToken (false);
 	hitbox[numhitboxes].group = atoi( token );
@@ -3070,12 +2853,7 @@ int Cmd_Hitbox( )
 	return 0;
 }
 
-
-/*
-=================
-=================
-*/
-int Cmd_Attachment( )
+int Cmd_Attachment(void)
 {
 	// index
 	GetToken (false);
@@ -3103,13 +2881,7 @@ int Cmd_Attachment( )
 	return 0;
 }
 
-
-
-/*
-=================
-=================
-*/
-void Cmd_Renamebone( )
+void Cmd_Renamebone(void)
 {
 	// from
 	GetToken (false);
@@ -3122,67 +2894,39 @@ void Cmd_Renamebone( )
 	numrenamedbones++;
 }
 
-/*add transparent texture support to models
-===================
-Cmd_SetTextureRendermode
-
-//paramaters:
-  	 // "texturename" "rendermode" renderamt
-  	// acceptable strings for rendermode are:
-  	// "alpha"
-  	// "additive"
-  	// "masked"
-
-===================
-*/
-void Cmd_SetTextureRendermode( void )
+void Cmd_RenameTexture(void)// XDM
 {
-	int iTextureIndex;
-
-	if(!TokenAvailable())
-	{
-  		printf("*********ERROR!!!*************");
-  		printf("\nmissing texturename after $texrendermode\n");
-  		exit(1);
-	}
-
+	int tex = 0;
 	GetToken(false);
-
-	iTextureIndex = lookup_texture(token);
-
-	if(!TokenAvailable())
-	{
-  		printf("\n*********ERROR!!!*************\n");
-  		printf("\nmissing rendermode at $texrendermode\n");
-  		exit(1);
-	}
-
+	tex = lookup_texture(token);
+//	strcpy(tex_name, token);
 	GetToken(false);
-
-	if(!strcmp(token, "additive"))
-	{
-		texture[iTextureIndex].flags |= STUDIO_NF_ADDITIVE;
-		return;
-	}
-	else if(!strcmp(token, "masked"))
-	{
-  		texture[iTextureIndex].flags |= STUDIO_NF_MASKED;
-  		return;
-	}
-	else
-	{
-  		printf("\n*********ERROR!!!*************\n");
-  		printf("\ninvalid rendermode at $texrendermode, choices are :\nadditive\nmasked\n");
-  		exit(1);
-	}
+//	printf(" Renaming '%s' to '%s'\n", texture[tex].name, token);
+//	strcpy(texture[tex].name, token);
+	strcpy(renametextures[tex], token);
 }
 
 
-/*
-===============
-ParseScript
-===============
-*/
+void Cmd_TexRenderMode(void)
+{
+	char tex_name[64];
+	GetToken(false);
+	strcpy(tex_name, token);
+
+	GetToken(false);
+	if (!strcmp(token, "additive"))
+	{
+		texture[lookup_texture(tex_name)].flags |= STUDIO_NF_ADDITIVE;
+	}
+	else if (!strcmp(token, "masked"))
+	{
+		texture[lookup_texture(tex_name)].flags |= STUDIO_NF_MASKED;
+	}
+	else
+		printf("Texture '%s' has unknown render mode '%s'!\n", tex_name, token);
+
+}
+
 void ParseScript (void)
 {
 	while (1)
@@ -3220,12 +2964,14 @@ void ParseScript (void)
 				cdtextureset++;
 			}
 		}
-
 		else if (!strcmp (token, "$scale"))
 		{
 			Cmd_ScaleUp ();
 		}
-
+		else if (!_stricmp(token, "$rotate"))// XDM
+		{
+			Cmd_Rotate();
+		}
 		else if (!strcmp (token, "$root"))
 		{
 			Cmd_Root ();
@@ -3238,8 +2984,6 @@ void ParseScript (void)
 		{
 			Cmd_Controller ();
 		}
-
-
 		else if (!strcmp (token, "$body"))
 		{
 			Cmd_Body();
@@ -3318,29 +3062,27 @@ void ParseScript (void)
 		}
 		else if (!strcmp (token, "$cliptotextures"))
 		{
-			clip_texcoords = 0;
+			clip_texcoords = 1;
 		}
-		else if (!strcmp (token, "$renamebone"))
+		else if (!strcmp(token, "$renamebone"))
 		{
-			Cmd_Renamebone ();
+			Cmd_Renamebone();
 		}
-  		else if (!strcmp (token, "$texrendermode"))
-  		{
-			Cmd_SetTextureRendermode();
-  		}
-  		else
+		else if (!strcmp(token, "$renametexture"))
+		{
+			Cmd_RenameTexture();
+		}
+		else if (!strcmp (token, "$texrendermode"))
+		{
+			Cmd_TexRenderMode();
+		}
+		else
 		{
 			Error ("bad command %s\n", token);
 		}
-
 	}
 }
 
-/*
-==============
-main
-==============
-*/
 int main (int argc, char **argv)
 {
 	int		i;
@@ -3360,7 +3102,7 @@ int main (int argc, char **argv)
 	gamma = 1.8;
 
 	if (argc == 1)
-		Error ("usage: studiomdl [-t texture] -r(tag reversed) -n(tag bad normals) -f(flip all triangles) [-a normal_blend_angle] -h(dump hboxes) -i(ignore warnings) -p(force power of 2 textures) [-g max_sequencegroup_size(K)] file.qc");
+		Error("usage: studiomdl <flags>\n [-t texture]\n -r(tag reversed)\n -n(tag bad normals)\n -f(flip all triangles)\n [-a normal_blend_angle]\n -h(dump hboxes)\n -i(ignore warnings)\n [-g max_sequencegroup_size(K)]\n file.qc");
 		
 	for (i = 1; i < argc - 1; i++) {
 		if (argv[i][0] == '-') {
@@ -3396,10 +3138,6 @@ int main (int argc, char **argv)
 				i++;
 				maxseqgroupsize = 1024 * atoi( argv[i] );
 				break;
-			case 'p':
-			case '2':
-				force_powerof2_textures = 1;
-				break;
 			case 'i':
 				ignore_warnings = 1;
 				break;
@@ -3409,22 +3147,14 @@ int main (int argc, char **argv)
 
 	strcpy( sequencegroup[numseqgroups].label, "default" );
 	numseqgroups = 1;
-
-//
 // load the script
-//
 	strcpy (path, argv[i]);
 	DefaultExtension (path, ".qc");
 	// SetQdirFromPath (path);
 	LoadScriptFile (path);
-	
-//
 // parse it
-//
-
 	ClearModel ();
 	strcpy (outname, argv[i]);
-
 	ParseScript ();
 	SetSkinValues ();
 	SimplifyModel ();
@@ -3432,7 +3162,3 @@ int main (int argc, char **argv)
 
 	return 0;
 }
-
-
-
-

@@ -14,20 +14,22 @@ using namespace vgui;
 
 CListBox::CListBox() : Panel(0, 0, 0, 0),
 	m_ItemsPanel(0,0,0,0),
-	m_ScrollBar(0, 0, 0, 0, true),
-	m_Slider(0, 0, 10, 40, true)
+	m_ScrollBar(0, 0, 0, 0, true)
+//	m_Slider(0, 0, 10, 40, true)
 {
 	m_Signal.m_pListBox = this;
 
 	m_ItemsPanel.setParent(this);
 	m_ItemsPanel.setBgColor(0,0,0,255);
  
-	m_Slider.setRangeWindow(50);
-	m_Slider.setRangeWindowEnabled(true);
+//	m_Slider.setRangeWindow(50);
+//	m_Slider.setRangeWindowEnabled(true);
 
 	m_ScrollBar.setParent(this);
+	m_ScrollBar.setRangeWindow(50);
+	m_ScrollBar.setRangeWindowEnabled(true);
 	m_ScrollBar.addIntChangeSignal(&m_Signal);
-	m_ScrollBar.setSlider(&m_Slider);
+//	m_ScrollBar.setSlider(&m_Slider);
 	m_ScrollBar.setButtonPressedScrollValue(1);
 
 	m_Items.m_pNext = m_Items.m_pPrev = &m_Items;
@@ -75,8 +77,10 @@ void CListBox::AddItem(Panel* panel)
 	pItem->m_pNext->m_pPrev = pItem->m_pPrev->m_pNext = pItem;	
 
 	m_ScrollBar.setRange(0, GetScrollMax());
-	m_Slider.setRangeWindow(50);
-	m_Slider.setRangeWindowEnabled(true);
+	m_ScrollBar.setRangeWindow(50);
+	m_ScrollBar.setRangeWindowEnabled(true);
+//	m_Slider.setRangeWindow(50);
+//	m_Slider.setRangeWindowEnabled(true);
 
 	InternalLayout();
 }

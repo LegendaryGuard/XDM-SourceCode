@@ -26,6 +26,7 @@ extern "C"
 	void CL_DLLEXPORT HUD_VoiceStatus(int entindex, qboolean bTalking);
 	void CL_DLLEXPORT HUD_DirectorMessage( int iSize, void *pbuf );
 	void CL_DLLEXPORT HUD_ChatInputPosition( int *x, int *y );
+	int	CL_DLLEXPORT HUD_GetPlayerTeam(int playerIndex);// XDM3037
 
 	// From demo
 	void CL_DLLEXPORT Demo_ReadBuffer( int size, unsigned char *buffer );

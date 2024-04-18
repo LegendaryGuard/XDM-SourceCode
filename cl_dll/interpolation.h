@@ -28,8 +28,8 @@ public:
 	CInterpolation();
 	virtual ~CInterpolation();
 
-	void SetWaypoints(vec3_t * prev, vec3_t start, vec3_t end, vec3_t * next);
-	void SetViewAngles( vec3_t start, vec3_t end );
+	void SetWaypoints(vec3_t *prev, const vec3_t &start, const vec3_t &end, vec3_t * next);
+	void SetViewAngles(const vec3_t &start, const vec3_t &end);
 	void SetFOVs(float start, float end);
 	void SetSmoothing(bool start, bool end);
 	

@@ -3,9 +3,48 @@
 //  variable
 
 #ifdef _WIN32
-#include "winsani_in.h"
+//#define WIN32_LEAN_AND_MEAN
+#define WIN32_EXTRALEAN
+#define NOGDICAPMASKS
+#define NOVIRTUALKEYCODE
+#define NOWINMESSAGES
+#define NOWINSTYLES
+#define NOSYSMETRICS
+#define NOMENUS
+#define NOICONS
+#define NOKEYSTATES
+#define NOSYSCOMMANDS
+#define NORASTEROPS
+#define NOSHOWWINDOW
+#define OEMRESOURCE
+#define NOATOM
+#define NOCLIPBOARD
+#define NOCOLOR
+#define NOCTLMGR
+#define NODRAWTEXT
+#define NOGDI
+#define NOKERNEL
+#define NOUSER
+#define NONLS
+#define NOMB
+#define NOMEMMGR
+#define NOMETAFILE
+#define NOMINMAX
+#define NOMSG
+#define NOOPENFILE
+#define NOSCROLL
+#define NOSERVICE
+#define NOSOUND
+#define NOTEXTMETRIC
+#define NOWH
+#define NOWINOFFSETS
+#define NOCOMM
+#define NOKANJI
+#define NOHELP
+#define NOPROFILER
+#define NODEFERWINDOWPOS
+#define NOMCX
 #include <windows.h>
-#include "winsani_out.h"
 #else
 #include "port.h"
 #include <dlfcn.h>
@@ -63,16 +102,18 @@ int Trace_GetHopCount( char *pServer, int nMaxHops )
 	int						c;				// Hop counter
 
 	// Prototypes
-	HANDLE ( WINAPI *pfnICMPCreateFile ) ( VOID );
-	BOOL ( WINAPI *pfnICMPCloseFile ) ( HANDLE );
-	DWORD (WINAPI *pfnICMPSendEcho) ( HANDLE, DWORD, LPVOID, WORD, LPVOID, LPVOID, DWORD, DWORD );
+	HANDLE ( WINAPI *pfnICMPCreateFile ) ( VOID ) = NULL;
+	BOOL ( WINAPI *pfnICMPCloseFile ) ( HANDLE ) = NULL;
+	DWORD (WINAPI *pfnICMPSendEcho) ( HANDLE, DWORD, LPVOID, WORD, LPVOID, LPVOID, DWORD, DWORD ) = NULL;
 
 	hICMP = ::LoadLibrary( "ICMP.DLL" );
-	
-	pfnICMPCreateFile	= ( HANDLE ( WINAPI *)(VOID ) )::GetProcAddress( hICMP,"IcmpCreateFile");
-	pfnICMPCloseFile	= ( BOOL ( WINAPI *) ( HANDLE ) )::GetProcAddress( hICMP,"IcmpCloseHandle");
-	pfnICMPSendEcho		= ( DWORD ( WINAPI * ) ( HANDLE, DWORD, LPVOID, WORD, LPVOID, LPVOID, DWORD,DWORD ) )::GetProcAddress( hICMP,"IcmpSendEcho" );
-	
+	if (hICMP)
+	{
+		pfnICMPCreateFile	= ( HANDLE ( WINAPI *)(VOID ) )::GetProcAddress( hICMP,"IcmpCreateFile");
+		pfnICMPCloseFile	= ( BOOL ( WINAPI *) ( HANDLE ) )::GetProcAddress( hICMP,"IcmpCloseHandle");
+		pfnICMPSendEcho		= ( DWORD ( WINAPI * ) ( HANDLE, DWORD, LPVOID, WORD, LPVOID, LPVOID, DWORD,DWORD ) )::GetProcAddress( hICMP,"IcmpSendEcho" );
+	}
+
 	if ( !pfnICMPCreateFile ||
 		 !pfnICMPCloseFile ||
 		 !pfnICMPSendEcho )
@@ -195,7 +236,7 @@ void Trace_StartTrace( int *results, int *finished, const char *server )
 {
 #ifdef _WIN32
 	tp.p_nresults = results;
-	strcpy( tp.server, server );
+	strncpy(tp.server, server, 256);
 
 	*results = -1;
 

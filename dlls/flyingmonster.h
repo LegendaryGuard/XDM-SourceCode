@@ -1,9 +1,9 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*
+*	This product contains software technology licensed from Id
+*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc.
 *	All Rights Reserved.
 *
 *   This source code contains proprietary and confidential information of
@@ -17,19 +17,22 @@
 #ifndef FLYINGMONSTER_H
 #define FLYINGMONSTER_H
 
+#define FLYING_AE_FLAP		(8)
+#define FLYING_AE_FLAPSOUND	(9)
+
 class CFlyingMonster : public CBaseMonster
 {
 public:
-	int 		CheckLocalMove ( const Vector &vecStart, const Vector &vecEnd, CBaseEntity *pTarget, float *pflDist );// check validity of a straight move through space
-	BOOL		FTriangulate ( const Vector &vecStart , const Vector &vecEnd, float flDist, CBaseEntity *pTargetEnt, Vector *pApex );
-	Activity	GetStoppedActivity( void );
-	void		Killed( entvars_t *pevAttacker, int iGib );
-	void		Stop( void );
-	float		ChangeYaw( int speed );
-	void		HandleAnimEvent( MonsterEvent_t *pEvent );
-	void		MoveExecute( CBaseEntity *pTargetEnt, const Vector &vecDir, float flInterval );
-	void		Move( float flInterval = 0.1 );
-	BOOL		ShouldAdvanceRoute( float flWaypointDist );
+	virtual int CheckLocalMove(const Vector &vecStart, const Vector &vecEnd, CBaseEntity *pTarget, float *pflDist);// check validity of a straight move through space
+	virtual BOOL FTriangulate(const Vector &vecStart , const Vector &vecEnd, float flDist, CBaseEntity *pTargetEnt, Vector *pApex);
+	virtual Activity GetStoppedActivity(void);
+	virtual void Killed(CBaseEntity *pInflictor, CBaseEntity *pAttacker, int iGib);
+	virtual void Stop(void);
+	virtual float ChangeYaw(float yawSpeed);
+	virtual void HandleAnimEvent(MonsterEvent_t *pEvent);
+	virtual void MoveExecute(CBaseEntity *pTargetEnt, const Vector &vecDir, float flInterval);
+	virtual void Move(float flInterval = 0.1);
+	virtual BOOL ShouldAdvanceRoute(float flWaypointDist);
 
 	inline void	SetFlyingMomentum( float momentum ) { m_momentum = momentum; }
 	inline void	SetFlyingFlapSound( const char *pFlapSound ) { m_pFlapSound = pFlapSound; }
@@ -37,8 +40,7 @@ public:
 	float		CeilingZ( const Vector &position );
 	float		FloorZ( const Vector &position );
 	BOOL		ProbeZ( const Vector &position, const Vector &probe, float *pFraction );
-	
-	
+
 	// UNDONE:  Save/restore this stuff!!!
 protected:
 	Vector		m_vecTravel;		// Current direction
@@ -48,6 +50,4 @@ protected:
 	const char	*m_pFlapSound;
 };
 
-
 #endif		//FLYINGMONSTER_H
-

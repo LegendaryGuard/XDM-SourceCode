@@ -5,6 +5,10 @@
 #if !defined PORT_H
 #define PORT_H
 
+#if defined(_MSC_VER)
+#pragma warning(disable: 4820)// 'n' bytes padding added after data member 'x'
+#endif // _MSC_VER
+
 #include "archtypes.h"     // DAL
 
 #ifdef _WIN32
@@ -13,16 +17,21 @@
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #define WIN32_EXTRA_LEAN
 
-#include "winsani_in.h"
+// prevent tons of warnings
+//#define __midl 0
+#define _DBG_MEMCPY_INLINE_ 0
+#if !defined(_MSC_VER)
+#define _WIN32_WCE 0
+#endif
+
 #include <windows.h>
-#include "winsani_out.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 
-#define snprintf _snprintf
-#define vsnprintf _vsnprintf
+//#define snprintf _snprintf
+//#define vsnprintf _vsnprintf
 
 #else // _WIN32
 
@@ -120,5 +129,9 @@ extern char g_szEXEName[ 4096 ];
 #endif
 #endif
 #endif
+
+#if defined(_MSC_VER)
+#pragma warning(default: 4820)// 'n' bytes padding added after data member 'x'
+#endif // _MSC_VER
 
 #endif // PORT_H

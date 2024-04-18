@@ -1,6 +1,8 @@
 //
 //-----------------------------------------------------
 //
+#if defined (ENABLE_BENCKMARK)
+
 #define BENCH_TIME 10.0
 
 #include "hud.h"
@@ -27,10 +29,6 @@
 #include "net_api.h"
 
 #include "entity_types.h"
-
-#ifndef M_PI
-#define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
-#endif
 
 #define NUM_BENCH_OBJ 12
 #define BENCH_CYCLE_TIME 10.0
@@ -135,13 +133,13 @@ void CHudBenchmark::Restart( void )
 	g_benchSwitchTime = gHUD.m_flTime + g_benchSwitchTimes[ FIRST_STAGE ];
 	StartNextSection( FIRST_STAGE );
 
-	gHUD.m_Benchmark.m_iFlags |= HUD_ACTIVE;
-	gHUD.m_Benchmark.m_fDrawTime = gHUD.m_flTime + BENCH_TIME;
+	/*gHUD.m_Benchmark.*/m_iFlags |= HUD_ACTIVE;
+	/*gHUD.m_Benchmark.*/m_fDrawTime = gHUD.m_flTime + BENCH_TIME;
 }
 
 int CHudBenchmark::MsgFunc_Bench(const char *pszName, int iSize, void *pbuf)
 {
-	int section = READ_BYTE();
+	/*int section = */READ_BYTE();
 
 	m_fReceiveTime = gHUD.m_flTime;
 	m_StoredLatency = ( m_fReceiveTime - m_fSendTime );
@@ -193,7 +191,7 @@ void CHudBenchmark::StartNextSection( int section )
 		m_StoredPacketLoss = 0.0;
 		m_nStoredHopCount = 0;
 		m_nTraceDone = 0;
-		ServerCmd( "ppdemo 1 start\n" );
+		SERVER_COMMAND( "ppdemo 1 start\n" );
 		break;
 	case 2:
 		if ( m_nTraceDone )
@@ -206,11 +204,11 @@ void CHudBenchmark::StartNextSection( int section )
 
 		}
 		m_nSentFinish = 0;	// added by minman
-		ServerCmd( "ppdemo 2\n" );
+		SERVER_COMMAND( "ppdemo 2\n" );
 		break;
 	case 3:
 		m_nSentFinish = 0;	// added by minman
-		ServerCmd( "ppdemo 3\n" );
+		SERVER_COMMAND( "ppdemo 3\n" );
 		break;
 	default:
 		break;
@@ -235,10 +233,10 @@ void Bench_CheckStart( void )
 	if ( !started && !Bench_Active() )
 	{
 		level = gEngfuncs.pfnGetLevelName();
-		if ( level && level[0] && !stricmp( level, "maps/ppdemo.bsp" ) )
+		if ( level && level[0] && !_stricmp( level, "maps/ppdemo.bsp" ) )
 		{
 			started = 1;
-			EngineClientCmd( "ppdemostart\n" );
+			CLIENT_COMMAND( "ppdemostart\n" );
 		}
 	}
 }
@@ -301,7 +299,7 @@ void CHudBenchmark::Think( void )
 				{
 					g_benchSwitchTime = gHUD.m_flTime + 1.0 + SCORE_TIME_UP;
 
-					ServerCmd( "ppdemo 1 finish\n" );
+					SERVER_COMMAND( "ppdemo 1 finish\n" );
 					m_nSentFinish = 1;
 				}
 			}
@@ -383,14 +381,14 @@ void CHudBenchmark::Think( void )
 		if ( !m_nScoreComputed )
 		{
 			m_nScoreComputed = 1;
-			gHUD.m_Benchmark.SetCompositeScore();
+			/*gHUD.m_Benchmark.*/SetCompositeScore();
 		}
 	}
 
 	if ( Bench_GetStage() > LAST_STAGE )
 	{
 		m_iFlags &= ~HUD_ACTIVE;
-		EngineClientCmd( "quit\n" );
+		CLIENT_COMMAND( "quit\n" );
 	}
 }
 
@@ -471,7 +469,7 @@ void CHudBenchmark::SetCompositeScore( void )
 	m_nCompositeScore = composite;
 }
 
-int CHudBenchmark::Draw( float flTime )
+int CHudBenchmark::Draw(const float &flTime)// XDM3038
 {
 	char sz[ 256 ];
 	int x, y;
@@ -599,6 +597,8 @@ void Bench_SpotPosition( vec3_t dot, vec3_t target )
 	gHUD.m_Benchmark.SetScore( delta.Length() );
 }
 
+/* XDM3038b: WHAT THE DUCK WAS THAT!?!?
+
 typedef struct model_s
 {
 	char		name[64];
@@ -614,7 +614,7 @@ typedef struct model_s
 // volume occupied by the model
 //		
 	vec3_t		mins, maxs;
-} model_t;
+} model_t;*/
 
 static vec3_t g_dotorg;
 vec3_t g_aimorg;
@@ -622,7 +622,7 @@ float g_fZAdjust = 0.0;
 
 void Bench_CheckEntity( int type, struct cl_entity_s *ent, const char *modelname )
 {
-	if ( Bench_InStage( THIRD_STAGE ) && !stricmp( modelname, "*3" ) )
+	if ( Bench_InStage( THIRD_STAGE ) && !_stricmp( modelname, "*3" ) )
 	{
 		model_t *pmod;
 		vec3_t v;
@@ -695,7 +695,7 @@ int HUD_SetupBenchObjects( cl_entity_t *bench, int plindex, vec3_t origin )
 	vec3_t centerspot;
 	pmtrace_t tr;
 	
-	ang = vec3_origin;
+	ang = g_vecZero;// XDM
 	//ang[1] = 90.0;
 	
 	// Determine forward vector
@@ -765,7 +765,7 @@ int HUD_SetupBenchObjects( cl_entity_t *bench, int plindex, vec3_t origin )
 		//	bench[ i ].curstate.velocity[ j ] = gEngfuncs.pfnRandomLong( -300, 300 );
 		}
 		//bench[ i ].curstate.velocity[ 2 ] = gEngfuncs.pfnRandomLong( 0, 50 );
-		bench[ i ].curstate.velocity = vec3_origin;
+		bench[ i ].curstate.velocity = g_vecZero;// XDM
 
 		bench[ i ].curstate.angles[ 2 ] = 0.0;
 		bench[ i ].curstate.angles[ 0 ] = 0.0;
@@ -866,7 +866,7 @@ void HUD_CreateBenchObjects( vec3_t origin )
 	}
 
 	// Determine forward vector
-	AngleVectors ( vec3_origin, forward, right, up );
+	AngleVectors ( g_vecZero, forward, right, up );
 
 	centerspot = origin;
 	centerspot[2] -= 512;
@@ -1032,7 +1032,7 @@ void Bench_SetViewAngles( int recalc_wander, float *viewangles, float frametime,
 	// Clear stochastic offset between runs
 	if ( Bench_InStage( FIRST_STAGE ) )
 	{
-		VectorCopy( vec3_origin, v_stochastic );
+		VectorCopy( g_vecZero, v_stochastic );
 	}
 
 	if ( Bench_InStage( SECOND_STAGE ) || Bench_InStage( THIRD_STAGE ) )
@@ -1041,7 +1041,9 @@ void Bench_SetViewAngles( int recalc_wander, float *viewangles, float frametime,
 		VectorNormalize( lookdir );
 		VectorAngles( (float *)&lookdir, viewangles );
 		
+#if !defined (CORRECT_PITCH)// XDM3038a: TESTME
 		viewangles[0] = -viewangles[0];
+#endif
 
 		/*
 		if ( recalc_wander )
@@ -1069,13 +1071,13 @@ void Bench_SetViewAngles( int recalc_wander, float *viewangles, float frametime,
 		{
 			if ( viewangles[ i ] > 180 )
 				viewangles[ i ] -= 360;
-			if ( viewangles[ i ] < -180 )
+			else if ( viewangles[ i ] < -180 )
 				viewangles[ i ] += 360;
 		}
 	}
 	else
 	{
-		VectorCopy( vec3_origin, viewangles )
+		VectorCopy( g_vecZero, viewangles );
 
 		if ( Bench_InStage( FIRST_STAGE ) )
 		{
@@ -1117,7 +1119,7 @@ void Bench_SetViewOrigin( float *vieworigin, float frametime )
 
 	drift = sin( frac ) * offset_amt;
 	
-	ang = vec3_origin;
+	ang = g_vecZero;
 
 	AngleVectors( ang, NULL, right, NULL );
 
@@ -1127,3 +1129,4 @@ void Bench_SetViewOrigin( float *vieworigin, float frametime )
 	VectorAdd( vieworigin, move, vieworigin );
 }
 
+#endif // defined (ENABLE_BENCKMARK)

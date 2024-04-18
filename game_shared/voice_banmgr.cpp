@@ -1,6 +1,6 @@
 //========= Copyright © 1996-2002, Valve LLC, All rights reserved. ============
 //
-// Purpose: 
+// Purpose:
 //
 // $NoKeywords: $
 //=============================================================================
@@ -8,6 +8,12 @@
 #include <string.h>
 #include <stdio.h>
 #include "voice_banmgr.h"
+
+#ifndef _WIN32
+#if !(defined _snprintf)
+#define _snprintf snprintf
+#endif
+#endif
 
 
 #define BANMGR_FILEVERSION	1
@@ -20,7 +26,7 @@ unsigned char HashPlayerID(char const playerID[16])
 {
 	unsigned char curHash = 0;
 
-	for(int i=0; i < 16; i++)
+	for(short i=0; i < 16; i++)
 		curHash += (unsigned char)playerID[i];
 
 	return curHash;
@@ -45,8 +51,8 @@ bool CVoiceBanMgr::Init(char const *pGameDir)
 	Term();
 
 	char filename[512];
-	_snprintf(filename, sizeof(filename), "%s/%s", pGameDir, g_pBanMgrFilename);
-
+	_snprintf(filename, 512, "%s/%s", pGameDir, g_pBanMgrFilename);
+	filename[511] = '\0';
 	// Load in the squelch file.
 	FILE *fp = fopen(filename, "rb");
 	if(fp)
@@ -64,7 +70,7 @@ bool CVoiceBanMgr::Init(char const *pGameDir)
 				char playerID[16];
 				fread(playerID, 1, 16, fp);
 				AddBannedPlayer(playerID);
-			}			
+			}
 		}
 
 		fclose(fp);
@@ -96,8 +102,8 @@ void CVoiceBanMgr::SaveState(char const *pGameDir)
 {
 	// Save the file out.
 	char filename[512];
-	_snprintf(filename, sizeof(filename), "%s/%s", pGameDir, g_pBanMgrFilename);
-
+	_snprintf(filename, 512, "%s/%s\0", pGameDir, g_pBanMgrFilename);
+	filename[511] = '\0';
 	FILE *fp = fopen(filename, "wb");
 	if(fp)
 	{
@@ -131,7 +137,7 @@ void CVoiceBanMgr::SetPlayerBan(char const playerID[16], bool bSquelch)
 		// Is this guy already squelched?
 		if(GetPlayerBan(playerID))
 			return;
-	
+
 		AddBannedPlayer(playerID);
 	}
 	else

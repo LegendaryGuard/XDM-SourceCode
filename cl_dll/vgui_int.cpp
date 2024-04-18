@@ -5,14 +5,13 @@
 // $NoKeywords: $
 //=============================================================================
 
-#include"vgui_int.h"
-#include<VGUI_Label.h>
-#include<VGUI_BorderLayout.h>
-#include<VGUI_LineBorder.h>
-#include<VGUI_SurfaceBase.h>
-#include<VGUI_TextEntry.h>
-#include<VGUI_ActionSignal.h>
-#include<string.h>
+#include "vgui_Int.h"
+#include <VGUI_Label.h>
+#include <VGUI_BorderLayout.h>
+#include <VGUI_LineBorder.h>
+#include <VGUI_SurfaceBase.h>
+#include <VGUI_TextEntry.h>
+#include <VGUI_ActionSignal.h>
 #include "hud.h"
 #include "cl_util.h"
 #include "camera.h"
@@ -22,9 +21,9 @@
 #include "const.h"
 #include "camera.h"
 #include "in_defs.h"
-#include "vgui_TeamFortressViewport.h"
-#include "vgui_ControlConfigPanel.h"
+#include "vgui_Viewport.h"
 
+/*
 namespace
 {
 
@@ -56,73 +55,75 @@ public:
 protected:
 	virtual void paintBackground()
 	{
-			Panel::paintBackground();
-			
-			int wide,tall;
-			getPaintSize(wide,tall);
-		
-			drawSetColor(0,0,255,0);
-			drawSetTexture(_bindIndex);
-			drawTexturedRect(0,19,257,257);
+		Panel::paintBackground();
+		int wide,tall;
+		getPaintSize(wide,tall);
+		drawSetColor(0,0,255,0);
+		drawSetTexture(_bindIndex);
+		drawTexturedRect(0,19,257,257);
 	}
-
 };
 
 }
+*/
 
 using namespace vgui;
 
+extern "C"// XDM3038a
+{
+
 void VGui_ViewportPaintBackground(int extents[4])
 {
-	gEngfuncs.VGui_ViewportPaintBackground(extents);
+	gEngfuncs.VGui_ViewportPaintBackground(extents);// BUGBUG: sometimes engine hangs within. Probably nvoglv32.dll fault.
 }
 
-void* VGui_GetPanel()
+void VGui_Startup(void)
 {
-	return (Panel*)gEngfuncs.VGui_GetPanel();
-}
-
-void VGui_Startup()
-{
-	Panel* root=(Panel*)VGui_GetPanel();
-	root->setBgColor(128,128,0,0);
+	DBG_PRINTF("VGui_Startup()\n");
+	Panel *root = (Panel *)gEngfuncs.VGui_GetPanel();
+	if (root == NULL)
+	{
+		conprintf(0, "CL: error attaching VGUI API!\n");
+		return;
+	}
+	root->setBgColor(127,127,127,0);
+	root->setPaintBackgroundEnabled(false);// XDM3037: ?
 	//root->setNonPainted(false);
 	//root->setBorder(new LineBorder());
 	root->setLayout(new BorderLayout(0));
-
-	
 	//root->getSurfaceBase()->setEmulatedCursorVisible(true);
+
+	// XDM3038: ridiculous bug!! VGUI viewport reports 0,0 if game window is not properly focused!!!
+	if (root->getWide() <= 0 || root->getTall() <= 0)
+	{
+		conprintf(0, "CL: warning: detected wrong viewport dimensions! Resetting!\n");
+		root->setSize(ScreenWidth, ScreenHeight);
+		root->setPos(0,0);// these usually get stuck around -3200
+	}
 
 	if (gViewPort != NULL)
 	{
-//		root->removeChild(gViewPort);
-
+		//root->removeChild(gViewPort);
 		// free the memory
-//		delete gViewPort;
-//		gViewPort = NULL;
-
+		//delete gViewPort;
+		//gViewPort = NULL;
 		gViewPort->Initialize();
 	}
 	else
 	{
-		gViewPort = new TeamFortressViewport(0,0,root->getWide(),root->getTall());
+		gViewPort = new CViewport(0,0,root->getWide(),root->getTall());
 		gViewPort->setParent(root);
 	}
-
-	/*
-	TexturePanel* texturePanel=new TexturePanel();
-	texturePanel->setParent(gViewPort);
-	*/
-
 }
 
 void VGui_Shutdown()
 {
-	delete gViewPort;
-	gViewPort = NULL;
+	DBG_PRINTF("VGui_Shutdown()\n");
+	if (gViewPort)
+	{
+		delete gViewPort;
+		gViewPort = NULL;
+	}
 }
 
-
-
-
-
+}// extern "C"

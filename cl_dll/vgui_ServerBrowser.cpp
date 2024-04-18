@@ -16,28 +16,23 @@
 #include "cl_util.h"
 #include "hud_servers.h"
 #include "net_api.h"
-
-#include "vgui_TeamFortressViewport.h"
+#include "vgui_Viewport.h"
+#include "vgui_CustomObjects.h"
 #include "vgui_ServerBrowser.h"
 
 using namespace vgui;
 
 namespace
 {
-
 #define MAX_SB_ROWS 24
-
 #define NUM_COLUMNS 5
-
 #define HEADER_SIZE_Y			YRES(18)
-
 // Column sizes
 #define CSIZE_ADDRESS			XRES(200)
 #define CSIZE_SERVER			XRES(400) 
 #define CSIZE_MAP				XRES(500)
 #define CSIZE_CURRENT			XRES(570)
 #define CSIZE_PING				XRES(640)
-
 #define CELL_HEIGHT				YRES(15)
 
 class ServerBrowserTablePanel;
@@ -55,9 +50,7 @@ public:
 	virtual void cursorMoved(int x,int y,Panel* panel) {};
 	virtual void cursorEntered(Panel* panel){};
 	virtual void cursorExited(Panel* Panel) {};
-
 	virtual void mousePressed(MouseCode code,Panel* panel);
-
 	virtual void mouseDoublePressed(MouseCode code,Panel* panel);
 	virtual void mouseReleased(MouseCode code,Panel* panel) {};
 	virtual void mouseWheeled(int delta,Panel* panel) {};
@@ -115,7 +108,7 @@ public:
 
 	void DoCancel( void )
 	{
-		EngineClientCmd( "togglebrowser\n" );
+		CLIENT_COMMAND( "togglebrowser\n" );
 	}
 
 	void DoConnect( void )
@@ -131,9 +124,9 @@ public:
 		address = gEngfuncs.pNetAPI->ValueForKey( info, "address" );
 		//gEngfuncs.Con_Printf( "Connecting to %s\n", address );
 
-		sprintf( sz, "connect %s\n", address );
+		_snprintf(sz, 256, "connect %s\n", address);
 
-		EngineClientCmd( sz );
+		CLIENT_COMMAND( sz );
 
 		DoCancel();
 	}
@@ -176,7 +169,7 @@ public:
 
 		if ( row == m_nMouseOverRow )
 		{
-			m_pLabel->setFgColor( 200, 240, 63, 100 );
+			m_pLabel->setFgColor( 0, 240, 63, 100 );// XDM 200, 240, 63, 100
 		}
 		else
 		{
@@ -226,7 +219,7 @@ public:
 				val2 = gEngfuncs.pNetAPI->ValueForKey( info, "max" );
 				if ( val && val2 )
 				{
-					sprintf( sz, "%s/%s", val, val2 );
+					_snprintf(sz, 32, "%s/%s", val, val2);
 					sz[ 31 ] = '\0';
 					// Server Map;
 					m_pLabel->setText( sz );
@@ -406,20 +399,27 @@ public:
 	LabelSortInputHandler( ServerBrowserTablePanel *pBrowser, char *name )
 	{
 		m_pBrowser = pBrowser;
-		strcpy( m_szSortKey, name );
+		strncpy(m_szSortKey, name, 64);
 	}
 
 	virtual void cursorMoved(int x,int y,Panel* panel) {};
-	virtual void cursorEntered(Panel* panel){};
-	virtual void cursorExited(Panel* Panel) {};
-
+	virtual void cursorEntered(Panel* panel)
+	{
+		PlaySound("vgui/button_enter.wav", VOL_NORM);// XDM
+	}
+	virtual void cursorExited(Panel* Panel)
+	{
+		PlaySound("vgui/button_exit.wav", VOL_NORM);// XDM
+	}
 	virtual void mousePressed(MouseCode code,Panel* panel)
 	{
+		PlaySound("vgui/button_press.wav", VOL_NORM);// XDM
 		m_pBrowser->DoSort( m_szSortKey );
 	}
 
 	virtual void mouseDoublePressed(MouseCode code,Panel* panel)
 	{
+		PlaySound("vgui/button_press.wav", VOL_NORM);// XDM
 		m_pBrowser->DoSort( m_szSortKey );
 	}
 
@@ -442,16 +442,15 @@ public:
 	CSBLabel( char *name, char *sortkey ) : Label( name )
 	{
 		m_pBrowser = NULL;
+		strncpy(m_szSortKey, name, 64);
 
-		strcpy( m_szSortKey, sortkey );
-
-		int label_bg_r = 120,
-			label_bg_g = 75,
-			label_bg_b = 32,
+		int label_bg_r = 0,
+			label_bg_g = 64,
+			label_bg_b = 128,
 			label_bg_a = 200;
 
-		int label_fg_r = 255,
-			label_fg_g = 0,
+		int label_fg_r = 0,
+			label_fg_g = 255,
 			label_fg_b = 0,
 			label_fg_a = 0;
 
@@ -470,7 +469,7 @@ public:
 	}
 };
 
-ServerBrowser::ServerBrowser(int x,int y,int wide,int tall) : CTransparentPanel( 100, x,y,wide,tall )
+ServerBrowser::ServerBrowser(int x,int y,int wide,int tall) : CMenuPanel(0, x,y,wide,tall )
 {
 	int i;
 

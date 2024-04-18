@@ -4,7 +4,7 @@
 //
 // $NoKeywords: $
 //=============================================================================
-
+#include "platform.h"
 #include "vgui_slider2.h"
 
 #include<VGUI_InputSignal.h>
@@ -216,37 +216,30 @@ bool Slider2::hasFullRange()
 	float frange=(float)(_range[1]-_range[0]);
 	float frangewindow=(float)(_rangeWindow);
 
-	if(frangewindow<0)
-	{
+	if (frangewindow<0)
 		frangewindow=0;
-	}
 
-	if(!_rangeWindowEnabled)
+	if (!_rangeWindowEnabled)
 	{
 		frangewindow=frange;
 	}
 
 	if ( frangewindow > 0 )
 	{
-		if(_vertical)
+		if (_vertical)
 		{
 			if( frangewindow <= ( ftall + _buttonOffset ) )
-			{
 				return true;
-			}
 		}
 		else
 		{
 			if( frangewindow <= ( fwide + _buttonOffset ) )
-			{
 				return true;
-			}
 		}
 	}
-
 	return false;
 }
-	
+
 void Slider2::addIntChangeSignal(IntChangeSignal* s)
 {
 	_intChangeSignalDar.putElement(s);
@@ -260,60 +253,47 @@ void Slider2::fireIntChangeSignal()
 	}
 }
 
-void Slider2::paintBackground()
+void Slider2::paintBackground(void)// XDM3035a: recoded
 {
 	int wide,tall;
 	getPaintSize(wide,tall);
 
-	if (_vertical)
-	{
-		// background behind slider
-		drawSetColor(40, 40, 40, 0);
-		drawFilledRect(0, 0, wide, tall);
+//	Panel::paintBackground();
 
-		// slider front
-		drawSetColor(0, 0, 0, 0);
-		drawFilledRect(0,_nobPos[0],wide,_nobPos[1]); 
+	// Entire scroll field background
+	drawSetColor(Scheme::sc_black);
+	drawFilledRect(1,1,wide-1,tall-1);
+	// Border
+	drawSetColor(Scheme::sc_white);
+	drawOutlinedRect(0,0,wide,tall);
 
-		// slider border
-		drawSetColor(60, 60, 60, 0);
-		drawFilledRect(0,_nobPos[0],wide,_nobPos[0]+1);      // top
-		drawFilledRect(0,_nobPos[1],wide,_nobPos[1]+1);      // bottom
-		drawFilledRect(0,_nobPos[0]+1,1,_nobPos[1]);         // left
-		drawFilledRect(wide-1,_nobPos[0]+1,wide,_nobPos[1]); // right
-	}
+//	drawFilledRect(0,_nobPos[0],wide,_nobPos[1]);// draw rail?
+
+	if (_dragging)
+		drawSetColor(Scheme::sc_user);
 	else
-	{
-		//!! doesn't work
+		drawSetColor(Scheme::sc_primary1);
 
+	if (_vertical)
+		drawFilledRect(1,_nobPos[0]+1,wide-1,_nobPos[1]-1);
+	else
+		drawFilledRect(_nobPos[0]+1,1,_nobPos[1]-1,tall-1);
+
+	if (_dragging)
 		drawSetColor(Scheme::sc_secondary3);
-		drawFilledRect(0,0,wide,tall);
+	else
+		drawSetColor(Scheme::sc_primary3);
 
-		drawSetColor(Scheme::sc_black);
-		drawOutlinedRect(0,0,wide,tall);
-
-		drawSetColor(Scheme::sc_primary2);
-		drawFilledRect(_nobPos[0],0,_nobPos[1],tall);
-		
-		drawSetColor(Scheme::sc_black);
+	if (_vertical)
+		drawOutlinedRect(0,_nobPos[0],wide,_nobPos[1]);
+	else
 		drawOutlinedRect(_nobPos[0],0,_nobPos[1],tall);
-	}
 }
 
-void Slider2::setRange(int min,int max)
+void Slider2::setRange(int min, int max)
 {
-	if(max<min)
-	{
-		max=min;
-	}
-
-	if(min>max)
-	{
-		min=max;
-	}
-
-	_range[0]=min;
-	_range[1]=max;
+	_range[0]=__min(min, max);
+	_range[1]=__max(min, max);
 }
 
 void Slider2::getRange(int& min,int& max)
@@ -322,7 +302,7 @@ void Slider2::getRange(int& min,int& max)
 	max=_range[1];
 }
 
-void Slider2::privateCursorMoved(int x,int y,Panel* panel)
+void Slider2::privateCursorMoved(int x,int y, Panel *panel)
 {
 	if(!_dragging)
 	{
@@ -405,7 +385,6 @@ void Slider2::privateMousePressed(MouseCode code,Panel* panel)
 			_dragStartPos[1]=y;
 		}
 	}
-
 }
 
 void Slider2::privateMouseReleased(MouseCode code,Panel* panel)

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -20,7 +20,7 @@
 //=========================================================
 CPlane :: CPlane ( void )
 {
-	m_fInitialized = FALSE;
+	m_fInitialized = false;
 }
 
 //=========================================================
@@ -31,30 +31,20 @@ void CPlane :: InitializePlane ( const Vector &vecNormal, const Vector &vecPoint
 {
 	m_vecNormal = vecNormal;
 	m_flDist = DotProduct ( m_vecNormal, vecPoint );
-	m_fInitialized = TRUE;
+	m_fInitialized = true;
 }
-
 
 //=========================================================
 // PointInFront - determines whether the given vector is 
 // in front of the plane. 
 //=========================================================
-BOOL CPlane :: PointInFront ( const Vector &vecPoint )
+bool CPlane :: PointInFront ( const Vector &vecPoint )
 {
-	float flFace;
-
 	if ( !m_fInitialized )
-	{
-		return FALSE;
-	}
+		return false;
 
-	flFace = DotProduct ( m_vecNormal, vecPoint ) - m_flDist;
+	if ((DotProduct(m_vecNormal, vecPoint) - m_flDist) >= 0)
+		return true;
 
-	if ( flFace >= 0 )
-	{
-		return TRUE;
-	}
-
-	return FALSE;
+	return false;
 }
-

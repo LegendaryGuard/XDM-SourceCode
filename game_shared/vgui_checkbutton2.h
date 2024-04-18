@@ -8,7 +8,9 @@
 #ifndef VGUI_CHECKBUTTON2_H
 #define VGUI_CHECKBUTTON2_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 
@@ -38,9 +40,8 @@ public:
 class CCheckButton2 : public Panel, public CDefaultInputSignal
 {
 public:
-
-				CCheckButton2();
-				~CCheckButton2();
+	CCheckButton2();
+	~CCheckButton2();
 	
 	// Initialize the button with these.
 	void		SetImages(char const *pChecked, char const *pUnchecked);
@@ -62,35 +63,26 @@ public:
 	bool		IsChecked();
 	void		SetChecked(bool bChecked);
 
-
-
 // Panel overrides.
 public:
-
 	virtual void	internalMousePressed(MouseCode code);	
 
-
 protected:
-
 	void			SetupControls();
-
 
 // InputSignal overrides.
 protected:
 	virtual void mousePressed(MouseCode code,Panel* panel);
 
-
 public:
+	// XDM3038c: reordered to reduce padding
 	ICheckButton2Handler	*m_pHandler;
-
-	bool		m_bCheckboxLeft;
-	Label		m_Label;
-	ImagePanel	m_CheckboxPanel;
-	
 	Image		*m_pChecked;
 	Image		*m_pUnchecked;
+	Label		m_Label;
+	ImagePanel	m_CheckboxPanel;
 	bool		m_bOwnImages;
-
+	bool		m_bCheckboxLeft;
 	bool		m_bChecked;
 };
 

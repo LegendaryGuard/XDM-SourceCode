@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cl_dll", "cl_dll\cl_dll.vcxproj", "{E5EDD971-A9F5-C513-C127-E195BB23922F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XDM", "dlls\XDM.vcxproj", "{D87C9DAF-AB7E-4AD0-FCD8-6C6C881C3557}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "XBM", "xbm\XBM.vcxproj", "{2700BB55-862C-1CD6-AFF6-0CA1B25E8F1C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{532FE656-C7B1-4C3B-9F85-EE05C7E352FA}"
+	ProjectSection(SolutionItems) = preProject
+		readme.txt = readme.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "XHL", "XHL", "{5CFD2860-DF81-443A-8096-26C24853A0CE}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\..\..\HL1121\XDM\delta.lst = ..\..\..\..\HL1121\XDM\delta.lst
+		..\..\..\..\HL1121\XDM\sprites\hud.txt = ..\..\..\..\HL1121\XDM\sprites\hud.txt
+		..\..\..\..\HL1121\XDM\liblist.gam = ..\..\..\..\HL1121\XDM\liblist.gam
+		..\..\..\..\HL1121\XDM\sound\materials.txt = ..\..\..\..\HL1121\XDM\sound\materials.txt
+		..\..\..\..\HL1121\XDM\sound\sentences.txt = ..\..\..\..\HL1121\XDM\sound\sentences.txt
+		..\..\..\..\HL1121\XDM\skill.cfg = ..\..\..\..\HL1121\XDM\skill.cfg
+		..\..\..\..\HL1121\XDM\titles.txt = ..\..\..\..\HL1121\XDM\titles.txt
+		..\..\..\..\HL1121\XDM\XHL.fgd = ..\..\..\..\HL1121\XDM\XHL.fgd
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+		Template|Win32 = Template|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E5EDD971-A9F5-C513-C127-E195BB23922F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E5EDD971-A9F5-C513-C127-E195BB23922F}.Debug|Win32.Build.0 = Debug|Win32
+		{E5EDD971-A9F5-C513-C127-E195BB23922F}.Release|Win32.ActiveCfg = Release|Win32
+		{E5EDD971-A9F5-C513-C127-E195BB23922F}.Release|Win32.Build.0 = Release|Win32
+		{E5EDD971-A9F5-C513-C127-E195BB23922F}.Template|Win32.ActiveCfg = Release|Win32
+		{D87C9DAF-AB7E-4AD0-FCD8-6C6C881C3557}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D87C9DAF-AB7E-4AD0-FCD8-6C6C881C3557}.Debug|Win32.Build.0 = Debug|Win32
+		{D87C9DAF-AB7E-4AD0-FCD8-6C6C881C3557}.Release|Win32.ActiveCfg = Release|Win32
+		{D87C9DAF-AB7E-4AD0-FCD8-6C6C881C3557}.Release|Win32.Build.0 = Release|Win32
+		{D87C9DAF-AB7E-4AD0-FCD8-6C6C881C3557}.Template|Win32.ActiveCfg = Release|Win32
+		{2700BB55-862C-1CD6-AFF6-0CA1B25E8F1C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2700BB55-862C-1CD6-AFF6-0CA1B25E8F1C}.Debug|Win32.Build.0 = Debug|Win32
+		{2700BB55-862C-1CD6-AFF6-0CA1B25E8F1C}.Release|Win32.ActiveCfg = Release|Win32
+		{2700BB55-862C-1CD6-AFF6-0CA1B25E8F1C}.Release|Win32.Build.0 = Release|Win32
+		{2700BB55-862C-1CD6-AFF6-0CA1B25E8F1C}.Template|Win32.ActiveCfg = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5CFD2860-DF81-443A-8096-26C24853A0CE} = {532FE656-C7B1-4C3B-9F85-EE05C7E352FA}
+	EndGlobalSection
+EndGlobal

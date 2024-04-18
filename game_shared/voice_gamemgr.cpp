@@ -5,6 +5,7 @@
 // $NoKeywords: $
 //=============================================================================
 
+#include "platform.h"
 #include "archtypes.h"     // DAL
 #include "voice_gamemgr.h"
 #include <string.h>
@@ -43,7 +44,7 @@ cvar_t sv_alltalk = {"sv_alltalk", "0", FCVAR_SERVER};
 // ------------------------------------------------------------------------ //
 
 // Find a player with a case-insensitive name search.
-static CBasePlayer* FindPlayerByName(const char *pTestName)
+/*static CBasePlayer* FindPlayerByName(const char *pTestName)
 {
 	for(int i=1; i <= gpGlobals->maxClients; i++)
 	{
@@ -54,7 +55,7 @@ static CBasePlayer* FindPlayerByName(const char *pTestName)
 			if(pEnt && pEnt->IsPlayer())
 			{			
 				const char *pNetName = STRING(pEnt->pev->netname);
-				if(stricmp(pNetName, pTestName) == 0)
+				if(_stricmp(pNetName, pTestName) == 0)
 				{
 					return (CBasePlayer*)pEnt;
 				}
@@ -63,18 +64,17 @@ static CBasePlayer* FindPlayerByName(const char *pTestName)
 	}
 
 	return NULL;
-}
+}*/
 
 static void VoiceServerDebug( char const *pFmt, ... )
 {
-	char msg[4096];
-	va_list marker;
-
-	if( !voice_serverdebug.value )
+	static char msg[2048];
+	if (voice_serverdebug.value <= 0.0f)
 		return;
 
+	va_list marker;
 	va_start( marker, pFmt );
-	_vsnprintf( msg, sizeof(msg), pFmt, marker );
+	_vsnprintf( msg, 2048, pFmt, marker );
 	va_end( marker );
 
 	ALERT( at_console, "%s", msg );
@@ -101,10 +101,11 @@ CVoiceGameMgr::~CVoiceGameMgr()
 bool CVoiceGameMgr::Init(
 	IVoiceGameMgrHelper *pHelper,
 	int maxClients)
-{		  
+{
+	VoiceServerDebug("CVoiceGameMgr::Init(%d)\n", maxClients);
 	m_pHelper = pHelper;
 	m_nMaxPlayers = VOICE_MAX_PLAYERS < maxClients ? VOICE_MAX_PLAYERS : maxClients;
-	g_engfuncs.pfnPrecacheModel("sprites/voiceicon.spr");
+	// XDM3038a: client precache g_engfuncs.pfnPrecacheModel("sprites/voiceicon.spr");
 
 	m_msgPlayerVoiceMask = REG_USER_MSG( "VoiceMask", VOICE_MAX_PLAYERS_DW*4 * 2 );
 	m_msgRequestState = REG_USER_MSG( "ReqState", 0 );
@@ -140,7 +141,9 @@ void CVoiceGameMgr::Update(double frametime)
 void CVoiceGameMgr::ClientConnected(edict_t *pEdict)
 {
 	int index = ENTINDEX(pEdict) - 1;
-	
+	if (index < 0 || index >= m_nMaxPlayers)
+		return;
+
 	// Clear out everything we use for deltas on this guy.
 	g_bWantModEnable[index] = true;
 	g_SentGameRulesMasks[index].Init(0);
@@ -174,18 +177,18 @@ bool CVoiceGameMgr::ClientCommand(CBasePlayer *pPlayer, const char *cmd)
 		return true;
 	}
 
-	bool bBan = stricmp(cmd, "vban") == 0;
-	if(bBan && CMD_ARGC() >= 2)
+	if (strcmp(cmd, "vban") == 0 && CMD_ARGC() >= 2)// XDM3038c: case-sensitive
 	{
 		for(int i=1; i < CMD_ARGC(); i++)
 		{
-			uint32 mask = 0;
-			sscanf(CMD_ARGV(i), "%x", &mask);
-
-			if(i <= VOICE_MAX_PLAYERS_DW)
+			if (i <= VOICE_MAX_PLAYERS_DW)
 			{
-				VoiceServerDebug( "CVoiceGameMgr::ClientCommand: vban (0x%x) from %d\n", mask, playerClientIndex );
-				g_BanMasks[playerClientIndex].SetDWord(i-1, mask);
+				uint32 mask = 0;
+				if (sscanf(CMD_ARGV(i), "%x", &mask) == 1)
+				{
+					VoiceServerDebug( "CVoiceGameMgr::ClientCommand: vban (0x%x) from %d\n", mask, playerClientIndex );
+					g_BanMasks[playerClientIndex].SetDWord(i-1, mask);
+				}
 			}
 			else
 			{
@@ -197,12 +200,18 @@ bool CVoiceGameMgr::ClientCommand(CBasePlayer *pPlayer, const char *cmd)
 		//UpdateMasks();		
 		return true;
 	}
-	else if(stricmp(cmd, "VModEnable") == 0 && CMD_ARGC() >= 2)
+	else if (strcmp(cmd, "VModEnable") == 0)// XDM3038c: case-sensitive
 	{
-		VoiceServerDebug( "CVoiceGameMgr::ClientCommand: VModEnable (%d)\n", !!atoi(CMD_ARGV(1)) );
-		g_PlayerModEnable[playerClientIndex] = !!atoi(CMD_ARGV(1));
-		g_bWantModEnable[playerClientIndex] = false;
-		//UpdateMasks();		
+		if (CMD_ARGC() >= 2)
+		{
+			VoiceServerDebug( "CVoiceGameMgr::ClientCommand: VModEnable (%d)\n", !!atoi(CMD_ARGV(1)) );
+			g_PlayerModEnable[playerClientIndex] = !!atoi(CMD_ARGV(1));
+			g_bWantModEnable[playerClientIndex] = false;
+			//UpdateMasks();		
+		}
+		else
+			VoiceServerDebug("%s: missing argument\n", CMD_ARGV(0));
+
 		return true;
 	}
 	else
@@ -216,18 +225,18 @@ void CVoiceGameMgr::UpdateMasks()
 {
 	m_UpdateInterval = 0;
 
-	bool bAllTalk = !!(sv_alltalk.value);
+	bool bAllTalk = (sv_alltalk.value > 0.0f);//!!g_engfuncs.pfnCVarGetFloat( "sv_alltalk" );
 
-	for(int iClient=0; iClient < m_nMaxPlayers; iClient++)
+	for(int iClient=0; iClient < m_nMaxPlayers; ++iClient)
 	{
-		CBaseEntity *pEnt = UTIL_PlayerByIndex(iClient+1);
-		if(!pEnt || !pEnt->IsPlayer())
+		CBasePlayer *pEnt = UTIL_ClientByIndex(iClient+1);
+		if (pEnt == NULL)// || !pEnt->IsPlayer())
 			continue;
 
 		// Request the state of their "VModEnable" cvar.
 		if(g_bWantModEnable[iClient])
 		{
-			MESSAGE_BEGIN(MSG_ONE, m_msgRequestState, NULL, pEnt->pev);
+			MESSAGE_BEGIN(MSG_ONE, m_msgRequestState, NULL, ENT(pEnt->pev));
 			MESSAGE_END();
 		}
 
@@ -237,10 +246,10 @@ void CVoiceGameMgr::UpdateMasks()
 		if( g_PlayerModEnable[iClient] )
 		{
 			// Build a mask of who they can hear based on the game rules.
-			for(int iOtherClient=0; iOtherClient < m_nMaxPlayers; iOtherClient++)
+			for(CLIENT_INDEX iOtherClient=0; iOtherClient < m_nMaxPlayers; ++iOtherClient)
 			{
-				CBaseEntity *pEnt = UTIL_PlayerByIndex(iOtherClient+1);
-				if(pEnt && (bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, (CBasePlayer*)pEnt)) )
+				CBasePlayer *pEnt2 = UTIL_ClientByIndex(iOtherClient+1);
+				if (pEnt2 && (bAllTalk || m_pHelper->CanPlayerHearPlayer(pPlayer, pEnt2)))
 				{
 					gameRulesMask[iOtherClient] = true;
 				}
@@ -254,9 +263,9 @@ void CVoiceGameMgr::UpdateMasks()
 			g_SentGameRulesMasks[iClient] = gameRulesMask;
 			g_SentBanMasks[iClient] = g_BanMasks[iClient];
 
-			MESSAGE_BEGIN(MSG_ONE, m_msgPlayerVoiceMask, NULL, pPlayer->pev);
+			MESSAGE_BEGIN(MSG_ONE, m_msgPlayerVoiceMask, NULL, ENT(pPlayer->pev));
 				int dw;
-				for(dw=0; dw < VOICE_MAX_PLAYERS_DW; dw++)
+				for(dw=0; dw < VOICE_MAX_PLAYERS_DW; ++dw)
 				{
 					WRITE_LONG(gameRulesMask.GetDWord(dw));
 					WRITE_LONG(g_BanMasks[iClient].GetDWord(dw));
@@ -265,7 +274,7 @@ void CVoiceGameMgr::UpdateMasks()
 		}
 
 		// Tell the engine.
-		for(int iOtherClient=0; iOtherClient < m_nMaxPlayers; iOtherClient++)
+		for(CLIENT_INDEX iOtherClient=0; iOtherClient < m_nMaxPlayers; ++iOtherClient)
 		{
 			bool bCanHear = gameRulesMask[iOtherClient] && !g_BanMasks[iClient][iOtherClient];
 			g_engfuncs.pfnVoice_SetClientListening(iClient+1, iOtherClient+1, bCanHear);

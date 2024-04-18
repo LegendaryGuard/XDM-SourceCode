@@ -1,0 +1,33 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: bmp2spr - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x417 /fo".\Release/bmp2spr.res" /d "NDEBUG" "D:\dev\src\XHL\SourceCode\utils\bmp2spr\bmp2spr.rc"" 
+Creating temporary file "C:\Users\xawari\AppData\Local\Temp\RSPC2B5.tmp" with contents
+[
+/nologo /ML /W3 /GX /Zi /O1 /I "..\common" /D "NDEBUG" /D "WIN32" /D "_CONSOLE" /FR".\Release/" /Fp".\Release/bmp2spr.pch" /YX /Fo".\Release/" /Fd".\Release/" /FD /c 
+"D:\dev\src\XHL\SourceCode\utils\bmp2spr\bmp2spr.c"
+"D:\dev\src\XHL\SourceCode\utils\bmp2spr\cmdlib.c"
+"D:\dev\src\XHL\SourceCode\utils\bmp2spr\lbmlib.c"
+]
+Creating command line "cl.exe @C:\Users\xawari\AppData\Local\Temp\RSPC2B5.tmp" 
+Creating command line "link.exe /nologo /subsystem:console /incremental:no /pdb:".\Release/bmp2spr.pdb" /debug /machine:I386 /out:".\Release/bmp2spr.exe"  .\Release\bmp2spr.obj .\Release\cmdlib.obj .\Release\lbmlib.obj .\Release\bmp2spr.res "
+<h3>Output Window</h3>
+Compiling resources...
+Compiling...
+bmp2spr.c
+cmdlib.c
+lbmlib.c
+Linking...
+
+
+
+<h3>Results</h3>
+bmp2spr.exe - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

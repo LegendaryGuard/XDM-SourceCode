@@ -1,196 +1,197 @@
-/***
-*
-*	Copyright (c) 1999, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-*   Use, distribution, and modification of this source code and/or resulting
-*   object code is restricted to non-commercial enhancements to products from
-*   Valve LLC.  All other use, distribution, or modification is prohibited
-*   without written permission from Valve LLC.
-*
-****/
-//
-// cl_util.h
-//
-
-#include "cvardef.h"
-
-#ifndef TRUE
-#define TRUE 1
-#define FALSE 0
+#ifndef CL_UTIL_H
+#define CL_UTIL_H
+#ifdef _WIN32
+#if !defined (__MINGW32__)
+#pragma once
+#endif /* not __MINGW32__ */
 #endif
 
-#include <stdio.h> // for safe_sprintf()
-#include <stdarg.h>  // "
-#include <string.h> // for strncpy()
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "cvardef.h"
+#include "cl_enginefuncs.h"
+#include "util_vector.h"
+#include "util_common.h"
+#include "gamedefs.h"
+#include "color.h"
+
+/*
+#ifdef _MSC_VER
+//#pragma warning(disable: 4244)// 'possible loss of data converting float to int'
+#pragma warning(disable: 4305)// 'truncation from 'const double' to 'float'
+#endif // _MSC_VER
+*/
+
+#define CBSENTENCENAME_MAX 16
+
+inline int IS_DEDICATED_SERVER(void) {return 0;}// XDM3038c: a stub, there is no dedicated server on a client side!
 
 // Macros to hook function calls into the HUD object
-#define HOOK_MESSAGE(x) gEngfuncs.pfnHookUserMsg(#x, __MsgFunc_##x );
-
+/*#if defined (_DEBUG)
 #define DECLARE_MESSAGE(y, x) int __MsgFunc_##x(const char *pszName, int iSize, void *pbuf) \
 							{ \
-							return gHUD.y.MsgFunc_##x(pszName, iSize, pbuf ); \
+								CON_DPRINTF("%s::%s(%s, %d)\n", " ##y", " ##x", pszName, iSize); \
+								return gHUD.y.MsgFunc_##x(pszName, iSize, pbuf); \
 							}
+#else*/
+#define DECLARE_MESSAGE(y, x) int __MsgFunc_##x(const char *pszName, int iSize, void *pbuf) { return gHUD.y.MsgFunc_##x(pszName, iSize, pbuf); }
+//#endif
 
+#if defined (_DEBUG)
+#define HOOK_MESSAGE(x) gEngfuncs.Con_Printf("HOOK_MESSAGE(%s): %d\n", #x, gEngfuncs.pfnHookUserMsg(#x, __MsgFunc_##x));
+#else
+#define HOOK_MESSAGE(x) gEngfuncs.pfnHookUserMsg(#x, __MsgFunc_##x);
+#endif
 
-#define HOOK_COMMAND(x, y) gEngfuncs.pfnAddCommand( x, __CmdFunc_##y );
-#define DECLARE_COMMAND(y, x) void __CmdFunc_##x( void ) \
+#define DECLARE_COMMAND(y, x) void __CmdFunc_##x(void) \
 							{ \
-								gHUD.y.UserCmd_##x( ); \
+								gHUD.y.UserCmd_##x(); \
 							}
-
-inline float CVAR_GET_FLOAT( const char *x ) {	return gEngfuncs.pfnGetCvarFloat( (char*)x ); }
-inline char* CVAR_GET_STRING( const char *x ) {	return gEngfuncs.pfnGetCvarString( (char*)x ); }
-inline struct cvar_s *CVAR_CREATE( const char *cv, const char *val, const int flags ) {	return gEngfuncs.pfnRegisterVariable( (char*)cv, (char*)val, flags ); }
-
-#define SPR_Load (*gEngfuncs.pfnSPR_Load)
-#define SPR_Set (*gEngfuncs.pfnSPR_Set)
-#define SPR_Frames (*gEngfuncs.pfnSPR_Frames)
-#define SPR_GetList (*gEngfuncs.pfnSPR_GetList)
-
-// SPR_Draw  draws a the current sprite as solid
-#define SPR_Draw (*gEngfuncs.pfnSPR_Draw)
-// SPR_DrawHoles  draws the current sprites,  with color index255 not drawn (transparent)
-#define SPR_DrawHoles (*gEngfuncs.pfnSPR_DrawHoles)
-// SPR_DrawAdditive  adds the sprites RGB values to the background  (additive transulency)
-#define SPR_DrawAdditive (*gEngfuncs.pfnSPR_DrawAdditive)
-
-// SPR_EnableScissor  sets a clipping rect for HUD sprites.  (0,0) is the top-left hand corner of the screen.
-#define SPR_EnableScissor (*gEngfuncs.pfnSPR_EnableScissor)
-// SPR_DisableScissor  disables the clipping rect
-#define SPR_DisableScissor (*gEngfuncs.pfnSPR_DisableScissor)
-//
-#define FillRGBA (*gEngfuncs.pfnFillRGBA)
+#define HOOK_COMMAND(x, y) gEngfuncs.pfnAddCommand(x, __CmdFunc_##y);
 
 
-// ScreenHeight returns the height of the screen, in pixels
-#define ScreenHeight (gHUD.m_scrinfo.iHeight)
-// ScreenWidth returns the width of the screen, in pixels
-#define ScreenWidth (gHUD.m_scrinfo.iWidth)
-
-#define BASE_XRES 640.f
-
-// use this to project world coordinates to screen coordinates
-#define XPROJECT(x)	( (1.0f+(x))*ScreenWidth*0.5f )
-#define YPROJECT(y) ( (1.0f-(y))*ScreenHeight*0.5f )
-
-#define XRES(x)					(x  * ((float)ScreenWidth / 640))
-#define YRES(y)					(y  * ((float)ScreenHeight / 480))
-
-#define GetScreenInfo (*gEngfuncs.pfnGetScreenInfo)
-#define ServerCmd (*gEngfuncs.pfnServerCmd)
-#define EngineClientCmd (*gEngfuncs.pfnClientCmd)
-#define SetCrosshair (*gEngfuncs.pfnSetCrosshair)
-#define AngleVectors (*gEngfuncs.pfnAngleVectors)
-
-
-// Gets the height & width of a sprite,  at the specified frame
-inline int SPR_Height( HSPRITE x, int f )	{ return gEngfuncs.pfnSPR_Height(x, f); }
-inline int SPR_Width( HSPRITE x, int f )	{ return gEngfuncs.pfnSPR_Width(x, f); }
-
-inline 	client_textmessage_t	*TextMessageGet( const char *pName ) { return gEngfuncs.pfnTextMessageGet( pName ); }
-inline 	int						TextMessageDrawChar( int x, int y, int number, int r, int g, int b ) 
-{ 
-	return gEngfuncs.pfnDrawCharacter( x, y, number, r, g, b ); 
-}
-
-inline int DrawConsoleString( int x, int y, const char *string )
+inline void DrawSetTextColor(const byte &r, const byte &g, const byte &b)
 {
-	return gEngfuncs.pfnDrawConsoleString( x, y, (char*) string );
+	gEngfuncs.pfnDrawSetTextColor((float)r/255.0f, (float)g/255.0f, (float)b/255.0f);
 }
 
-inline void GetConsoleStringSize( const char *string, int *width, int *height )
-{
-	gEngfuncs.pfnDrawConsoleStringLen( string, width, height );
-}
-
-inline int ConsoleStringLen( const char *string )
+inline int ConsoleStringLen(const char *string)
 {
 	int _width, _height;
-	GetConsoleStringSize( string, &_width, &_height );
+	gEngfuncs.pfnDrawConsoleStringLen(string, &_width, &_height);
 	return _width;
 }
 
-inline void ConsolePrint( const char *string )
+inline int RectWidth(const struct rect_s &r)
 {
-	gEngfuncs.pfnConsolePrint( string );
+	return r.right - r.left;
 }
 
-inline void CenterPrint( const char *string )
+inline int RectHeight(const struct rect_s &r)
 {
-	gEngfuncs.pfnCenterPrint( string );
+	return r.bottom - r.top;
 }
 
-
-inline char *safe_strcpy( char *dst, const char *src, int len_dst)
+// HL20130901
+inline char *safe_strcpy(char *dst, const char *src, int len_dst)
 {
-	if( len_dst <= 0 )
-	{
+	if (len_dst <= 0)
 		return NULL; // this is bad
-	}
 
 	strncpy(dst,src,len_dst);
-	dst[ len_dst - 1 ] = '\0';
-
+	dst[len_dst-1] = '\0';
 	return dst;
 }
 
-inline int safe_sprintf( char *dst, int len_dst, const char *format, ...)
+inline int safe_sprintf(char *dst, int len_dst, const char *format, ...)
 {
-	if( len_dst <= 0 )
-	{
+	if (len_dst <= 0)
 		return -1; // this is bad
-	}
 
 	va_list v;
-
     va_start(v, format);
-
-	_vsnprintf(dst,len_dst,format,v);
-
+	int iret = _vsnprintf(dst,len_dst,format,v);
 	va_end(v);
-
-	dst[ len_dst - 1 ] = '\0';
-
-	return 0;
+	dst[len_dst-1] = '\0';
+	return iret;
 }
 
 // sound functions
-inline void PlaySound( char *szSound, float vol ) { gEngfuncs.pfnPlaySoundByName( szSound, vol ); }
-inline void PlaySound( int iSound, float vol ) { gEngfuncs.pfnPlaySoundByIndex( iSound, vol ); }
+// Made inlines to avoid conflict with system macros and for overloading
+inline void PlaySound(char *szSound, float vol) { gEngfuncs.pfnPlaySoundByName(szSound, vol); }
+//inline void PlaySound(int iSound, float vol) { gEngfuncs.pfnPlaySoundByIndex(iSound, vol); }
+void PlaySoundSuit(char *szSound);
+void PlaySoundAnnouncer(char *szSound, float duration);
 
-#define max(a, b)  (((a) > (b)) ? (a) : (b))
-#define min(a, b)  (((a) < (b)) ? (a) : (b))
-#define fabs(x)	   ((x) > 0 ? (x) : 0 - (x))
+float GetSensitivityModByFOV(const float &newfov);
+HLSPRITE LoadSprite(const char *pszName);
+client_sprite_t *GetSpriteList(client_sprite_t *pList, const char *pszName, int iRes, int iCount);
+int SPR_FindFrame(HLSPRITE hSprite);// XDM3037a
+void SPR_Set(HLSPRITE hPic, int r, int g, int b);// XDM3037
+void SPR_Draw(int frame, int x, int y, const wrect_t *prc);// XDM3037a
+void SPR_DrawHoles(int frame, int x, int y, const wrect_t *prc);// XDM3037a
+void SPR_DrawAdditive(int frame, int x, int y, const wrect_t *prc);// XDM3037
 
-void ScaleColors( int &r, int &g, int &b, int a );
+void CL_ScreenFade(byte r, byte g, byte b, byte alpha, float fadeTime, float fadeHold, int flags);// XDM3037
 
-#define DotProduct(x,y) ((x)[0]*(y)[0]+(x)[1]*(y)[1]+(x)[2]*(y)[2])
-#define VectorSubtract(a,b,c) {(c)[0]=(a)[0]-(b)[0];(c)[1]=(a)[1]-(b)[1];(c)[2]=(a)[2]-(b)[2];}
-#define VectorAdd(a,b,c) {(c)[0]=(a)[0]+(b)[0];(c)[1]=(a)[1]+(b)[1];(c)[2]=(a)[2]+(b)[2];}
-#define VectorCopy(a,b) {(b)[0]=(a)[0];(b)[1]=(a)[1];(b)[2]=(a)[2];}
-inline void VectorClear(float *a) { a[0]=0.0;a[1]=0.0;a[2]=0.0;}
-float Length(const float *v);
-void VectorMA (const float *veca, float scale, const float *vecb, float *vecc);
-void VectorScale (const float *in, float scale, float *out);
-float VectorNormalize (float *v);
-void VectorInverse ( float *v );
+void UnpackRGB(int &r, int &g, int &b, unsigned short colorindex);
+void UnpackRGB(byte &r, byte &g, byte &b, unsigned short colorindex);
+void UnpackRGB(::Color &rgb, unsigned short colorindex);
 
-extern vec3_t vec3_origin;
+const ::Color &GetTeamColor(TEAM_ID team);
+void GetTeamColor(TEAM_ID team, byte &r, byte &g, byte &b);
+void GetTeamColor(TEAM_ID team, int &r, int &g, int &b);
+const ::Color &GetPlayerColor(CLIENT_INDEX client);
+bool GetPlayerColor(CLIENT_INDEX client, byte &r, byte &g, byte &b);
+void GetMeterColor(const float &fMeterValue, byte &r, byte &g, byte &b);
 
-// disable 'possible loss of data converting float to int' warning message
-#pragma warning( disable: 4244 )
-// disable 'truncation from 'const double' to 'float' warning message
-#pragma warning( disable: 4305 )
+int SpriteRenderMode(struct msprite_s *pHeader);
 
-inline void UnpackRGB(int &r, int &g, int &b, unsigned long ulRGB)\
-{\
-	r = (ulRGB & 0xFF0000) >>16;\
-	g = (ulRGB & 0xFF00) >> 8;\
-	b = ulRGB & 0xFF;\
-}
+char *LocaliseTextString(const char *msg, char *dst_buffer, const size_t buffer_size);
+char *BufferedLocaliseTextString(const char *msg);
+char *LookupString(const char *msg_name, int *msg_dest = NULL);
+//char *StripEndNewlineFromString(char *str);
+void StripEndNewlineFromString(char *str);
+char *ConvertCRtoNL(char *str);
 
-HSPRITE LoadSprite(const char *pszName);
+const char *GetMapName(bool bIncludeSubdir = false);// XDM
+
+//void ExtractFileName(const char *fullpath, char *dir, char *name, char *ext);// XDM3030
+//int LoadModel(const char *pszName, struct model_s *pModel = NULL);
+
+void GetAllPlayersInfo(void);// XDM3037a
+void RebuildTeams(void);// XDM3038a
+bool CL_IsDead(void);
+
+bool IsActiveTeam(const TEAM_ID &team_id);
+bool IsValidTeam(const TEAM_ID &team_id);
+
+//bool IsActivePlayer(cl_entity_t *ent);
+bool IsActivePlayer(const CLIENT_INDEX &idx);
+bool IsValidPlayer(const CLIENT_INDEX &idx);
+bool IsValidPlayerIndex(const CLIENT_INDEX &idx);
+bool IsSpectator(const CLIENT_INDEX &idx);
+
+bool IsTeamGame(const short &gamegules);
+bool IsRoundBasedGame(const short &gamerules);// XDM3037
+bool IsExtraScoreBasedGame(const short &gamerules);// XDM3037a
+
+short GetGameMode(void);
+short GetGameFlags(void);
+bool IsMultiplayer(void);// XDM3038a
+bool IsGameOver(void);// XDM3038a
+
+const char *GetGameDescription(const short &gamerules);
+const char *GetGameRulesIntroText(const short &gametype, const short &gamemode);
+const char *GetTeamName(const TEAM_ID &team_id);
+
+float UTIL_PointViewDist(const Vector &point);// XDM3035c
+bool UTIL_PointIsFar(const Vector &point);// XDM3035c
+bool UTIL_PointIsVisible(const Vector &point, bool check_backplane);// XDM3035
+
+void GetEntityPrintableName(int entindex, char *output, const size_t max_len);// XDM3035c
+const char *GetEntityPrintableName(int entindex);// XDM3038a
+cl_entity_t *GetUpdatingEntity(int entindex);// XDM3035c
+const Vector &GetCEntAttachment(const struct cl_entity_s *pEntity, const int attachment);// XDM3038c
+
+void V_PunchAxis(int axis, float angle);// view.cpp
+
+
+
+extern wrect_t nullrc;// XDM3037
+
+extern double g_cl_gravity;// XDM3035
+
+extern int g_iDrawCycle;// XDM3037a
+extern short g_ThirdPersonView;
+extern Vector g_vecViewOrigin;// XDM: real view point
+extern Vector g_vecViewAngles;
+extern Vector g_vecViewForward;
+extern Vector g_vecViewRight;
+extern Vector g_vecViewUp;
+// bad extern struct ref_params_s *g_pRefParams;
+extern struct cl_entity_s *g_pWorld;
+
+#endif // CL_UTIL_H

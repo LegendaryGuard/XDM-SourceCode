@@ -9,14 +9,18 @@
 // NOTE: must include quakedef.h first
 
 #ifndef _CAMERA_H_
-#define _CAMEA_H_
+#define _CAMERA_H_
 
 // pitch, yaw, dist
 extern vec3_t cam_ofs;
 // Using third person camera
 extern int cam_thirdperson;
 
-void CAM_Init( void );
+extern cvar_t	*cl_chasedist;
+extern cvar_t	*cl_chaseclip;
+extern cvar_t	*cl_chaseang;// XDM3035
+
+
 void CAM_ClearStates( void );
 void CAM_StartMouseMove(void);
 void CAM_EndMouseMove(void);

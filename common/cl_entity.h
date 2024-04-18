@@ -15,8 +15,14 @@
 // cl_entity.h
 #if !defined( CL_ENTITYH )
 #define CL_ENTITYH
-#ifdef _WIN32
+#if defined (_WIN32)
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
+#endif
+
+#ifndef CLIENT_DLL
+#pragma warning "What are you trying to do?"
 #endif
 
 typedef struct efrag_s

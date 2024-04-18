@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -476,6 +476,7 @@ Schedule_t	slRangeAttack1[] =
 		bits_COND_HEAVY_DAMAGE		|
 		bits_COND_ENEMY_OCCLUDED	|
 		bits_COND_NO_AMMO_LOADED	|
+		bits_COND_SEE_FEAR			|// XDM
 		bits_COND_HEAR_SOUND,
 		
 		bits_SOUND_DANGER,
@@ -501,6 +502,7 @@ Schedule_t	slRangeAttack2[] =
 		bits_COND_LIGHT_DAMAGE		|
 		bits_COND_HEAVY_DAMAGE		|
 		bits_COND_ENEMY_OCCLUDED	|
+		bits_COND_SEE_FEAR			|// XDM
 		bits_COND_HEAR_SOUND,
 		
 		bits_SOUND_DANGER,
@@ -908,11 +910,13 @@ Schedule_t	slCower[] =
 Task_t	tlTakeCoverFromOrigin[] =
 {
 	{ TASK_STOP_MOVING,					(float)0					},
+	{ TASK_STORE_LASTPOSITION,			(float)0					},// XDM
 	{ TASK_FIND_COVER_FROM_ORIGIN,		(float)0					},
 	{ TASK_RUN_PATH,					(float)0					},
 	{ TASK_WAIT_FOR_MOVEMENT,			(float)0					},
 	{ TASK_REMEMBER,					(float)bits_MEMORY_INCOVER	},
-	{ TASK_TURN_LEFT,					(float)179					},
+//	{ TASK_TURN_LEFT,					(float)179					},// XDM
+//	{ TASK_FACE_LASTPOSITION,			(float)0					},// XDM
 };
 
 Schedule_t	slTakeCoverFromOrigin[] =
@@ -1029,22 +1033,20 @@ Schedule_t *CBaseMonster::ScheduleFromName( const char *pName )
 Schedule_t *CBaseMonster :: ScheduleInList( const char *pName, Schedule_t **pList, int listCount )
 {
 	int i;
-	
-	if ( !pName )
+	if (!pName)
 	{
-		ALERT( at_console, "%s set to unnamed schedule!\n", STRING(pev->classname) );
+		conprintf(1, "%s[%d] set to unnamed schedule!\n", STRING(pev->classname), entindex());
 		return NULL;
 	}
 
-
-	for ( i = 0; i < listCount; i++ )
+	for ( i = 0; i < listCount; ++i )
 	{
 		if ( !pList[i]->pName )
 		{
-			ALERT( at_console, "Unnamed schedule!\n" );
+			conprintf(1, "Unnamed schedule!\n");
 			continue;
 		}
-		if ( stricmp( pName, pList[i]->pName ) == 0 )
+		if (_stricmp(pName, pList[i]->pName) == 0)
 			return pList[i];
 	}
 	return NULL;
@@ -1056,7 +1058,7 @@ Schedule_t *CBaseMonster :: ScheduleInList( const char *pName, Schedule_t **pLis
 //=========================================================
 Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type ) 
 {
-//	ALERT ( at_console, "Sched Type:%d\n", Type );
+	//conprintf(0, "Sched Type:%d\n", Type);
 	switch	( Type )
 	{
 	// This is the schedule for scripted sequences AND scripted AI
@@ -1065,12 +1067,12 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 			ASSERT( m_pCine != NULL );
 			if ( !m_pCine )
 			{
-				ALERT( at_aiconsole, "Script failed for %s\n", STRING(pev->classname) );
+				conprintf(2, "Script failed for %s[%d]\n", STRING(pev->classname), entindex());
 				CineCleanup();
 				return GetScheduleOfType( SCHED_IDLE_STAND );
 			}
-//			else
-//				ALERT( at_aiconsole, "Starting script %s for %s\n", STRING( m_pCine->m_iszPlay ), STRING(pev->classname) );
+			//else
+			//	conprintf(2, "Starting script %s for %s\n", STRING( m_pCine->m_iszPlay ), STRING(pev->classname) );
 
 			switch ( m_pCine->m_fMoveTo )
 			{
@@ -1129,6 +1131,7 @@ Schedule_t* CBaseMonster :: GetScheduleOfType ( int Type )
 		}
 	case SCHED_CHASE_ENEMY_FAILED:
 		{
+//why not?			return &slChaseEnemyFailed[ 0 ];
 			return &slFail[ 0 ];
 		}
 	case SCHED_SMALL_FLINCH:

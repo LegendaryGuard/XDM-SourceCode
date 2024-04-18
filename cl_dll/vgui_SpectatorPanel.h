@@ -1,112 +1,100 @@
-// vgui_SpectatorPanel.h: interface for the SpectatorPanel class.
-//
-//////////////////////////////////////////////////////////////////////
-
 #ifndef SPECTATORPANEL_H
 #define SPECTATORPANEL_H
 
 #include <VGUI_Panel.h>
 #include <VGUI_Label.h>
-#include <VGUI_Button.h>
+#include "vgui_CustomObjects.h"
 
 using namespace vgui;
 
-#define SPECTATOR_PANEL_CMD_NONE				0
-
-#define SPECTATOR_PANEL_CMD_OPTIONS				1
-#define	SPECTATOR_PANEL_CMD_PREVPLAYER			2
-#define SPECTATOR_PANEL_CMD_NEXTPLAYER			3
-#define	SPECTATOR_PANEL_CMD_HIDEMENU			4
-#define	SPECTATOR_PANEL_CMD_TOGGLE_INSET		5
-#define SPECTATOR_PANEL_CMD_CAMERA				6
-#define SPECTATOR_PANEL_CMD_PLAYERS				7
-
-// spectator panel sizes
-#define PANEL_HEIGHT 64
-
-#define BANNER_WIDTH	256
-#define BANNER_HEIGHT	64
-
-#define OPTIONS_BUTTON_X 96
-#define CAMOPTIONS_BUTTON_X 200
-
-
-#define SEPERATOR_WIDTH 15
-#define SEPERATOR_HEIGHT 15
-
-
-#define TEAM_NUMBER 2
-
-class SpectatorPanel : public Panel //, public vgui::CDefaultInputSignal
+enum
 {
+	SPECTATOR_PANEL_CMD_NONE = VGUI_IDLAST,
+	SPECTATOR_PANEL_CMD_OPTIONS,
+	SPECTATOR_PANEL_CMD_PREVPLAYER,
+	SPECTATOR_PANEL_CMD_NEXTPLAYER,
+	SPECTATOR_PANEL_CMD_HIDEMENU,
+	SPECTATOR_PANEL_CMD_TOGGLE_INSET,
+	SPECTATOR_PANEL_CMD_CAMERA,
+	SPECTATOR_PANEL_CMD_PLAYERS
+};
 
+#define SPECTATORPANEL_HEIGHT				32
+#define SPECTATORPANEL_BANNER_WIDTH			256
+#define SPECTATORPANEL_BANNER_HEIGHT		64
+#define SPECTATORPANEL_SMALL_BUTTON_X		24
+#define SPECTATORPANEL_OPTIONS_BUTTON_X		112
+#define SPECTATORPANEL_BUTTON_Y				20
+#define SPECTATORPANEL_MARGIN				16
+
+#define SPECTATORPANEL_HELP_DISPLAY_TIME	5
+
+
+class SpectatorPanel : public CMenuPanel//Panel //, public vgui::CDefaultInputSignal
+{
+	typedef CMenuPanel BaseClass;
 public:
-	SpectatorPanel(int x,int y,int wide,int tall);
+	SpectatorPanel(int x, int y, int wide, int tall);
 	virtual ~SpectatorPanel();
+	virtual bool OnClose(void);
+	virtual int KeyInput(const int &down, const int &keynum, const char *pszCurrentBinding);// XDM3037a
+	virtual void OnActionSignal(int signal, class CMenuPanelActionSignalHandler *pCaller);// XDM3038a
 
-	void			ActionSignal(int cmd);
+	virtual bool IsPersistent(void) { return true; }// XDM3038
+	virtual bool AllowConcurrentWindows(void) { return true; }// XDM3038
 
-	// InputSignal overrides.
-public:
-	void Initialize();
-	void Update();
-	
-
-
-public:
-
+	void Initialize(void);
+	void Update(void);
 	void EnableInsetView(bool isEnabled);
-	void ShowMenu(bool isVisible);
+	void ShowMenu(bool bVisible);
+	void SetBanner(const char *image);
+	int GetBorderHeight(void);
 
-	DropDownButton		  *	m_OptionButton;
-//	CommandButton     *	m_HideButton;
-	//ColorButton	  *	m_PrevPlayerButton;
-	//ColorButton	  *	m_NextPlayerButton;
-	CImageButton	  *	m_PrevPlayerButton;
-	CImageButton	  *	m_NextPlayerButton;
-	DropDownButton     *	m_CamButton;	
+protected:
+	CommandButton	m_OptionButton;
+	CommandButton	m_PrevPlayerButton;
+	CommandButton	m_NextPlayerButton;
+	CommandButton	m_CamButton;	
+	CommandButton	m_BottomMainButton;// HL20130901
+	CommandButton	m_InsetViewButton;
+	CPlayersCommandMenu	*m_pPlayersMenu;// XDM3038c
 
-	CTransparentPanel *			m_TopBorder;
-	CTransparentPanel *			m_BottomBorder;
+	Panel			m_TopBorder;// Top black line (letterboxing). XDM3038a: not a pointer anymore
+	Panel			m_BottomBorder;// Bottom black line (menu buttons are drawn on it)
+	Label			m_TopMainLabel;// XDM: title label
+	Label			m_ExtraInfo;// text above timer
+	Label			m_CurrentTime;// next to timer image
+	Label			m_TeamScores[MAX_TEAMS];// top frame, near timer
+	CImageLabel		*m_TimerImage;// @top right
+	CImageLabel		*m_TopBanner;// top frame
 
-	ColorButton		*m_InsetViewButton;
-	
-	DropDownButton	*m_BottomMainButton;
-	CImageLabel		*m_TimerImage;
-	Label			*m_BottomMainLabel;
-	Label			*m_CurrentTime;
-	Label			*m_ExtraInfo;
-	Panel			*m_Separator;
-
-	Label			*m_TeamScores[TEAM_NUMBER];
-	
-	CImageLabel		*m_TopBanner;
-
-	bool			m_menuVisible;
-	bool			m_insetVisible;
-};
-
-
-
-class CSpectatorHandler_Command : public ActionSignal
-{
-
-private:
-	SpectatorPanel * m_pFather;
-	int				 m_cmd;
+	::Color			m_BottomMainButtonFg;
+	float			m_fHideHelpTime;
 
 public:
-	CSpectatorHandler_Command( SpectatorPanel * panel, int cmd )
-	{
-		m_pFather = panel;
-		m_cmd = cmd;
-	}
-
-	virtual void actionPerformed( Panel * panel )
-	{
-		m_pFather->ActionSignal(m_cmd);
-	}
+	bool			m_menuVisible;// buttons and menus at the bottom are currently visible
+	bool			m_insetVisible;// inset view (overview window) is currently visible
 };
 
+
+class CMenuHandler_SpectateFollow : public ActionSignal
+{
+protected:
+	CLIENT_INDEX m_iPlayerIndex;
+
+public:
+	CMenuHandler_SpectateFollow(CLIENT_INDEX iPlayerIndex)
+	{
+		//strncpy(m_szplayer, player, MAX_COMMAND_SIZE);
+		//m_szplayer[MAX_COMMAND_SIZE-1] = '\0';
+		m_iPlayerIndex = iPlayerIndex;
+	}
+
+	virtual void actionPerformed(Panel *panel)
+	{
+		gHUD.m_Spectator.FindPlayer(m_iPlayerIndex);
+		gViewPort->HideCommandMenu();
+	}
+};
 
 #endif // !defined SPECTATORPANEL_H

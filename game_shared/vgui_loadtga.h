@@ -8,7 +8,9 @@
 #ifndef VGUI_LOADTGA_H
 #define VGUI_LOADTGA_H
 #ifdef _WIN32
+#if !defined (__MINGW32__)
 #pragma once
+#endif /* not __MINGW32__ */
 #endif
 
 

@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
+*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -12,501 +12,301 @@
 *   without written permission from Valve LLC.
 *
 ****/
-/*
-
-===== util.cpp ========================================================
-
-  Utility code.  Really not optional after all.
-
-*/
-
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
-#include "saverestore.h"
-#include <time.h>
-#include "shake.h"
-#include "decals.h"
 #include "player.h"
 #include "weapons.h"
+#include "globals.h"
+#include "game.h"
 #include "gamerules.h"
+#include "shake.h"
+#include "decals.h"
+#include "colors.h"// XDM
+#include "sound.h"
+#include <assert.h>
 
-float UTIL_WeaponTimeBase( void )
+// Only valve knows how this shit works
+int g_groupmask = 0;
+int g_groupop = 0;
+
+// Normal overrides
+void UTIL_SetGroupTrace(const int &groupmask, const int &op)
 {
-#if defined( CLIENT_WEAPONS )
-	return 0.0;
-#else
-	return gpGlobals->time;
-#endif
+	g_groupmask		= groupmask;
+	g_groupop		= op;
+	ENGINE_SETGROUPMASK(g_groupmask, g_groupop);
 }
 
-static unsigned int glSeed = 0; 
-
-unsigned int seed_table[ 256 ] =
+void UTIL_UnsetGroupTrace(void)
 {
-	28985, 27138, 26457, 9451, 17764, 10909, 28790, 8716, 6361, 4853, 17798, 21977, 19643, 20662, 10834, 20103,
-	27067, 28634, 18623, 25849, 8576, 26234, 23887, 18228, 32587, 4836, 3306, 1811, 3035, 24559, 18399, 315,
-	26766, 907, 24102, 12370, 9674, 2972, 10472, 16492, 22683, 11529, 27968, 30406, 13213, 2319, 23620, 16823,
-	10013, 23772, 21567, 1251, 19579, 20313, 18241, 30130, 8402, 20807, 27354, 7169, 21211, 17293, 5410, 19223,
-	10255, 22480, 27388, 9946, 15628, 24389, 17308, 2370, 9530, 31683, 25927, 23567, 11694, 26397, 32602, 15031,
-	18255, 17582, 1422, 28835, 23607, 12597, 20602, 10138, 5212, 1252, 10074, 23166, 19823, 31667, 5902, 24630,
-	18948, 14330, 14950, 8939, 23540, 21311, 22428, 22391, 3583, 29004, 30498, 18714, 4278, 2437, 22430, 3439,
-	28313, 23161, 25396, 13471, 19324, 15287, 2563, 18901, 13103, 16867, 9714, 14322, 15197, 26889, 19372, 26241,
-	31925, 14640, 11497, 8941, 10056, 6451, 28656, 10737, 13874, 17356, 8281, 25937, 1661, 4850, 7448, 12744,
-	21826, 5477, 10167, 16705, 26897, 8839, 30947, 27978, 27283, 24685, 32298, 3525, 12398, 28726, 9475, 10208,
-	617, 13467, 22287, 2376, 6097, 26312, 2974, 9114, 21787, 28010, 4725, 15387, 3274, 10762, 31695, 17320,
-	18324, 12441, 16801, 27376, 22464, 7500, 5666, 18144, 15314, 31914, 31627, 6495, 5226, 31203, 2331, 4668,
-	12650, 18275, 351, 7268, 31319, 30119, 7600, 2905, 13826, 11343, 13053, 15583, 30055, 31093, 5067, 761,
-	9685, 11070, 21369, 27155, 3663, 26542, 20169, 12161, 15411, 30401, 7580, 31784, 8985, 29367, 20989, 14203,
-	29694, 21167, 10337, 1706, 28578, 887, 3373, 19477, 14382, 675, 7033, 15111, 26138, 12252, 30996, 21409,
-	25678, 18555, 13256, 23316, 22407, 16727, 991, 9236, 5373, 29402, 6117, 15241, 27715, 19291, 19888, 19847
-};
-
-unsigned int U_Random( void ) 
-{ 
-	glSeed *= 69069; 
-	glSeed += seed_table[ glSeed & 0xff ];
- 
-	return ( ++glSeed & 0x0fffffff ); 
-} 
-
-void U_Srand( unsigned int seed )
-{
-	glSeed = seed_table[ seed & 0xff ];
+	g_groupmask		= 0;
+	g_groupop		= 0;
+	ENGINE_SETGROUPMASK(0, 0);
 }
 
-/*
-=====================
-UTIL_SharedRandomLong
-=====================
-*/
-int UTIL_SharedRandomLong( unsigned int seed, int low, int high )
+// Smart version, it'll clean itself up when it pops off stack
+/* UNUSED: requires container UTIL_GroupTrace::UTIL_GroupTrace(int groupmask, int op)
 {
-	unsigned int range;
-
-	U_Srand( (int)seed + low + high );
-
-	range = high - low + 1;
-	if ( !(range - 1) )
-	{
-		return low;
-	}
-	else
-	{
-		int offset;
-		int rnum;
-
-		rnum = U_Random();
-
-		offset = rnum % range;
-
-		return (low + offset);
-	}
+	m_oldgroupmask	= g_groupmask;
+	m_oldgroupop	= g_groupop;
+	g_groupmask		= groupmask;
+	g_groupop		= op;
+	ENGINE_SETGROUPMASK(g_groupmask, g_groupop);
 }
 
-/*
-=====================
-UTIL_SharedRandomFloat
-=====================
-*/
-float UTIL_SharedRandomFloat( unsigned int seed, float low, float high )
+UTIL_GroupTrace::~UTIL_GroupTrace(void)
 {
-	//
-	unsigned int range;
+	g_groupmask		=	m_oldgroupmask;
+	g_groupop		=	m_oldgroupop;
+	ENGINE_SETGROUPMASK(g_groupmask, g_groupop);
+}*/
 
-	U_Srand( (int)seed + *(int *)&low + *(int *)&high );
 
-	U_Random();
-	U_Random();
+#if defined (_DEBUG)
+edict_t *DBG_EntOfVars(const entvars_t *pev)
+{
+	if (pev == NULL)
+		return NULL;
 
-	range = high - low;
-	if ( !range )
-	{
-		return low;
-	}
-	else
-	{
-		int tensixrand;
-		float offset;
+	if (pev->pContainingEntity != NULL)
+		return pev->pContainingEntity;
 
-		tensixrand = U_Random() & 65535;
+	conprintf(1, "FindEntityByVars() ERROR: pContainingEntity is NULL, calling into engine!\n");
+	DBG_FORCEBREAK
+	edict_t *pent = (*g_engfuncs.pfnFindEntityByVars)((entvars_t *)pev);
+	if (pent == NULL)
+		conprintf(0, "FindEntityByVars() ERROR: pent == NULL!\n");
 
-		offset = (float)tensixrand / 65536.0;
-
-		return (low + offset * range );
-	}
+	((entvars_t *)pev)->pContainingEntity = pent;
+	return pent;
 }
+#endif // _DEBUG
 
-void UTIL_ParametricRocket( entvars_t *pev, Vector vecOrigin, Vector vecAngles, edict_t *owner )
+
+/*void UTIL_ParametricRocket(entvars_t *pev, Vector vecOrigin, Vector vecAngles, edict_t *owner)
 {	
 	pev->startpos = vecOrigin;
 	// Trace out line to end pos
 	TraceResult tr;
-	UTIL_MakeVectors( vecAngles );
-	UTIL_TraceLine( pev->startpos, pev->startpos + gpGlobals->v_forward * 8192, ignore_monsters, owner, &tr);
+	UTIL_MakeVectors(vecAngles);
+	UTIL_TraceLine(pev->startpos, pev->startpos + gpGlobals->v_forward * 8192, ignore_monsters, owner, &tr);
 	pev->endpos = tr.vecEndPos;
 
 	// Now compute how long it will take based on current velocity
 	Vector vecTravel = pev->endpos - pev->startpos;
 	float travelTime = 0.0;
-	if ( pev->velocity.Length() > 0 )
+	if (pev->velocity.Length() > 0)
 	{
 		travelTime = vecTravel.Length() / pev->velocity.Length();
 	}
 	pev->starttime = gpGlobals->time;
 	pev->impacttime = gpGlobals->time + travelTime;
-}
+}*/
 
-int g_groupmask = 0;
-int g_groupop = 0;
-
-// Normal overrides
-void UTIL_SetGroupTrace( int groupmask, int op )
-{
-	g_groupmask		= groupmask;
-	g_groupop		= op;
-
-	ENGINE_SETGROUPMASK( g_groupmask, g_groupop );
-}
-
-void UTIL_UnsetGroupTrace( void )
-{
-	g_groupmask		= 0;
-	g_groupop		= 0;
-
-	ENGINE_SETGROUPMASK( 0, 0 );
-}
-
-// Smart version, it'll clean itself up when it pops off stack
-UTIL_GroupTrace::UTIL_GroupTrace( int groupmask, int op )
-{
-	m_oldgroupmask	= g_groupmask;
-	m_oldgroupop	= g_groupop;
-
-	g_groupmask		= groupmask;
-	g_groupop		= op;
-
-	ENGINE_SETGROUPMASK( g_groupmask, g_groupop );
-}
-
-UTIL_GroupTrace::~UTIL_GroupTrace( void )
-{
-	g_groupmask		=	m_oldgroupmask;
-	g_groupop		=	m_oldgroupop;
-
-	ENGINE_SETGROUPMASK( g_groupmask, g_groupop );
-}
-
-TYPEDESCRIPTION	gEntvarsDescription[] = 
-{
-	DEFINE_ENTITY_FIELD( classname, FIELD_STRING ),
-	DEFINE_ENTITY_GLOBAL_FIELD( globalname, FIELD_STRING ),
-	
-	DEFINE_ENTITY_FIELD( origin, FIELD_POSITION_VECTOR ),
-	DEFINE_ENTITY_FIELD( oldorigin, FIELD_POSITION_VECTOR ),
-	DEFINE_ENTITY_FIELD( velocity, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( basevelocity, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( movedir, FIELD_VECTOR ),
-
-	DEFINE_ENTITY_FIELD( angles, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( avelocity, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( punchangle, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( v_angle, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( fixangle, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( idealpitch, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( pitch_speed, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( ideal_yaw, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( yaw_speed, FIELD_FLOAT ),
-
-	DEFINE_ENTITY_FIELD( modelindex, FIELD_INTEGER ),
-	DEFINE_ENTITY_GLOBAL_FIELD( model, FIELD_MODELNAME ),
-
-	DEFINE_ENTITY_FIELD( viewmodel, FIELD_MODELNAME ),
-	DEFINE_ENTITY_FIELD( weaponmodel, FIELD_MODELNAME ),
-
-	DEFINE_ENTITY_FIELD( absmin, FIELD_POSITION_VECTOR ),
-	DEFINE_ENTITY_FIELD( absmax, FIELD_POSITION_VECTOR ),
-	DEFINE_ENTITY_GLOBAL_FIELD( mins, FIELD_VECTOR ),
-	DEFINE_ENTITY_GLOBAL_FIELD( maxs, FIELD_VECTOR ),
-	DEFINE_ENTITY_GLOBAL_FIELD( size, FIELD_VECTOR ),
-
-	DEFINE_ENTITY_FIELD( ltime, FIELD_TIME ),
-	DEFINE_ENTITY_FIELD( nextthink, FIELD_TIME ),
-
-	DEFINE_ENTITY_FIELD( solid, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( movetype, FIELD_INTEGER ),
-
-	DEFINE_ENTITY_FIELD( skin, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( body, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( effects, FIELD_INTEGER ),
-
-	DEFINE_ENTITY_FIELD( gravity, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( friction, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( light_level, FIELD_FLOAT ),
-
-	DEFINE_ENTITY_FIELD( frame, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( scale, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( sequence, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( animtime, FIELD_TIME ),
-	DEFINE_ENTITY_FIELD( framerate, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( controller, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( blending, FIELD_INTEGER ),
-
-	DEFINE_ENTITY_FIELD( rendermode, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( renderamt, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( rendercolor, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( renderfx, FIELD_INTEGER ),
-
-	DEFINE_ENTITY_FIELD( health, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( frags, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( weapons, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( takedamage, FIELD_FLOAT ),
-
-	DEFINE_ENTITY_FIELD( deadflag, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( view_ofs, FIELD_VECTOR ),
-	DEFINE_ENTITY_FIELD( button, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( impulse, FIELD_INTEGER ),
-
-	DEFINE_ENTITY_FIELD( chain, FIELD_EDICT ),
-	DEFINE_ENTITY_FIELD( dmg_inflictor, FIELD_EDICT ),
-	DEFINE_ENTITY_FIELD( enemy, FIELD_EDICT ),
-	DEFINE_ENTITY_FIELD( aiment, FIELD_EDICT ),
-	DEFINE_ENTITY_FIELD( owner, FIELD_EDICT ),
-	DEFINE_ENTITY_FIELD( groundentity, FIELD_EDICT ),
-
-	DEFINE_ENTITY_FIELD( spawnflags, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( flags, FIELD_FLOAT ),
-
-	DEFINE_ENTITY_FIELD( colormap, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( team, FIELD_INTEGER ),
-
-	DEFINE_ENTITY_FIELD( max_health, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( teleport_time, FIELD_TIME ),
-	DEFINE_ENTITY_FIELD( armortype, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( armorvalue, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( waterlevel, FIELD_INTEGER ),
-	DEFINE_ENTITY_FIELD( watertype, FIELD_INTEGER ),
-
-	// Having these fields be local to the individual levels makes it easier to test those levels individually.
-	DEFINE_ENTITY_GLOBAL_FIELD( target, FIELD_STRING ),
-	DEFINE_ENTITY_GLOBAL_FIELD( targetname, FIELD_STRING ),
-	DEFINE_ENTITY_FIELD( netname, FIELD_STRING ),
-	DEFINE_ENTITY_FIELD( message, FIELD_STRING ),
-
-	DEFINE_ENTITY_FIELD( dmg_take, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( dmg_save, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( dmg, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( dmgtime, FIELD_TIME ),
-
-	DEFINE_ENTITY_FIELD( noise, FIELD_SOUNDNAME ),
-	DEFINE_ENTITY_FIELD( noise1, FIELD_SOUNDNAME ),
-	DEFINE_ENTITY_FIELD( noise2, FIELD_SOUNDNAME ),
-	DEFINE_ENTITY_FIELD( noise3, FIELD_SOUNDNAME ),
-	DEFINE_ENTITY_FIELD( speed, FIELD_FLOAT ),
-	DEFINE_ENTITY_FIELD( air_finished, FIELD_TIME ),
-	DEFINE_ENTITY_FIELD( pain_finished, FIELD_TIME ),
-	DEFINE_ENTITY_FIELD( radsuit_finished, FIELD_TIME ),
-};
-
-#define ENTVARS_COUNT		(sizeof(gEntvarsDescription)/sizeof(gEntvarsDescription[0]))
-
-
-#ifdef	DEBUG
-edict_t *DBG_EntOfVars( const entvars_t *pev )
-{
-	if (pev->pContainingEntity != NULL)
-		return pev->pContainingEntity;
-	ALERT(at_console, "entvars_t pContainingEntity is NULL, calling into engine");
-	edict_t* pent = (*g_engfuncs.pfnFindEntityByVars)((entvars_t*)pev);
-	if (pent == NULL)
-		ALERT(at_console, "DAMN!  Even the engine couldn't FindEntityByVars!");
-	((entvars_t *)pev)->pContainingEntity = pent;
-	return pent;
-}
-#endif //DEBUG
-
-
-#ifdef	DEBUG
-	void
-DBG_AssertFunction(
-	BOOL		fExpr,
-	const char*	szExpr,
-	const char*	szFile,
-	int			szLine,
-	const char*	szMessage)
-	{
-	if (fExpr)
-		return;
-	char szOut[512];
-	if (szMessage != NULL)
-		sprintf(szOut, "ASSERT FAILED:\n %s \n(%s@%d)\n%s", szExpr, szFile, szLine, szMessage);
-	else
-		sprintf(szOut, "ASSERT FAILED:\n %s \n(%s@%d)", szExpr, szFile, szLine);
-	ALERT(at_console, szOut);
-	}
-#endif	// DEBUG
-
-BOOL UTIL_GetNextBestWeapon( CBasePlayer *pPlayer, CBasePlayerItem *pCurrentWeapon )
-{
-	return g_pGameRules->GetNextBestWeapon( pPlayer, pCurrentWeapon );
-}
-
-// ripped this out of the engine
-float	UTIL_AngleMod(float a)
-{
-	if (a < 0)
-	{
-		a = a + 360 * ((int)(a / 360) + 1);
-	}
-	else if (a >= 360)
-	{
-		a = a - 360 * ((int)(a / 360));
-	}
-	// a = (360.0/65536) * ((int)(a*(65536/360.0)) & 65535);
-	return a;
-}
-
-float UTIL_AngleDiff( float destAngle, float srcAngle )
-{
-	float delta;
-
-	delta = destAngle - srcAngle;
-	if ( destAngle > srcAngle )
-	{
-		if ( delta >= 180 )
-			delta -= 360;
-	}
-	else
-	{
-		if ( delta <= -180 )
-			delta += 360;
-	}
-	return delta;
-}
-
-Vector UTIL_VecToAngles( const Vector &vec )
-{
-	float rgflVecOut[3];
-	VEC_TO_ANGLES(vec, rgflVecOut);
-	return Vector(rgflVecOut);
-}
-	
-//	float UTIL_MoveToOrigin( edict_t *pent, const Vector vecGoal, float flDist, int iMoveType )
-void UTIL_MoveToOrigin( edict_t *pent, const Vector &vecGoal, float flDist, int iMoveType )
+//-----------------------------------------------------------------------------
+// Purpose: Used by monsters to move
+//-----------------------------------------------------------------------------
+void UTIL_MoveToOrigin(edict_t *pent, const Vector &vecGoal, float flDist, int iMoveType)
 {
 	float rgfl[3];
 	vecGoal.CopyToArray(rgfl);
-//		return MOVE_TO_ORIGIN ( pent, rgfl, flDist, iMoveType ); 
-	MOVE_TO_ORIGIN ( pent, rgfl, flDist, iMoveType ); 
+	MOVE_TO_ORIGIN(pent, rgfl, flDist, iMoveType); 
 }
 
-
-int UTIL_EntitiesInBox( CBaseEntity **pList, int listMax, const Vector &mins, const Vector &maxs, int flagMask )
+//-----------------------------------------------------------------------------
+// Purpose: XDM3038c: experimentsl override: allocate all strings via the engine
+// Input  : *str
+// Output : string_t
+//-----------------------------------------------------------------------------
+string_t MAKE_STRING(const char *str)
 {
-	edict_t		*pEdict = g_engfuncs.pfnPEntityOfEntIndex( 1 );
-	CBaseEntity *pEntity;
-	int			count;
+	if (sv_strings_alloc.value > 0)
+		return ALLOC_STRING(str);
+	else
+		return (uint64)str - (uint64)STRING(0);
+}
 
-	count = 0;
-
-	if ( !pEdict )
-		return count;
-
-	for ( int i = 1; i < gpGlobals->maxEntities; i++, pEdict++ )
+//-----------------------------------------------------------------------------
+// Purpose: XDM3037a: consistency checks
+// Input  : *szModel - HL accepts models and sprites... FINE!.. (=_=)
+// Output : int - modelindex
+//-----------------------------------------------------------------------------
+int PRECACHE_MODEL(char *szModel)
+{
+	if (szModel && *szModel)
 	{
-		if ( pEdict->free )	// Not in use
-			continue;
-		
-		if ( flagMask && !(pEdict->v.flags & flagMask) )	// Does it meet the criteria?
+		if (*szModel != '*')// internal BSP model
+		{
+			/* XDM: this method is bad and you should feel bad!
+			int length = 0;
+			byte *pFile = LOAD_FILE_FOR_ME(szModel, &length);// this method checks mod and base directories
+			if (pFile && length)
+			{
+				FREE_FILE(pFile);
+			}
+			else*/
+			if (!UTIL_FileExists(szModel))
+			{
+				conprintf(0, "PRECACHE_MODEL() ERROR: \"%s\" not found!\n", szModel);
+				if (UTIL_FileExtensionIs(szModel, ".mdl"))
+					szModel = g_szDefaultStudioModel;
+				else
+					szModel = g_szDefaultSprite;
+			}
+		}
+		return (*g_engfuncs.pfnPrecacheModel)(szModel);
+	}
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: XDM3037a: second part. Without this game will crash
+// Warning: pfnSetModel changes pev->model, pev->modelindex and mins/maxs!
+// Input  : *pEntity - 
+//			*szModel - 
+//-----------------------------------------------------------------------------
+void SET_MODEL(edict_t *pEntity, const char *szModel)
+{
+	if (pEntity && szModel && *szModel)
+	{
+		if (*szModel != '*')// internal BSP model
+		{
+			/* XDM: this method is bad and you should feel bad!
+			int length = 0;
+			byte *pFile = LOAD_FILE_FOR_ME((char *)szModel, &length);// this method checks mod and base directories
+			if (pFile && length) 
+			{
+				FREE_FILE(pFile);
+			}
+			else*/
+			if (!UTIL_FileExists(szModel))
+			{
+				conprintf(0, "SET_MODEL() ERROR: \"%s\" not found!\n", szModel);
+				if (UTIL_FileExtensionIs(szModel, ".mdl"))
+				{
+					szModel = g_szDefaultStudioModel;
+					if (!IsMultiplayer() && g_pCvarDeveloper && g_pCvarDeveloper->value > 0.0f)// make it easier to find
+					{
+						//pEntity->v.rendermode = kRenderTransAdd;
+						pEntity->v.renderamt = 255;
+						pEntity->v.renderfx = kRenderFxFullBright;
+					}
+				}
+				else
+				{
+					szModel = g_szDefaultSprite;
+					if (!IsMultiplayer() && g_pCvarDeveloper && g_pCvarDeveloper->value > 0.0f)// make it easier to find
+					{
+						pEntity->v.rendermode = kRenderTransAdd;
+						pEntity->v.renderamt = 255;
+						pEntity->v.renderfx = kRenderFxPulseFastWide;
+					}
+				}
+			}
+		}
+		(*g_engfuncs.pfnSetModel)(pEntity, szModel);
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Transmit float as 4 bytes using int as a container
+// Warning: Must match the recieving side!
+// Input  : flValue - 
+//-----------------------------------------------------------------------------
+void WRITE_FLOAT(const float &flValue)
+{
+	//static int iData;
+	//memcpy(&iData, &flValue, sizeof(iData));
+	/*static */union
+	{
+		int i;
+		float f;
+	} data;
+	data.f = flValue;
+	(*g_engfuncs.pfnWriteLong)(data.i);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: limited version of UTIL_FindEntityInBox, should be replaced
+// Input  : **pList - 
+//			listMax - 
+//			&mins &maxs - 
+//			flagMask - 
+// Output : size_t
+//-----------------------------------------------------------------------------
+size_t UTIL_EntitiesInBox(CBaseEntity **pList, size_t listMax, const Vector &mins, const Vector &maxs, int flagMask)
+{
+	edict_t *pEdict = INDEXENT(1);
+	if (!pEdict)
+		return 0;
+
+	CBaseEntity *pEntity;
+	size_t count = 0;
+	for (int i = 1; i < gpGlobals->maxEntities; ++i, ++pEdict)
+	{
+		if (!UTIL_IsValidEntity(pEdict))
 			continue;
 
-		if ( mins.x > pEdict->v.absmax.x ||
-			 mins.y > pEdict->v.absmax.y ||
-			 mins.z > pEdict->v.absmax.z ||
-			 maxs.x < pEdict->v.absmin.x ||
-			 maxs.y < pEdict->v.absmin.y ||
-			 maxs.z < pEdict->v.absmin.z )
+		if (flagMask && FBitSet(pEdict->v.flags, flagMask) == 0)	// Does it meet the criteria?
+			continue;
+
+		if (BoundsIntersect(pEdict->v.absmin, pEdict->v.absmax, mins, maxs) == false)// XDM3037
 			 continue;
 
 		pEntity = CBaseEntity::Instance(pEdict);
-		if ( !pEntity )
+		if (!pEntity)
 			continue;
 
-		pList[ count ] = pEntity;
-		count++;
+		pList[count] = pEntity;
+		++count;
 
-		if ( count >= listMax )
+		if (count >= listMax)
 			return count;
 	}
-
 	return count;
 }
 
-
-int UTIL_MonstersInSphere( CBaseEntity **pList, int listMax, const Vector &center, float radius )
+//-----------------------------------------------------------------------------
+// Purpose: Returns next entity inside or intersecting specified volume
+// Input  : *pStartEntity - start search from it (NULL to restart)
+//			&mins, &maxs - 
+// Output : CBaseEntity
+//-----------------------------------------------------------------------------
+CBaseEntity *UTIL_FindEntityInBox(CBaseEntity *pStartEntity, const Vector &mins, const Vector &maxs)
 {
-	edict_t		*pEdict = g_engfuncs.pfnPEntityOfEntIndex( 1 );
-	CBaseEntity *pEntity;
-	int			count;
-	float		distance, delta;
+	int startindex;
+	if (pStartEntity)
+		startindex = pStartEntity->entindex()+1;
+	else
+		startindex = 0;
 
-	count = 0;
-	float radiusSquared = radius * radius;
-
-	if ( !pEdict )
-		return count;
-
-	for ( int i = 1; i < gpGlobals->maxEntities; i++, pEdict++ )
+	//DBG UTIL_ShowBox(mins, maxs, 12, 0,0,255);
+	int i;
+	edict_t *pEdict;
+	for (i = startindex; i < gpGlobals->maxEntities; ++i, ++pEdict)
 	{
-		if ( pEdict->free )	// Not in use
-			continue;
-		
-		if ( !(pEdict->v.flags & (FL_CLIENT|FL_MONSTER)) )	// Not a client/monster ?
+		pEdict = INDEXENT(i);
+		if (!UTIL_IsValidEntity(pEdict))
 			continue;
 
-		// Use origin for X & Y since they are centered for all monsters
-		// Now X
-		delta = center.x - pEdict->v.origin.x;//(pEdict->v.absmin.x + pEdict->v.absmax.x)*0.5;
-		delta *= delta;
-
-		if ( delta > radiusSquared )
+		if (!BoundsIntersect(pEdict->v.absmin, pEdict->v.absmax, mins, maxs))// XDM3037
+		{
+			//DBG UTIL_ShowBox(pEdict->v.absmin, pEdict->v.absmax, 10, 255,255,0);
 			continue;
-		distance = delta;
-		
-		// Now Y
-		delta = center.y - pEdict->v.origin.y;//(pEdict->v.absmin.y + pEdict->v.absmax.y)*0.5;
-		delta *= delta;
-
-		distance += delta;
-		if ( distance > radiusSquared )
-			continue;
-
-		// Now Z
-		delta = center.z - (pEdict->v.absmin.z + pEdict->v.absmax.z)*0.5;
-		delta *= delta;
-
-		distance += delta;
-		if ( distance > radiusSquared )
-			continue;
-
-		pEntity = CBaseEntity::Instance(pEdict);
-		if ( !pEntity )
-			continue;
-
-		pList[ count ] = pEntity;
-		count++;
-
-		if ( count >= listMax )
-			return count;
+		}
+		return CBaseEntity::Instance(pEdict);
 	}
-
-
-	return count;
+	return NULL;
 }
 
-
-CBaseEntity *UTIL_FindEntityInSphere( CBaseEntity *pStartEntity, const Vector &vecCenter, float flRadius )
+CBaseEntity *UTIL_FindEntityInSphere(CBaseEntity *pStartEntity, const Vector &vecCenter, float flRadius)
 {
+	if (flRadius <= 0)
+	{
+		DBG_PRINTF("UTIL_FindEntityInSphere() error: bad radius %g!\n", flRadius);
+		return NULL;
+	}
 	edict_t	*pentEntity;
 
 	if (pStartEntity)
@@ -514,16 +314,21 @@ CBaseEntity *UTIL_FindEntityInSphere( CBaseEntity *pStartEntity, const Vector &v
 	else
 		pentEntity = NULL;
 
-	pentEntity = FIND_ENTITY_IN_SPHERE( pentEntity, vecCenter, flRadius);
+	pentEntity = FIND_ENTITY_IN_SPHERE(pentEntity, vecCenter, flRadius);
 
 	if (!FNullEnt(pentEntity))
 		return CBaseEntity::Instance(pentEntity);
+
 	return NULL;
 }
 
-
-CBaseEntity *UTIL_FindEntityByString( CBaseEntity *pStartEntity, const char *szKeyword, const char *szValue )
+CBaseEntity *UTIL_FindEntityByString(CBaseEntity *pStartEntity, const char *szKeyword, const char *szValue)
 {
+	if (szKeyword == NULL || szValue == NULL)
+	{
+		DBG_PRINTF("UTIL_FindEntityByString() ERROR: missing string name or value!\n");
+		return NULL;
+	}
 	edict_t	*pentEntity;
 
 	if (pStartEntity)
@@ -531,202 +336,209 @@ CBaseEntity *UTIL_FindEntityByString( CBaseEntity *pStartEntity, const char *szK
 	else
 		pentEntity = NULL;
 
-	pentEntity = FIND_ENTITY_BY_STRING( pentEntity, szKeyword, szValue );
+	pentEntity = FIND_ENTITY_BY_STRING(pentEntity, szKeyword, szValue);
 
-	if (!FNullEnt(pentEntity))
+	if (!FNullEnt(pentEntity))// XDM: NOTE: this requires EOFFSET check :(
 		return CBaseEntity::Instance(pentEntity);
+
 	return NULL;
 }
 
-CBaseEntity *UTIL_FindEntityByClassname( CBaseEntity *pStartEntity, const char *szName )
+CBaseEntity *UTIL_FindEntityByClassname(CBaseEntity *pStartEntity, const char *szName)
 {
-	return UTIL_FindEntityByString( pStartEntity, "classname", szName );
+	return UTIL_FindEntityByString(pStartEntity, "classname", szName);
 }
 
-CBaseEntity *UTIL_FindEntityByTargetname( CBaseEntity *pStartEntity, const char *szName )
+CBaseEntity *UTIL_FindEntityByTargetname(CBaseEntity *pStartEntity, const char *szName)
 {
-	return UTIL_FindEntityByString( pStartEntity, "targetname", szName );
+	return UTIL_FindEntityByString(pStartEntity, "targetname", szName);
 }
 
-
-CBaseEntity *UTIL_FindEntityGeneric( const char *szWhatever, Vector &vecSrc, float flRadius )
+// Spirit of Half-Life compatibility
+CBaseEntity *UTIL_FindEntityByTargetname(CBaseEntity *pStartEntity, const char *szName, CBaseEntity *pActivator)
 {
-	CBaseEntity *pEntity = NULL;
-
-	pEntity = UTIL_FindEntityByTargetname( NULL, szWhatever );
-	if (pEntity)
-		return pEntity;
-
-	CBaseEntity *pSearch = NULL;
-	float flMaxDist2 = flRadius * flRadius;
-	while ((pSearch = UTIL_FindEntityByClassname( pSearch, szWhatever )) != NULL)
+	if (szName && FStrEq(szName, "*locus"))
 	{
-		float flDist2 = (pSearch->pev->origin - vecSrc).Length();
-		flDist2 = flDist2 * flDist2;
-		if (flMaxDist2 > flDist2)
+		if (pActivator && (pStartEntity == NULL || pActivator->eoffset() > pStartEntity->eoffset()))
+			return pActivator;
+		else
+			return NULL;
+	}
+	else 
+		return UTIL_FindEntityByTargetname(pStartEntity, szName);
+}
+
+CBaseEntity *UTIL_FindEntityByTarget(CBaseEntity *pStartEntity, const char *szName)
+{
+	return UTIL_FindEntityByString(pStartEntity, "target", szName);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Universal search function
+// Input  : *pStartEntity - optional
+//			*szKeyword - required
+//			*szValue - required
+//			&vecCenter - optional
+//			flRadius - optional
+//-----------------------------------------------------------------------------
+CBaseEntity	*UTIL_FindEntities(CBaseEntity *pStartEntity, const char *szKeyword, const char *szValue, const Vector &vecCenter, float flRadius)
+{
+	CBaseEntity *pEntity = pStartEntity;
+	CBaseEntity *pFound = NULL;
+	while ((pEntity = UTIL_FindEntityByString(pEntity, szKeyword, szValue)) != NULL)
+	{
+		if (flRadius > 0.0f)// limit by radius
 		{
-			pEntity = pSearch;
-			flMaxDist2 = flDist2;
+			if ((pEntity->pev->origin - vecCenter).Length() <= flRadius)
+			{
+				pFound = pEntity;
+				break;
+			}
+		}
+		else// first found is ok
+		{
+			pFound = pEntity;
+			break;
 		}
 	}
-	return pEntity;
+	return pFound;
 }
 
-
-// returns a CBaseEntity pointer to a player by index.  Only returns if the player is spawned and connected
-// otherwise returns NULL
-// Index is 1 based
-CBaseEntity	*UTIL_PlayerByIndex( int playerIndex )
+void UTIL_MakeAimVectors(const Vector &vecAngles)
 {
-	CBaseEntity *pPlayer = NULL;
-
-	if ( playerIndex > 0 && playerIndex <= gpGlobals->maxClients )
-	{
-		edict_t *pPlayerEdict = INDEXENT( playerIndex );
-		if ( pPlayerEdict && !pPlayerEdict->free )
-		{
-			pPlayer = CBaseEntity::Instance( pPlayerEdict );
-		}
-	}
-	
-	return pPlayer;
+#if defined (NOSQB)
+	UTIL_MakeVectors(vecAngles);// XDM3038c: MAKE_VECTORS(vecAngles);
+#else
+	Vector rgflVec(vecAngles);
+	rgflVec.x = -rgflVec.x;
+	UTIL_MakeVectors(rgflVec);
+#endif
 }
 
-
-void UTIL_MakeVectors( const Vector &vecAngles )
+void UTIL_MakeInvVectors(const Vector &vecAngles, globalvars_t *pgv)
 {
-	MAKE_VECTORS( vecAngles );
-}
-
-
-void UTIL_MakeAimVectors( const Vector &vecAngles )
-{
-	float rgflVec[3];
-	vecAngles.CopyToArray(rgflVec);
-	rgflVec[0] = -rgflVec[0];
-	MAKE_VECTORS(rgflVec);
-}
-
-
-#define SWAP(a,b,temp)	((temp)=(a),(a)=(b),(b)=(temp))
-
-void UTIL_MakeInvVectors( const Vector &vec, globalvars_t *pgv )
-{
-	MAKE_VECTORS(vec);
-
+	AngleVectors(vecAngles, pgv->v_forward, pgv->v_right, pgv->v_up);;// XDM3038c: MAKE_VECTORS was actually using gpGlobals regardless of what pgv is
 	float tmp;
-	pgv->v_right = pgv->v_right * -1;
-
+	pgv->v_right *= -1.0f;
 	SWAP(pgv->v_forward.y, pgv->v_right.x, tmp);
 	SWAP(pgv->v_forward.z, pgv->v_up.x, tmp);
 	SWAP(pgv->v_right.z, pgv->v_up.y, tmp);
 }
 
-
-void UTIL_EmitAmbientSound( edict_t *entity, const Vector &vecOrigin, const char *samp, float vol, float attenuation, int fFlags, int pitch )
+void UTIL_EmitAmbientSound(edict_t *entity, const Vector &vecOrigin, const char *samp, float vol, float attenuation, int fFlags, int pitch)
 {
-	float rgfl[3];
-	vecOrigin.CopyToArray(rgfl);
+	if (!ASSERT(entity != NULL))
+		return;
 
-	if (samp && *samp == '!')
+	if (samp && *samp == '!')// replace sentence name with index
 	{
-		char name[32];
-		if (SENTENCEG_Lookup(samp, name) >= 0)
-			EMIT_AMBIENT_SOUND(entity, rgfl, name, vol, attenuation, fFlags, pitch);
+		char sentence_id[32];
+		if (SENTENCEG_Lookup(samp, sentence_id) >= 0)
+			EMIT_AMBIENT_SOUND(entity, vecOrigin, sentence_id, vol, attenuation, fFlags, pitch);
 	}
 	else
-		EMIT_AMBIENT_SOUND(entity, rgfl, samp, vol, attenuation, fFlags, pitch);
+		EMIT_AMBIENT_SOUND(entity, vecOrigin, samp, vol, attenuation, fFlags, pitch);
 }
 
-static unsigned short FixedUnsigned16( float value, float scale )
+static unsigned short FixedUnsigned16(float value, float scale)
 {
-	int output;
-
-	output = value * scale;
-	if ( output < 0 )
+	int output = (int)(value * scale);
+	if (output < 0)
 		output = 0;
-	if ( output > 0xFFFF )
-		output = 0xFFFF;
+	else if (output > USHRT_MAX)// XDM3037a: optimization
+		output = USHRT_MAX;
 
 	return (unsigned short)output;
 }
 
-static short FixedSigned16( float value, float scale )
+static short FixedSigned16(float value, float scale)
 {
-	int output;
-
-	output = value * scale;
-
-	if ( output > 32767 )
-		output = 32767;
-
-	if ( output < -32768 )
-		output = -32768;
+	int output = (int)(value * scale);
+	if (output > SHRT_MAX)
+		output = SHRT_MAX;
+	else if (output < SHRT_MIN)// XDM3037a: optimization
+		output = SHRT_MIN;
 
 	return (short)output;
 }
 
+void UTIL_ScreenShakeOne(CBaseEntity *pPlayer, const Vector &center, float amplitude, float frequency, float duration)
+{
+#if defined (_DEBUG)
+	if (!ASSERT(pPlayer != NULL))
+		return;
+#endif
+	if (pPlayer)
+	{
+		ScreenShake	shake;
+		shake.duration = FixedUnsigned16(duration, 1<<12);// 4.12 fixed
+		shake.frequency = FixedUnsigned16(frequency, 1<<8);// 8.8 fixed
+		shake.amplitude = FixedUnsigned16(amplitude, 1<<12);// 4.12 fixed
+		MESSAGE_BEGIN(MSG_ONE, gmsgShake, center, pPlayer->edict());
+			WRITE_SHORT(shake.amplitude);// shake amount
+			WRITE_SHORT(shake.duration);// shake lasts this long
+			WRITE_SHORT(shake.frequency);// shake noise frequency
+		MESSAGE_END();
+	}
+}
+
 // Shake the screen of all clients within radius
 // radius == 0, shake all clients
-// UNDONE: Allow caller to shake clients not ONGROUND?
+// XDM: fixed
 // UNDONE: Fix falloff model (disabled)?
 // UNDONE: Affect user controls?
-void UTIL_ScreenShake( const Vector &center, float amplitude, float frequency, float duration, float radius )
+void UTIL_ScreenShake(const Vector &center, float amplitude, float frequency, float duration, float radius)
 {
-	int			i;
-	float		localAmplitude;
+	float localAmplitude;
 	ScreenShake	shake;
-
-	shake.duration = FixedUnsigned16( duration, 1<<12 );		// 4.12 fixed
-	shake.frequency = FixedUnsigned16( frequency, 1<<8 );	// 8.8 fixed
-
-	for ( i = 1; i <= gpGlobals->maxClients; i++ )
+	shake.duration = FixedUnsigned16(duration, 1<<12);// 4.12 fixed
+	shake.frequency = FixedUnsigned16(frequency, 1<<8);// 8.8 fixed
+	bool inwater = UTIL_LiquidContents(center);
+	for (CLIENT_INDEX i = 1; i <= gpGlobals->maxClients; ++i)
 	{
-		CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-
-		if ( !pPlayer || !(pPlayer->pev->flags & FL_ONGROUND) )	// Don't shake if not onground
+		CBasePlayer *pPlayer = UTIL_ClientByIndex(i);
+		if (pPlayer == NULL)
 			continue;
 
 		localAmplitude = 0;
 
-		if ( radius <= 0 )
+		if (radius <= 0)
 			localAmplitude = amplitude;
 		else
 		{
-			Vector delta = center - pPlayer->pev->origin;
-			float distance = delta.Length();
-	
+			Vector delta(center); delta -= pPlayer->pev->origin;
+			vec_t distance = delta.Length();
 			// Had to get rid of this falloff - it didn't work well
-			if ( distance < radius )
+			if (distance < radius)
 				localAmplitude = amplitude;//radius - distance;
 		}
-		if ( localAmplitude )
+		if (localAmplitude)
 		{
-			shake.amplitude = FixedUnsigned16( localAmplitude, 1<<12 );		// 4.12 fixed
-			
-			MESSAGE_BEGIN( MSG_ONE, gmsgShake, NULL, pPlayer->edict() );		// use the magic #1 for "one client"
-				
-				WRITE_SHORT( shake.amplitude );				// shake amount
-				WRITE_SHORT( shake.duration );				// shake lasts this long
-				WRITE_SHORT( shake.frequency );				// shake noise frequency
+			if (UTIL_LiquidContents(pPlayer->pev->origin) != inwater)// XDM3038c: shake is neutralized when going throuch border of environment
+				localAmplitude *= 0.2f;
+			if (!FBitSet(pPlayer->pev->flags, FL_ONGROUND))// XDM: FIXed: not on ground?
+				localAmplitude *= 0.5f;
 
+			shake.amplitude = FixedUnsigned16(localAmplitude, 1<<12);// 4.12 fixed
+			MESSAGE_BEGIN(MSG_ONE, gmsgShake, NULL, pPlayer->edict());// use the magic #1 for "one client"
+				WRITE_SHORT(shake.amplitude);// shake amount
+				WRITE_SHORT(shake.duration);// shake lasts this long
+				WRITE_SHORT(shake.frequency);// shake noise frequency
 			MESSAGE_END();
+			//UTIL_ScreenShakeOne(pPlayer, center, localAmplitude, duration, frequency);// XDM: change method
 		}
 	}
 }
 
-
-
-void UTIL_ScreenShakeAll( const Vector &center, float amplitude, float frequency, float duration )
+void UTIL_ScreenShakeAll(const Vector &center, float amplitude, float frequency, float duration)
 {
-	UTIL_ScreenShake( center, amplitude, frequency, duration, 0 );
+	UTIL_ScreenShake(center, amplitude, frequency, duration, 0);
 }
 
-
-void UTIL_ScreenFadeBuild( ScreenFade &fade, const Vector &color, float fadeTime, float fadeHold, int alpha, int flags )
+void UTIL_ScreenFadeBuild(ScreenFade &fade, const Vector &color, float fadeTime, float fadeHold, int alpha, int flags)
 {
-	fade.duration = FixedUnsigned16( fadeTime, 1<<12 );		// 4.12 fixed
-	fade.holdTime = FixedUnsigned16( fadeHold, 1<<12 );		// 4.12 fixed
+	fade.duration = FixedUnsigned16(fadeTime, 1<<12);// 4.12 fixed
+	fade.holdTime = FixedUnsigned16(fadeHold, 1<<12);// 4.12 fixed
 	fade.r = (int)color.x;
 	fade.g = (int)color.y;
 	fade.b = (int)color.z;
@@ -734,523 +546,192 @@ void UTIL_ScreenFadeBuild( ScreenFade &fade, const Vector &color, float fadeTime
 	fade.fadeFlags = flags;
 }
 
-
-void UTIL_ScreenFadeWrite( const ScreenFade &fade, CBaseEntity *pEntity )
+void UTIL_ScreenFadeWrite(const ScreenFade &fade, CBaseEntity *pEntity)
 {
-	if ( !pEntity || !pEntity->IsNetClient() )
+	if (!pEntity || !pEntity->IsNetClient())
 		return;
 
-	MESSAGE_BEGIN( MSG_ONE, gmsgFade, NULL, pEntity->edict() );		// use the magic #1 for "one client"
-		
-		WRITE_SHORT( fade.duration );		// fade lasts this long
-		WRITE_SHORT( fade.holdTime );		// fade lasts this long
-		WRITE_SHORT( fade.fadeFlags );		// fade type (in / out)
-		WRITE_BYTE( fade.r );				// fade red
-		WRITE_BYTE( fade.g );				// fade green
-		WRITE_BYTE( fade.b );				// fade blue
-		WRITE_BYTE( fade.a );				// fade blue
-
+	MESSAGE_BEGIN(MSG_ONE, gmsgFade, NULL, pEntity->edict());// use the magic #1 for "one client"
+		WRITE_SHORT(fade.duration);// fade lasts this long
+		WRITE_SHORT(fade.holdTime);// fade lasts this long
+		WRITE_SHORT(fade.fadeFlags);// fade type (in / out)
+		WRITE_BYTE(fade.r);
+		WRITE_BYTE(fade.g);
+		WRITE_BYTE(fade.b);
+		WRITE_BYTE(fade.a);
 	MESSAGE_END();
 }
 
-
-void UTIL_ScreenFadeAll( const Vector &color, float fadeTime, float fadeHold, int alpha, int flags )
+void UTIL_ScreenFade(CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha, int flags)
 {
-	int			i;
+	if (!ASSERT(pEntity != NULL))
+		return;
+	ScreenFade fade;
+	UTIL_ScreenFadeBuild(fade, color, fadeTime, fadeHold, alpha, flags);
+	UTIL_ScreenFadeWrite(fade, pEntity);
+}
+
+void UTIL_ScreenFadeAll(const Vector &color, float fadeTime, float fadeHold, int alpha, int flags)
+{
 	ScreenFade	fade;
-
-
-	UTIL_ScreenFadeBuild( fade, color, fadeTime, fadeHold, alpha, flags );
-
-	for ( i = 1; i <= gpGlobals->maxClients; i++ )
+	UTIL_ScreenFadeBuild(fade, color, fadeTime, fadeHold, alpha, flags);
+	for (CLIENT_INDEX i = 1; i <= gpGlobals->maxClients; ++i)
 	{
-		CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-	
-		UTIL_ScreenFadeWrite( fade, pPlayer );
+		CBasePlayer *pPlayer = UTIL_ClientByIndex(i);
+		UTIL_ScreenFadeWrite(fade, pPlayer);
 	}
 }
 
-
-void UTIL_ScreenFade( CBaseEntity *pEntity, const Vector &color, float fadeTime, float fadeHold, int alpha, int flags )
+void UTIL_HudMessage(CBaseEntity *pEntity, const hudtextparms_t &textparms, const char *pMessage)
 {
-	ScreenFade	fade;
-
-	UTIL_ScreenFadeBuild( fade, color, fadeTime, fadeHold, alpha, flags );
-	UTIL_ScreenFadeWrite( fade, pEntity );
-}
-
-
-void UTIL_HudMessage( CBaseEntity *pEntity, const hudtextparms_t &textparms, const char *pMessage )
-{
-	if ( !pEntity || !pEntity->IsNetClient() )
+	if (!pEntity || !pEntity->IsNetClient())
 		return;
 
-	MESSAGE_BEGIN( MSG_ONE, SVC_TEMPENTITY, NULL, pEntity->edict() );
-		WRITE_BYTE( TE_TEXTMESSAGE );
-		WRITE_BYTE( textparms.channel & 0xFF );
+	MESSAGE_BEGIN(MSG_ONE, svc_temp_entity, NULL, pEntity->edict());
+		WRITE_BYTE(TE_TEXTMESSAGE);
+		WRITE_BYTE(textparms.channel & 0xFF);
+		WRITE_SHORT(FixedSigned16(textparms.x, 1<<13));
+		WRITE_SHORT(FixedSigned16(textparms.y, 1<<13));
+		WRITE_BYTE(textparms.effect);
+		WRITE_BYTE(textparms.r1);
+		WRITE_BYTE(textparms.g1);
+		WRITE_BYTE(textparms.b1);
+		WRITE_BYTE(textparms.a1);
+		WRITE_BYTE(textparms.r2);
+		WRITE_BYTE(textparms.g2);
+		WRITE_BYTE(textparms.b2);
+		WRITE_BYTE(textparms.a2);
+		WRITE_SHORT(FixedUnsigned16(textparms.fadeinTime, 1<<8));
+		WRITE_SHORT(FixedUnsigned16(textparms.fadeoutTime, 1<<8));
+		WRITE_SHORT(FixedUnsigned16(textparms.holdTime, 1<<8));
 
-		WRITE_SHORT( FixedSigned16( textparms.x, 1<<13 ) );
-		WRITE_SHORT( FixedSigned16( textparms.y, 1<<13 ) );
-		WRITE_BYTE( textparms.effect );
-
-		WRITE_BYTE( textparms.r1 );
-		WRITE_BYTE( textparms.g1 );
-		WRITE_BYTE( textparms.b1 );
-		WRITE_BYTE( textparms.a1 );
-
-		WRITE_BYTE( textparms.r2 );
-		WRITE_BYTE( textparms.g2 );
-		WRITE_BYTE( textparms.b2 );
-		WRITE_BYTE( textparms.a2 );
-
-		WRITE_SHORT( FixedUnsigned16( textparms.fadeinTime, 1<<8 ) );
-		WRITE_SHORT( FixedUnsigned16( textparms.fadeoutTime, 1<<8 ) );
-		WRITE_SHORT( FixedUnsigned16( textparms.holdTime, 1<<8 ) );
-
-		if ( textparms.effect == 2 )
-			WRITE_SHORT( FixedUnsigned16( textparms.fxTime, 1<<8 ) );
+		if (textparms.effect == 2)
+			WRITE_SHORT(FixedUnsigned16(textparms.fxTime, 1<<8));
 		
-		if ( strlen( pMessage ) < 512 )
+		if (strlen(pMessage) < MAX_MESSAGE_STRING)
 		{
-			WRITE_STRING( pMessage );
+			WRITE_STRING(pMessage);
 		}
 		else
 		{
-			char tmp[512];
-			strncpy( tmp, pMessage, 511 );
-			tmp[511] = 0;
-			WRITE_STRING( tmp );
+			char tmp[MAX_MESSAGE_STRING];
+			strncpy(tmp, pMessage, MAX_MESSAGE_STRING-1);
+			tmp[MAX_MESSAGE_STRING-1] = 0;
+			WRITE_STRING(tmp);
 		}
 	MESSAGE_END();
 }
 
-void UTIL_HudMessageAll( const hudtextparms_t &textparms, const char *pMessage )
+
+const Vector &UTIL_RandomBloodVector(void)
 {
-	int			i;
-
-	for ( i = 1; i <= gpGlobals->maxClients; i++ )
-	{
-		CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-		if ( pPlayer )
-			UTIL_HudMessage( pPlayer, textparms, pMessage );
-	}
-}
-
-					 
-extern int gmsgTextMsg, gmsgSayText;
-void UTIL_ClientPrintAll( int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
-{
-	MESSAGE_BEGIN( MSG_ALL, gmsgTextMsg );
-		WRITE_BYTE( msg_dest );
-		WRITE_STRING( msg_name );
-
-		if ( param1 )
-			WRITE_STRING( param1 );
-		if ( param2 )
-			WRITE_STRING( param2 );
-		if ( param3 )
-			WRITE_STRING( param3 );
-		if ( param4 )
-			WRITE_STRING( param4 );
-
-	MESSAGE_END();
-}
-
-void ClientPrint( entvars_t *client, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4 )
-{
-	MESSAGE_BEGIN( MSG_ONE, gmsgTextMsg, NULL, client );
-		WRITE_BYTE( msg_dest );
-		WRITE_STRING( msg_name );
-
-		if ( param1 )
-			WRITE_STRING( param1 );
-		if ( param2 )
-			WRITE_STRING( param2 );
-		if ( param3 )
-			WRITE_STRING( param3 );
-		if ( param4 )
-			WRITE_STRING( param4 );
-
-	MESSAGE_END();
-}
-
-void UTIL_SayText( const char *pText, CBaseEntity *pEntity )
-{
-	if ( !pEntity->IsNetClient() )
-		return;
-
-	MESSAGE_BEGIN( MSG_ONE, gmsgSayText, NULL, pEntity->edict() );
-		WRITE_BYTE( pEntity->entindex() );
-		WRITE_STRING( pText );
-	MESSAGE_END();
-}
-
-void UTIL_SayTextAll( const char *pText, CBaseEntity *pEntity )
-{
-	MESSAGE_BEGIN( MSG_ALL, gmsgSayText, NULL );
-		WRITE_BYTE( pEntity->entindex() );
-		WRITE_STRING( pText );
-	MESSAGE_END();
-}
-
-
-char *UTIL_dtos1( int d )
-{
-	static char buf[8];
-	sprintf( buf, "%d", d );
-	return buf;
-}
-
-char *UTIL_dtos2( int d )
-{
-	static char buf[8];
-	sprintf( buf, "%d", d );
-	return buf;
-}
-
-char *UTIL_dtos3( int d )
-{
-	static char buf[8];
-	sprintf( buf, "%d", d );
-	return buf;
-}
-
-char *UTIL_dtos4( int d )
-{
-	static char buf[8];
-	sprintf( buf, "%d", d );
-	return buf;
-}
-
-void UTIL_ShowMessage( const char *pString, CBaseEntity *pEntity )
-{
-	if ( !pEntity || !pEntity->IsNetClient() )
-		return;
-
-	MESSAGE_BEGIN( MSG_ONE, gmsgHudText, NULL, pEntity->edict() );
-	WRITE_STRING( pString );
-	MESSAGE_END();
-}
-
-
-void UTIL_ShowMessageAll( const char *pString )
-{
-	int		i;
-
-	// loop through all players
-
-	for ( i = 1; i <= gpGlobals->maxClients; i++ )
-	{
-		CBaseEntity *pPlayer = UTIL_PlayerByIndex( i );
-		if ( pPlayer )
-			UTIL_ShowMessage( pString, pPlayer );
-	}
-}
-
-// Overloaded to add IGNORE_GLASS
-void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, IGNORE_GLASS ignoreGlass, edict_t *pentIgnore, TraceResult *ptr )
-{
-	TRACE_LINE( vecStart, vecEnd, (igmon == ignore_monsters ? TRUE : FALSE) | (ignoreGlass?0x100:0), pentIgnore, ptr );
-}
-
-
-void UTIL_TraceLine( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, edict_t *pentIgnore, TraceResult *ptr )
-{
-	TRACE_LINE( vecStart, vecEnd, (igmon == ignore_monsters ? TRUE : FALSE), pentIgnore, ptr );
-}
-
-
-void UTIL_TraceHull( const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, edict_t *pentIgnore, TraceResult *ptr )
-{
-	TRACE_HULL( vecStart, vecEnd, (igmon == ignore_monsters ? TRUE : FALSE), hullNumber, pentIgnore, ptr );
-}
-
-void UTIL_TraceModel( const Vector &vecStart, const Vector &vecEnd, int hullNumber, edict_t *pentModel, TraceResult *ptr )
-{
-	g_engfuncs.pfnTraceModel( vecStart, vecEnd, hullNumber, pentModel, ptr );
-}
-
-
-TraceResult UTIL_GetGlobalTrace( )
-{
-	TraceResult tr;
-
-	tr.fAllSolid		= gpGlobals->trace_allsolid;
-	tr.fStartSolid		= gpGlobals->trace_startsolid;
-	tr.fInOpen			= gpGlobals->trace_inopen;
-	tr.fInWater			= gpGlobals->trace_inwater;
-	tr.flFraction		= gpGlobals->trace_fraction;
-	tr.flPlaneDist		= gpGlobals->trace_plane_dist;
-	tr.pHit			= gpGlobals->trace_ent;
-	tr.vecEndPos		= gpGlobals->trace_endpos;
-	tr.vecPlaneNormal	= gpGlobals->trace_plane_normal;
-	tr.iHitgroup		= gpGlobals->trace_hitgroup;
-	return tr;
-}
-
-	
-void UTIL_SetSize( entvars_t *pev, const Vector &vecMin, const Vector &vecMax )
-{
-	SET_SIZE( ENT(pev), vecMin, vecMax );
-}
-	
-	
-float UTIL_VecToYaw( const Vector &vec )
-{
-	return VEC_TO_YAW(vec);
-}
-
-
-void UTIL_SetOrigin( entvars_t *pev, const Vector &vecOrigin )
-{
-	edict_t *ent = ENT(pev);
-	if ( ent )
-		SET_ORIGIN( ent, vecOrigin );
-}
-
-void UTIL_ParticleEffect( const Vector &vecOrigin, const Vector &vecDirection, ULONG ulColor, ULONG ulCount )
-{
-	PARTICLE_EFFECT( vecOrigin, vecDirection, (float)ulColor, (float)ulCount );
-}
-
-
-float UTIL_Approach( float target, float value, float speed )
-{
-	float delta = target - value;
-
-	if ( delta > speed )
-		value += speed;
-	else if ( delta < -speed )
-		value -= speed;
-	else 
-		value = target;
-
-	return value;
-}
-
-
-float UTIL_ApproachAngle( float target, float value, float speed )
-{
-	target = UTIL_AngleMod( target );
-	value = UTIL_AngleMod( target );
-	
-	float delta = target - value;
-
-	// Speed is assumed to be positive
-	if ( speed < 0 )
-		speed = -speed;
-
-	if ( delta < -180 )
-		delta += 360;
-	else if ( delta > 180 )
-		delta -= 360;
-
-	if ( delta > speed )
-		value += speed;
-	else if ( delta < -speed )
-		value -= speed;
-	else 
-		value = target;
-
-	return value;
-}
-
-
-float UTIL_AngleDistance( float next, float cur )
-{
-	float delta = next - cur;
-
-	if ( delta < -180 )
-		delta += 360;
-	else if ( delta > 180 )
-		delta -= 360;
-
-	return delta;
-}
-
-
-float UTIL_SplineFraction( float value, float scale )
-{
-	value = scale * value;
-	float valueSquared = value * value;
-
-	// Nice little ease-in, ease-out spline-like curve
-	return 3 * valueSquared - 2 * valueSquared * value;
-}
-
-
-char* UTIL_VarArgs( char *format, ... )
-{
-	va_list		argptr;
-	static char		string[1024];
-	
-	va_start (argptr, format);
-	vsprintf (string, format,argptr);
-	va_end (argptr);
-
-	return string;	
-}
-	
-Vector UTIL_GetAimVector( edict_t *pent, float flSpeed )
-{
-	Vector tmp;
-	GET_AIM_VECTOR(pent, flSpeed, tmp);
-	return tmp;
-}
-
-int UTIL_IsMasterTriggered(string_t sMaster, CBaseEntity *pActivator)
-{
-	if (sMaster)
-	{
-		edict_t *pentTarget = FIND_ENTITY_BY_TARGETNAME(NULL, STRING(sMaster));
-	
-		if ( !FNullEnt(pentTarget) )
-		{
-			CBaseEntity *pMaster = CBaseEntity::Instance(pentTarget);
-			if ( pMaster && (pMaster->ObjectCaps() & FCAP_MASTER) )
-				return pMaster->IsTriggered( pActivator );
-		}
-
-		ALERT(at_console, "Master was null or not a master!\n");
-	}
-
-	// if this isn't a master entity, just say yes.
-	return 1;
-}
-
-BOOL UTIL_ShouldShowBlood( int color )
-{
-	if ( color != DONT_BLEED )
-	{
-		if ( color == BLOOD_COLOR_RED )
-		{
-			if ( CVAR_GET_FLOAT("violence_hblood") != 0 )
-				return TRUE;
-		}
-		else
-		{
-			if ( CVAR_GET_FLOAT("violence_ablood") != 0 )
-				return TRUE;
-		}
-	}
-	return FALSE;
-}
-
-int UTIL_PointContents(	const Vector &vec )
-{
-	return POINT_CONTENTS(vec);
-}
-
-void UTIL_BloodStream( const Vector &origin, const Vector &direction, int color, int amount )
-{
-	if ( !UTIL_ShouldShowBlood( color ) )
-		return;
-
-	if ( g_Language == LANGUAGE_GERMAN && color == BLOOD_COLOR_RED )
-		color = 0;
-
-	
-	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
-		WRITE_BYTE( TE_BLOODSTREAM );
-		WRITE_COORD( origin.x );
-		WRITE_COORD( origin.y );
-		WRITE_COORD( origin.z );
-		WRITE_COORD( direction.x );
-		WRITE_COORD( direction.y );
-		WRITE_COORD( direction.z );
-		WRITE_BYTE( color );
-		WRITE_BYTE( min( amount, 255 ) );
-	MESSAGE_END();
-}				
-
-void UTIL_BloodDrips( const Vector &origin, const Vector &direction, int color, int amount )
-{
-	if ( !UTIL_ShouldShowBlood( color ) )
-		return;
-
-	if ( color == DONT_BLEED || amount == 0 )
-		return;
-
-	if ( g_Language == LANGUAGE_GERMAN && color == BLOOD_COLOR_RED )
-		color = 0;
-
-	if ( g_pGameRules->IsMultiplayer() )
-	{
-		// scale up blood effect in multiplayer for better visibility
-		amount *= 2;
-	}
-
-	if ( amount > 255 )
-		amount = 255;
-
-	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, origin );
-		WRITE_BYTE( TE_BLOODSPRITE );
-		WRITE_COORD( origin.x);								// pos
-		WRITE_COORD( origin.y);
-		WRITE_COORD( origin.z);
-		WRITE_SHORT( g_sModelIndexBloodSpray );				// initial sprite model
-		WRITE_SHORT( g_sModelIndexBloodDrop );				// droplet sprite models
-		WRITE_BYTE( color );								// color index into host_basepal
-		WRITE_BYTE( min( max( 3, amount / 10 ), 16 ) );		// size
-	MESSAGE_END();
-}				
-
-Vector UTIL_RandomBloodVector( void )
-{
-	Vector direction;
-
-	direction.x = RANDOM_FLOAT ( -1, 1 );
-	direction.y = RANDOM_FLOAT ( -1, 1 );
-	direction.z = RANDOM_FLOAT ( 0, 1 );
-
+	static Vector direction;
+	direction.x = RANDOM_FLOAT(-1.0f, 1.0f);
+	direction.y = RANDOM_FLOAT(-1.0f, 1.0f);
+	direction.z = RANDOM_FLOAT(0.0f, 1.0f);
 	return direction;
 }
 
-
-void UTIL_BloodDecalTrace( TraceResult *pTrace, int bloodColor )
+void UTIL_ParticleEffect(const Vector &vecOrigin, const Vector &vecDirection, ULONG ulColor, ULONG ulCount)
 {
-	if ( UTIL_ShouldShowBlood( bloodColor ) )
-	{
-		if ( bloodColor == BLOOD_COLOR_RED )
-			UTIL_DecalTrace( pTrace, DECAL_BLOOD1 + RANDOM_LONG(0,5) );
-		else
-			UTIL_DecalTrace( pTrace, DECAL_YBLOOD1 + RANDOM_LONG(0,5) );
-	}
+	PARTICLE_EFFECT(vecOrigin, vecDirection, (float)ulColor, (float)ulCount);
 }
 
-
-void UTIL_DecalTrace( TraceResult *pTrace, int decalNumber )
+void UTIL_BloodStream(const Vector &origin, const Vector &direction, const int &color, const int &amount)
 {
-	short entityIndex;
-	int index;
-	int message;
-
-	if ( decalNumber < 0 )
+	if (amount == 0 || !UTIL_ShouldShowBlood(color))
 		return;
 
-	index = gDecals[ decalNumber ].index;
+	MESSAGE_BEGIN(MSG_PVS, svc_temp_entity, origin);
+		WRITE_BYTE(TE_BLOODSTREAM);
+		WRITE_COORD(origin.x);
+		WRITE_COORD(origin.y);
+		WRITE_COORD(origin.z);
+		WRITE_COORD(direction.x);
+		WRITE_COORD(direction.y);
+		WRITE_COORD(direction.z);
+		WRITE_BYTE(color);
+		WRITE_BYTE(min(amount, 255));
+	MESSAGE_END();
+}				
 
-	if ( index < 0 )
+void UTIL_BloodDrips(const Vector &origin, const Vector &direction, const int &color, const int &amount)
+{
+	if (amount == 0 || !UTIL_ShouldShowBlood(color))
 		return;
 
+	MESSAGE_BEGIN(MSG_PVS, svc_temp_entity, origin);
+		WRITE_BYTE(TE_BLOODSPRITE);
+		WRITE_COORD(origin.x);
+		WRITE_COORD(origin.y);
+		WRITE_COORD(origin.z);
+		WRITE_SHORT(g_iModelIndexBloodSpray);// initial sprite model
+		WRITE_SHORT(g_iModelIndexBloodDrop);// droplet sprite models
+		WRITE_BYTE(color);// color index into host_basepal
+		WRITE_BYTE(clamp(amount/80, 1, 255));// XDM3038a WRITE_BYTE(min(max(3, min(255,amount)/10), 16));		// scale
+	MESSAGE_END();
+}
+
+bool UTIL_ShouldShowBlood(const int &color)
+{
+	if (color != DONT_BLEED)
+	{
+		if (IsMultiplayer())// XDM3035c: nobody cares these days. Performance!
+			return true;//return (g_pGameRules->FAllowEffects())
+
+		if (color == BLOOD_COLOR_RED)
+		{
+			if (g_pviolence_hblood == NULL || g_pviolence_hblood->value > 0)
+				return true;
+		}
+		else if (color == BLOOD_COLOR_YELLOW)// ?
+		{
+			if (g_pviolence_ablood == NULL || g_pviolence_ablood->value > 0)
+				return true;
+		}
+		else
+			return true;
+	}
+	return false;
+}
+
+void UTIL_BloodDecalTrace(TraceResult *pTrace, const int &bloodColor)
+{
+	if (!ASSERT(pTrace != NULL))
+		return;
+	if (UTIL_ShouldShowBlood(bloodColor))
+		UTIL_DecalTrace(pTrace, UTIL_BloodDecalIndex(bloodColor));
+}
+
+void UTIL_DecalTrace(TraceResult *pTrace, int decalNumber)
+{
+	if (decalNumber < 0)
+		return;
+	if (!ASSERT(pTrace != NULL))
+		return;
 	if (pTrace->flFraction == 1.0)
 		return;
 
+	int index = g_Decals[decalNumber].index;
+	if (index < 0)
+		return;
+
+	short entityIndex;
 	// Only decal BSP models
-	if ( pTrace->pHit )
+	if (pTrace->pHit)
 	{
-		CBaseEntity *pEntity = CBaseEntity::Instance( pTrace->pHit );
-		if ( pEntity && !pEntity->IsBSPModel() )
+		CBaseEntity *pEntity = CBaseEntity::Instance(pTrace->pHit);
+		if (pEntity && !pEntity->IsBSPModel())
 			return;
-		entityIndex = ENTINDEX( pTrace->pHit );
+		entityIndex = ENTINDEX(pTrace->pHit);
 	}
 	else 
 		entityIndex = 0;
 
-	message = TE_DECAL;
-	if ( entityIndex != 0 )
+	int message = TE_DECAL;
+	if (entityIndex != 0)
 	{
-		if ( index > 255 )
+		if (index > UCHAR_MAX)
 		{
 			message = TE_DECALHIGH;
 			index -= 256;
@@ -1259,21 +740,44 @@ void UTIL_DecalTrace( TraceResult *pTrace, int decalNumber )
 	else
 	{
 		message = TE_WORLDDECAL;
-		if ( index > 255 )
+		if (index > UCHAR_MAX)
 		{
 			message = TE_WORLDDECALHIGH;
 			index -= 256;
 		}
 	}
-	
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( message );
-		WRITE_COORD( pTrace->vecEndPos.x );
-		WRITE_COORD( pTrace->vecEndPos.y );
-		WRITE_COORD( pTrace->vecEndPos.z );
-		WRITE_BYTE( index );
-		if ( entityIndex )
-			WRITE_SHORT( entityIndex );
+
+	MESSAGE_BEGIN(MSG_BROADCAST, svc_temp_entity);
+		WRITE_BYTE(message);
+		WRITE_COORD(pTrace->vecEndPos.x);
+		WRITE_COORD(pTrace->vecEndPos.y);
+		WRITE_COORD(pTrace->vecEndPos.z);
+		WRITE_BYTE(index);
+		if (entityIndex)
+			WRITE_SHORT(entityIndex);
+	MESSAGE_END();
+}
+
+void UTIL_GunshotDecalTrace(TraceResult *pTrace, int decalNumber)
+{
+	if (decalNumber < 0)
+		return;
+	if (!ASSERT(pTrace != NULL))
+		return;
+	if (pTrace->flFraction == 1.0)
+		return;
+
+	int index = g_Decals[decalNumber].index;
+	if (index < 0)
+		return;
+
+	MESSAGE_BEGIN(MSG_PAS, svc_temp_entity, pTrace->vecEndPos);
+		WRITE_BYTE(TE_GUNSHOTDECAL);
+		WRITE_COORD(pTrace->vecEndPos.x);
+		WRITE_COORD(pTrace->vecEndPos.y);
+		WRITE_COORD(pTrace->vecEndPos.z);
+		WRITE_SHORT((short)ENTINDEX(pTrace->pHit));
+		WRITE_BYTE(index);
 	MESSAGE_END();
 }
 
@@ -1286,248 +790,89 @@ Tell connected clients to display it, or use the default spray can decal
 if the custom can't be loaded.
 ==============
 */
-void UTIL_PlayerDecalTrace( TraceResult *pTrace, int playernum, int decalNumber, BOOL bIsCustom )
+void UTIL_PlayerDecalTrace(TraceResult *pTrace, int playernum, int decalNumber, bool bIsCustom)
 {
+	if (!ASSERT(pTrace != NULL))
+		return;
+	if (pTrace->flFraction == 1.0)
+		return;
+
 	int index;
-	
 	if (!bIsCustom)
 	{
-		if ( decalNumber < 0 )
+		if (decalNumber < 0)
 			return;
 
-		index = gDecals[ decalNumber ].index;
-		if ( index < 0 )
+		index = g_Decals[decalNumber].index;
+		if (index < 0)
 			return;
 	}
 	else
 		index = decalNumber;
 
-	if (pTrace->flFraction == 1.0)
-		return;
-
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_PLAYERDECAL );
-		WRITE_BYTE ( playernum );
-		WRITE_COORD( pTrace->vecEndPos.x );
-		WRITE_COORD( pTrace->vecEndPos.y );
-		WRITE_COORD( pTrace->vecEndPos.z );
-		WRITE_SHORT( (short)ENTINDEX(pTrace->pHit) );
-		WRITE_BYTE( index );
+	MESSAGE_BEGIN(MSG_BROADCAST, svc_temp_entity);
+		WRITE_BYTE(TE_PLAYERDECAL);
+		WRITE_BYTE(playernum);
+		WRITE_COORD(pTrace->vecEndPos.x);
+		WRITE_COORD(pTrace->vecEndPos.y);
+		WRITE_COORD(pTrace->vecEndPos.z);
+		WRITE_SHORT((short)ENTINDEX(pTrace->pHit));
+		WRITE_BYTE(index);
 	MESSAGE_END();
 }
 
-void UTIL_GunshotDecalTrace( TraceResult *pTrace, int decalNumber )
+void UTIL_Sparks(const Vector &position)
 {
-	if ( decalNumber < 0 )
-		return;
+	MESSAGE_BEGIN(MSG_PVS, svc_temp_entity, position);
+		WRITE_BYTE(TE_SPARKS);
+		WRITE_COORD(position.x);
+		WRITE_COORD(position.y);
+		WRITE_COORD(position.z);
+	MESSAGE_END();
+	//not here	UTIL_EmitAmbientSound(g_pWorld?g_pWorld->edict():???, position, gSoundsSparks[RANDOM_LONG(0,NUM_SPARK_SOUNDS-1)], RANDOM_FLOAT(0.05, 0.5), ATTN_STATIC, 0, RANDOM_LONG(95,105));
+}
 
-	int index = gDecals[ decalNumber ].index;
-	if ( index < 0 )
-		return;
-
-	if (pTrace->flFraction == 1.0)
-		return;
-
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, pTrace->vecEndPos );
-		WRITE_BYTE( TE_GUNSHOTDECAL );
-		WRITE_COORD( pTrace->vecEndPos.x );
-		WRITE_COORD( pTrace->vecEndPos.y );
-		WRITE_COORD( pTrace->vecEndPos.z );
-		WRITE_SHORT( (short)ENTINDEX(pTrace->pHit) );
-		WRITE_BYTE( index );
+void UTIL_Ricochet(const Vector &position, float scale)
+{
+	MESSAGE_BEGIN(MSG_PVS, svc_temp_entity, position);
+		WRITE_BYTE(TE_ARMOR_RICOCHET);
+		WRITE_COORD(position.x);
+		WRITE_COORD(position.y);
+		WRITE_COORD(position.z);
+		WRITE_BYTE((int)(scale*10.0f));
 	MESSAGE_END();
 }
 
-
-void UTIL_Sparks( const Vector &position )
+// Obsolete
+/*void UTIL_Bubbles(const Vector &mins, const Vector &maxs, int count)
 {
-	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, position );
-		WRITE_BYTE( TE_SPARKS );
-		WRITE_COORD( position.x );
-		WRITE_COORD( position.y );
-		WRITE_COORD( position.z );
-	MESSAGE_END();
-}
-
-
-void UTIL_Ricochet( const Vector &position, float scale )
-{
-	MESSAGE_BEGIN( MSG_PVS, SVC_TEMPENTITY, position );
-		WRITE_BYTE( TE_ARMOR_RICOCHET );
-		WRITE_COORD( position.x );
-		WRITE_COORD( position.y );
-		WRITE_COORD( position.z );
-		WRITE_BYTE( (int)(scale*10) );
-	MESSAGE_END();
-}
-
-
-BOOL UTIL_TeamsMatch( const char *pTeamName1, const char *pTeamName2 )
-{
-	// Everyone matches unless it's teamplay
-	if ( !g_pGameRules->IsTeamplay() )
-		return TRUE;
-
-	// Both on a team?
-	if ( *pTeamName1 != 0 && *pTeamName2 != 0 )
-	{
-		if ( !stricmp( pTeamName1, pTeamName2 ) )	// Same Team?
-			return TRUE;
-	}
-
-	return FALSE;
-}
-
-
-void UTIL_StringToVector( float *pVector, const char *pString )
-{
-	char *pstr, *pfront, tempString[128];
-	int	j;
-
-	strcpy( tempString, pString );
-	pstr = pfront = tempString;
-
-	for ( j = 0; j < 3; j++ )			// lifted from pr_edict.c
-	{
-		pVector[j] = atof( pfront );
-
-		while ( *pstr && *pstr != ' ' )
-			pstr++;
-		if (!*pstr)
-			break;
-		pstr++;
-		pfront = pstr;
-	}
-	if (j < 2)
-	{
-		/*
-		ALERT( at_error, "Bad field in entity!! %s:%s == \"%s\"\n",
-			pkvd->szClassName, pkvd->szKeyName, pkvd->szValue );
-		*/
-		for (j = j+1;j < 3; j++)
-			pVector[j] = 0;
-	}
-}
-
-
-void UTIL_StringToIntArray( int *pVector, int count, const char *pString )
-{
-	char *pstr, *pfront, tempString[128];
-	int	j;
-
-	strcpy( tempString, pString );
-	pstr = pfront = tempString;
-
-	for ( j = 0; j < count; j++ )			// lifted from pr_edict.c
-	{
-		pVector[j] = atoi( pfront );
-
-		while ( *pstr && *pstr != ' ' )
-			pstr++;
-		if (!*pstr)
-			break;
-		pstr++;
-		pfront = pstr;
-	}
-
-	for ( j++; j < count; j++ )
-	{
-		pVector[j] = 0;
-	}
-}
-
-Vector UTIL_ClampVectorToBox( const Vector &input, const Vector &clampSize )
-{
-	Vector sourceVector = input;
-
-	if ( sourceVector.x > clampSize.x )
-		sourceVector.x -= clampSize.x;
-	else if ( sourceVector.x < -clampSize.x )
-		sourceVector.x += clampSize.x;
-	else
-		sourceVector.x = 0;
-
-	if ( sourceVector.y > clampSize.y )
-		sourceVector.y -= clampSize.y;
-	else if ( sourceVector.y < -clampSize.y )
-		sourceVector.y += clampSize.y;
-	else
-		sourceVector.y = 0;
-	
-	if ( sourceVector.z > clampSize.z )
-		sourceVector.z -= clampSize.z;
-	else if ( sourceVector.z < -clampSize.z )
-		sourceVector.z += clampSize.z;
-	else
-		sourceVector.z = 0;
-
-	return sourceVector.Normalize();
-}
-
-
-float UTIL_WaterLevel( const Vector &position, float minz, float maxz )
-{
-	Vector midUp = position;
-	midUp.z = minz;
-
-	if (UTIL_PointContents(midUp) != CONTENTS_WATER)
-		return minz;
-
-	midUp.z = maxz;
-	if (UTIL_PointContents(midUp) == CONTENTS_WATER)
-		return maxz;
-
-	float diff = maxz - minz;
-	while (diff > 1.0)
-	{
-		midUp.z = minz + diff/2.0;
-		if (UTIL_PointContents(midUp) == CONTENTS_WATER)
-		{
-			minz = midUp.z;
-		}
-		else
-		{
-			maxz = midUp.z;
-		}
-		diff = maxz - minz;
-	}
-
-	return midUp.z;
-}
-
-
-extern DLL_GLOBAL	short	g_sModelIndexBubbles;// holds the index for the bubbles model
-
-void UTIL_Bubbles( Vector mins, Vector maxs, int count )
-{
-	Vector mid =  (mins + maxs) * 0.5;
-
-	float flHeight = UTIL_WaterLevel( mid,  mid.z, mid.z + 1024 );
+	Vector mid = (mins + maxs) * 0.5;
+	float flHeight = UTIL_WaterLevel(mid,  mid.z, mid.z + 1024);
 	flHeight = flHeight - mins.z;
-
-	MESSAGE_BEGIN( MSG_PAS, SVC_TEMPENTITY, mid );
-		WRITE_BYTE( TE_BUBBLES );
-		WRITE_COORD( mins.x );	// mins
-		WRITE_COORD( mins.y );
-		WRITE_COORD( mins.z );
-		WRITE_COORD( maxs.x );	// maxz
-		WRITE_COORD( maxs.y );
-		WRITE_COORD( maxs.z );
-		WRITE_COORD( flHeight );			// height
-		WRITE_SHORT( g_sModelIndexBubbles );
-		WRITE_BYTE( count ); // count
-		WRITE_COORD( 8 ); // speed
+	MESSAGE_BEGIN(MSG_PAS, svc_temp_entity, mid);
+		WRITE_BYTE(TE_BUBBLES);
+		WRITE_COORD(mins.x);	// mins
+		WRITE_COORD(mins.y);
+		WRITE_COORD(mins.z);
+		WRITE_COORD(maxs.x);	// maxz
+		WRITE_COORD(maxs.y);
+		WRITE_COORD(maxs.z);
+		WRITE_COORD(flHeight);			// height
+		WRITE_SHORT(g_iModelIndexBubble);
+		WRITE_BYTE(count); // count
+		WRITE_COORD(8); // speed
 	MESSAGE_END();
 }
 
-void UTIL_BubbleTrail( Vector from, Vector to, int count )
+// Obsolete
+void UTIL_BubbleTrail(const Vector &from, const Vector &to, int count)
 {
-	float flHeight = UTIL_WaterLevel( from,  from.z, from.z + 256 );
+	float flHeight = UTIL_WaterLevel(from,  from.z, from.z + 256);
 	flHeight = flHeight - from.z;
 
 	if (flHeight < 8)
 	{
-		flHeight = UTIL_WaterLevel( to,  to.z, to.z + 256 );
+		flHeight = UTIL_WaterLevel(to,  to.z, to.z + 256);
 		flHeight = flHeight - to.z;
 		if (flHeight < 8)
 			return;
@@ -1539,1011 +884,438 @@ void UTIL_BubbleTrail( Vector from, Vector to, int count )
 	if (count > 255) 
 		count = 255;
 
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY );
-		WRITE_BYTE( TE_BUBBLETRAIL );
-		WRITE_COORD( from.x );	// mins
-		WRITE_COORD( from.y );
-		WRITE_COORD( from.z );
-		WRITE_COORD( to.x );	// maxz
-		WRITE_COORD( to.y );
-		WRITE_COORD( to.z );
-		WRITE_COORD( flHeight );			// height
-		WRITE_SHORT( g_sModelIndexBubbles );
-		WRITE_BYTE( count ); // count
-		WRITE_COORD( 8 ); // speed
+	MESSAGE_BEGIN(MSG_BROADCAST, svc_temp_entity);
+		WRITE_BYTE(TE_BUBBLETRAIL);
+		WRITE_COORD(from.x);	// mins
+		WRITE_COORD(from.y);
+		WRITE_COORD(from.z);
+		WRITE_COORD(to.x);	// maxz
+		WRITE_COORD(to.y);
+		WRITE_COORD(to.z);
+		WRITE_COORD(flHeight);			// height
+		WRITE_SHORT(g_iModelIndexBubble);
+		WRITE_BYTE(count); // count
+		WRITE_COORD(8); // speed
+	MESSAGE_END();
+}*/
+
+void UTIL_HudMessageAll(const hudtextparms_t &textparms, const char *pMessage)
+{
+	for (CLIENT_INDEX i = 1; i <= gpGlobals->maxClients; ++i)
+	{
+		CBasePlayer *pPlayer = UTIL_ClientByIndex(i);
+		if (pPlayer)
+			UTIL_HudMessage(pPlayer, textparms, pMessage);
+	}
+}
+
+// client - NULL == everyone
+void ClientPrint(entvars_t *client, int msg_dest, const char *msg_name, const char *param1, const char *param2, const char *param3, const char *param4)
+{
+	if (msg_name == NULL)// allow developer to debug bogus call
+	{
+		DBG_FORCEBREAK
+		return;
+	}
+//#if defined (FIX_SECURITY)
+	// Stupid HL engine stops when a message is too long! Prevent players from crashing the server.
+	size_t len = 2;
+	len += strlen(msg_name);
+	if (param1)
+		len += strlen(param1);
+	if (param2)
+		len += strlen(param2);
+	if (param3)
+		len += strlen(param3);
+	if (param4)
+		len += strlen(param4);
+
+	len *= sizeof(char);
+	if (len > MAX_USER_MSG_DATA)
+	{
+		conprintf(0, "ClientPrint(%d) error: Message too long: %u!\n", client?ENTINDEX(ENT(client)):0, len);
+		return;
+	}
+//#endif
+	if (client)
+		MESSAGE_BEGIN(MSG_ONE, gmsgTextMsg, NULL, ENT(client));
+	else
+		MESSAGE_BEGIN(MSG_ALL, gmsgTextMsg);
+
+		WRITE_BYTE(msg_dest);
+		WRITE_STRING(msg_name);
+		if (param1)
+			WRITE_STRING(param1);
+		if (param2)
+			WRITE_STRING(param2);
+		if (param3)
+			WRITE_STRING(param3);
+		if (param4)
+			WRITE_STRING(param4);
+
 	MESSAGE_END();
 }
 
-
-void UTIL_Remove( CBaseEntity *pEntity )
+// client - NULL == everyone
+void ClientPrintF(entvars_t *client, int msg_dest, int devlevel, const char *fmt, ...)
 {
-	if ( !pEntity )
+	//if (g_pCvarDeveloper && g_pCvarDeveloper->value < devlevel)// filter on client, not on server!
+	//	return;
+
+	va_list argptr;
+	static char string[1024];
+	va_start(argptr, fmt);
+	vsnprintf(string, 1024, fmt, argptr);
+	va_end(argptr);
+	int bdata = (msg_dest & HUD_PRINTDEST_MASK) | (devlevel << 4);
+	ClientPrint(client, bdata, string);
+}
+
+
+// the purpose of many similar functions was for them to have different buffers so they could be used in a single printf-like call
+char *UTIL_dtos1(const int d)
+{
+	static char buf[8];
+	_snprintf(buf, 8, "%d", d);
+	return buf;
+}
+
+char *UTIL_dtos2(const int d)
+{
+	static char buf[8];
+	sprintf(buf, "%d", d);
+	return buf;
+}
+
+/*char *UTIL_dtos3(const int d)
+{
+	static char buf[8];
+	sprintf(buf, "%d", d);
+	return buf;
+}
+
+char *UTIL_dtos4(const int d)
+{
+	static char buf[8];
+	sprintf(buf, "%d", d);
+	return buf;
+}*/
+
+//-----------------------------------------------------------------------------
+// Purpose: Prints a logged message to console. Preceded by LOG: (timestamp) < message >
+// Input  : format - printf-like arguments
+//-----------------------------------------------------------------------------
+void UTIL_LogPrintf(char *fmt, ...)
+{
+	static char string[1024];
+	va_list argptr;
+	va_start(argptr, fmt);
+	vsnprintf(string, 1024, fmt, argptr);
+	va_end(argptr);
+	// Print to server console
+	ALERT(at_logged, "%s", string);
+	DBG_PRINTF(string);// _DEBUG only
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: More convinient server-only print function
+// Input  : format - printf-like arguments
+//-----------------------------------------------------------------------------
+void SERVER_PRINTF(char *format, ...)
+{
+	static char string[1024];
+	va_list argptr;
+	va_start(argptr, format);
+	vsnprintf(string, 1024, format, argptr);
+	va_end(argptr);
+	SERVER_PRINT(string);
+}
+
+// TODO: find out what's in globals
+void UTIL_GetGlobalTrace(TraceResult *pTrace)
+{
+	pTrace->fAllSolid		= gpGlobals->trace_allsolid;
+	pTrace->fStartSolid		= gpGlobals->trace_startsolid;
+	pTrace->fInOpen			= gpGlobals->trace_inopen;
+	pTrace->fInWater		= gpGlobals->trace_inwater;
+	pTrace->flFraction		= gpGlobals->trace_fraction;
+	pTrace->vecEndPos		= gpGlobals->trace_endpos;
+	pTrace->flPlaneDist		= gpGlobals->trace_plane_dist;
+	pTrace->vecPlaneNormal	= gpGlobals->trace_plane_normal;
+	pTrace->pHit			= gpGlobals->trace_ent;
+	pTrace->iHitgroup		= gpGlobals->trace_hitgroup;
+}
+
+// Overloaded to add IGNORE_GLASS
+void UTIL_TraceLine(const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, IGNORE_GLASS ignoreGlass, edict_t *pentIgnore, TraceResult *ptr)
+{
+	edict_t *pOwner;
+	if (pentIgnore)// XDM3037: UNHACK
+	{
+		pOwner = pentIgnore->v.owner;
+		pentIgnore->v.owner = NULL;
+	}
+	//else
+	//	pOwner = NULL;
+	TRACE_LINE(vecStart, vecEnd, (igmon == ignore_monsters ? TRACE_IGNORE_MONSTERS:TRACE_IGNORE_NOTHING) | (ignoreGlass == ignore_glass?TRACE_IGNORE_GLASS:TRACE_IGNORE_NOTHING), pentIgnore, ptr);
+	if (pentIgnore)// pOwner)// faster
+		pentIgnore->v.owner = pOwner;// Warning C4701 is OK
+}
+
+void UTIL_TraceLine(const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, edict_t *pentIgnore, TraceResult *ptr)
+{
+	TRACE_LINE(vecStart, vecEnd, (igmon == ignore_monsters ? TRACE_IGNORE_MONSTERS:TRACE_IGNORE_NOTHING), pentIgnore, ptr);
+}
+
+void UTIL_TraceHull(const Vector &vecStart, const Vector &vecEnd, IGNORE_MONSTERS igmon, int hullNumber, edict_t *pentIgnore, TraceResult *ptr)
+{
+	TRACE_HULL(vecStart, vecEnd, (igmon == ignore_monsters ? TRACE_IGNORE_MONSTERS:TRACE_IGNORE_NOTHING), hullNumber, pentIgnore, ptr);
+}
+
+void UTIL_TraceModel(const Vector &vecStart, const Vector &vecEnd, int hullNumber, edict_t *pentModel, TraceResult *ptr)
+{
+	TRACE_MODEL(vecStart, vecEnd, hullNumber, pentModel, ptr);
+}
+
+/*void UTIL_SetSize(entvars_t *pev, const Vector &vecMin, const Vector &vecMax)
+{
+	SET_SIZE(edict(), vecMin, vecMax);
+}*/
+
+void UTIL_SetSize(CBaseEntity *pEntity, const Vector &vecMin, const Vector &vecMax)// XDM
+{
+	if (pEntity)
+		SET_SIZE(pEntity->edict(), vecMin, vecMax);
+
+	// XDM3038c: UNDONE: Must be done in the engine, not here!
+	/*static Vector vmin, vmax;
+	vmin = vecMin; vmin *= pEntity->pev->scale;
+	vmax = vecMax; vmax *= pEntity->pev->scale;
+	SET_SIZE(pEntity->edict(), vmin, vmax);*/
+}
+
+void UTIL_SetSize(CBaseEntity *pEntity, const float &radius)// XDM
+{
+	if (pEntity)
+		SET_SIZE(pEntity->edict(), Vector(-radius, -radius, -radius), Vector(radius, radius, radius));
+}
+
+/* unused const Vector &UTIL_GetAimVector(edict_t *pent, float flSpeed)
+{
+	static Vector tmp;
+	GET_AIM_VECTOR(pent, flSpeed, tmp);
+	return tmp;
+}*/
+
+//-----------------------------------------------------------------------------
+// Purpose: UTIL_IsMasterTriggered
+// Input  : *szMaster - master's name (logic reverses if starts with '~')
+//			*pActivator - may affect target's decision
+// Output : Returns true on success, false on failure.
+//-----------------------------------------------------------------------------
+bool UTIL_IsMasterTriggered(const char *szMaster, const CBaseEntity *pActivator)
+{
+	//if (FStringNull(iszMaster))
+	if (szMaster == NULL || szMaster == '\0')
+		return true;
+
+	size_t i, j;
+	char szBuf[80];
+	CBaseEntity *pMaster;
+	bool found = false;
+	bool reverse = false;
+
+	//if (pActivator == NULL)// XDM3035a
+	//	return TRUE;// TRUE?!!
+
+	//conprintf(0, "IsMasterTriggered(%s, %s \"%s\")\n", STRING(iszMaster), STRING(pActivator->pev->classname), STRING(pActivator->pev->targetname));
+	//szMaster = STRING(iszMaster);
+	if (szMaster[0] == '~') //inverse master
+	{
+		reverse = true;
+		szMaster++;
+	}
+
+	pMaster = UTIL_FindEntityByTargetname(NULL, szMaster);
+	if (!pMaster)
+	{
+		for (i = 0; szMaster[i]; ++i)
+		{
+			if (szMaster[i] == '(')
+			{
+				for (j = i+1; szMaster[j]; ++j)
+				{
+					if (szMaster[j] == ')')
+					{
+						strncpy(szBuf, szMaster+i+1, (j-i)-1);
+						szBuf[(j-i)-1] = 0;
+						/*pActivator*/pMaster = UTIL_FindEntityByTargetname(NULL, szBuf);// XDM3035a: TODO: was this wrong?!?! HLFIX
+						found = true;
+						break;
+					}
+				}
+				if (!found) // no) found
+				{
+					conprintf(0, "Missing ')' in master \"%s\"!\n", szMaster);
+					return false;
+				}
+				break;
+			}
+		}
+		if (!found) // no (found
+		{
+			conprintf(0, "Master \"%s\" not found!\n", szMaster);
+			return true;
+		}
+
+		strncpy(szBuf, szMaster, i);
+		szBuf[i] = 0;
+		pMaster = UTIL_FindEntityByTargetname(NULL, szBuf);
+	}
+
+	if (pMaster)// XDM3037: TODO: check for real capabilities && pMaster->ObjectCaps() & FCAP_MASTER)
+	{
+		if (reverse)
+			return (pMaster->IsTriggered(pActivator) == false);
+		else
+			return (pMaster->IsTriggered(pActivator) == true);
+	}
+	else
+		conprintf(1, "Master \"%s\" was null or not a master!\n", szMaster);
+
+	// if this isn't a master entity, just say yes.
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Properly remove entity
+// Warning: !!! THIS MUST BE LAST CALL from entity's code! Just return; and no single line after UTIL_Remove(this)!
+// Warning: Don't call from Touch() functions!!
+// Warning: REMOVE_ENTITY() should not be called too often! Example: if during RadiusDamage() some entity is erased, pStart/pNext search entity pointer is corrupted which leads to an infinite loop.
+// Note   : FL_KILLME must be set here!
+// Input  : *pEntity - 
+//-----------------------------------------------------------------------------
+void UTIL_Remove(CBaseEntity *pEntity)
+{
+	if (pEntity == NULL)
 		return;
 
-	pEntity->UpdateOnRemove();
-	pEntity->pev->flags |= FL_KILLME;
-	pEntity->pev->targetname = 0;
-}
-
-
-BOOL UTIL_IsValidEntity( edict_t *pent )
-{
-	if ( !pent || pent->free || (pent->v.flags & FL_KILLME) )
-		return FALSE;
-	return TRUE;
-}
-
-
-void UTIL_PrecacheOther( const char *szClassname )
-{
-	edict_t	*pent;
-
-	pent = CREATE_NAMED_ENTITY( MAKE_STRING( szClassname ) );
-	if ( FNullEnt( pent ) )
+	if (pEntity->IsRemoving())
 	{
-		ALERT ( at_console, "NULL Ent in UTIL_PrecacheOther\n" );
+		DBG_PRINTF("Error: UTIL_Remove() called on already removed entity!\n");
 		return;
 	}
-	
-	CBaseEntity *pEntity = CBaseEntity::Instance (VARS( pent ));
+	if (pEntity->IsPlayer())
+	{
+		DBG_PRINTF("Error: UTIL_Remove() called on player!\n");
+		DBG_FORCEBREAK
+		return;
+	}
+// TODO?	pEntity->SetThink(&CBaseEntity::SUB_Remove);
+//	pEntity->SetNextThink(0);// remove it ASAP
+//	conprintf(1, "UTIL_Remove(%s[%d] %s)\n", STRING(pEntity->pev->classname), pEntity->entindex(), STRING(pEntity->pev->targetname));
+//bad	pEntity->SUB_Remove();// XDM3037: NUM_FOR_EDICT: bad pointer
+	// XDM3038a: BUGBUG: why do gluon beams have ShouldRespawn() NULL during changelevel, while UpdateOnRemove() is not NULL!!!?
+#if defined (USE_EXCEPTIONS)
+	try
+	{
+#endif
+	if (pEntity->ShouldRespawn())// XDM3035
+	{
+		if (pEntity->StartRespawn() != NULL)
+			return;
+		//pEntity->SetTouchNull();
+		/*pEntity->SetUseNull();
+		pEntity->SetBlockedNull();
+		// BAD pEntity->m_iExistenceState = ENTITY_EXSTATE_VOID;
+		pEntity->SetThink(&CBaseEntity::SUB_Respawn);
+		if (pEntity->IsMonster())
+			pEntity->SetNextThink(mp_monstersrespawntime.value);// XDM: TODO
+		else
+		{
+			DBG_PRINTF("UTIL_Remove(%s[%d]): respawning a non-monster!\n", STRING(pEntity->pev->classname), pEntity->entindex());
+			pEntity->SetNextThink(10.0f);// unknown entity is respawning!
+		}*/
+	}
+
+	pEntity->UpdateOnRemove();
+	// NUM_FOR_EDICT: bad pointer		REMOVE_ENTITY(ENT(pEntity->pev));
+
+#if defined (USE_EXCEPTIONS)
+	}
+	catch (...)
+	{
+		SERVER_PRINT("UTIL_Remove() exception!!!\n");
+		DBG_FORCEBREAK
+		SetBits(pEntity->pev->flags, FL_KILLME);// XDM3037: give entities a chance to update client side
+		pEntity->pev->ltime = 0;// XDM3038a
+		pEntity->DontThink();// XDM3038a
+		//pEntity->SendClientData(NULL, MSG_ALL, SCD_ENTREMOVE);
+		pEntity->SetThinkNull();// XDM3037
+		pEntity->SetTouchNull();
+		pEntity->SetUseNull();
+		pEntity->SetBlockedNull();
+		pEntity->pev->targetname = MAKE_STRING("???ERROR???");// XDM3038a: AWESOME debugging idea!!
+		pEntity->pev->target = iStringNull;// XDM3038a
+		// we can't pEntity->m_iExistenceState = ENTITY_EXSTATE_VOID;
+	}
+#endif
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Precache resources used by specified entity
+// XDM: TODO: FIXME: this is very slow and eats resources and edicts!
+// Avoid using this at all costs! Especially at runtime!
+// Input  : *szClassname - classname
+//			iszCustomModel - try to override default model of this entity
+//-----------------------------------------------------------------------------
+void UTIL_PrecacheOther(const char *szClassname, const string_t iszCustomModel)
+{
+	if (szClassname == NULL || *szClassname == '\0')// XDM3037a
+		return;
+
+	edict_t	*pent = CREATE_NAMED_ENTITY(szClassname);//MAKE_STRING(szClassname));// should be safe because we remove this entity before returning
+	if (FNullEnt(pent))
+	{
+		conprintf(1, "UTIL_PrecacheOther(%s): CreateNamedEntity() failed.\n", szClassname);
+		return;
+	}
+	pent->v.spawnflags = SF_NOREFERENCE|SF_NORESPAWN;
+	pent->v.flags = FL_NOTARGET;
+	pent->v.effects = EF_NOINTERP|EF_NODRAW;
+	CBaseEntity *pEntity = CBaseEntity::Instance(pent);
 	if (pEntity)
-		pEntity->Precache( );
-	REMOVE_ENTITY(pent);
+	{
+		if (!FStringNull(iszCustomModel))// XDM3037a
+			pEntity->pev->model = iszCustomModel;
+
+		pEntity->Precache();
+		pEntity->pev->flags |= FL_KILLME;
+		// SLOW! but can save a few ASSERTs pEntity->UpdateOnRemove();
+		REMOVE_ENTITY(pent);
+	}
 }
 
-//=========================================================
-// UTIL_LogPrintf - Prints a logged message to console.
-// Preceded by LOG: ( timestamp ) < message >
-//=========================================================
-void UTIL_LogPrintf( char *fmt, ... )
+//-----------------------------------------------------------------------------
+// Purpose: returns the 2D dot product of a line from src to check and vecdir
+//-----------------------------------------------------------------------------
+float UTIL_DotPoints(const Vector &vecSrc, const Vector &vecCheck, const Vector &vecDir)
 {
-	va_list			argptr;
-	static char		string[1024];
-	
-	va_start ( argptr, fmt );
-	vsprintf ( string, fmt, argptr );
-	va_end   ( argptr );
-
-	// Print to server console
-	ALERT( at_logged, "%s", string );
+	Vector2D vec2LOS((vecCheck - vecSrc).Make2D());
+	vec2LOS.NormalizeSelf();
+	return DotProduct(vec2LOS, (vecDir.Make2D()));
 }
 
-//=========================================================
-// UTIL_DotPoints - returns the dot product of a line from
-// src to check and vecdir.
-//=========================================================
-float UTIL_DotPoints ( const Vector &vecSrc, const Vector &vecCheck, const Vector &vecDir )
+//-----------------------------------------------------------------------------
+// Purpose: The game editor cannot add duplicate key names, it adds keyname#1, keyname#2 instead. Get rid of these numbers.
+//-----------------------------------------------------------------------------
+void UTIL_StripToken(const char *pKey, char *pDest)
 {
-	Vector2D	vec2LOS;
-
-	vec2LOS = ( vecCheck - vecSrc ).Make2D();
-	vec2LOS = vec2LOS.Normalize();
-
-	return DotProduct (vec2LOS , ( vecDir.Make2D() ) );
-}
-
-
-//=========================================================
-// UTIL_StripToken - for redundant keynames
-//=========================================================
-void UTIL_StripToken( const char *pKey, char *pDest )
-{
-	int i = 0;
-
-	while ( pKey[i] && pKey[i] != '#' )
+	size_t i = 0;
+	while (pKey[i] && pKey[i] != '#')
 	{
 		pDest[i] = pKey[i];
-		i++;
+		++i;
 	}
 	pDest[i] = 0;
 }
-
-
-// --------------------------------------------------------------
-//
-// CSave
-//
-// --------------------------------------------------------------
-static int gSizes[FIELD_TYPECOUNT] = 
-{
-	sizeof(float),		// FIELD_FLOAT
-	sizeof(int),		// FIELD_STRING
-	sizeof(int),		// FIELD_ENTITY
-	sizeof(int),		// FIELD_CLASSPTR
-	sizeof(int),		// FIELD_EHANDLE
-	sizeof(int),		// FIELD_entvars_t
-	sizeof(int),		// FIELD_EDICT
-	sizeof(float)*3,	// FIELD_VECTOR
-	sizeof(float)*3,	// FIELD_POSITION_VECTOR
-	sizeof(int *),		// FIELD_POINTER
-	sizeof(int),		// FIELD_INTEGER
-#ifdef GNUC
-	sizeof(int *)*2,		// FIELD_FUNCTION
-#else
-	sizeof(int *),		// FIELD_FUNCTION	
-#endif
-	sizeof(int),		// FIELD_BOOLEAN
-	sizeof(short),		// FIELD_SHORT
-	sizeof(char),		// FIELD_CHARACTER
-	sizeof(float),		// FIELD_TIME
-	sizeof(int),		// FIELD_MODELNAME
-	sizeof(int),		// FIELD_SOUNDNAME
-};
-
-
-// Base class includes common SAVERESTOREDATA pointer, and manages the entity table
-CSaveRestoreBuffer :: CSaveRestoreBuffer( void )
-{
-	m_pdata = NULL;
-}
-
-
-CSaveRestoreBuffer :: CSaveRestoreBuffer( SAVERESTOREDATA *pdata )
-{
-	m_pdata = pdata;
-}
-
-
-CSaveRestoreBuffer :: ~CSaveRestoreBuffer( void )
-{
-}
-
-int	CSaveRestoreBuffer :: EntityIndex( CBaseEntity *pEntity )
-{
-	if ( pEntity == NULL )
-		return -1;
-	return EntityIndex( pEntity->pev );
-}
-
-
-int	CSaveRestoreBuffer :: EntityIndex( entvars_t *pevLookup )
-{
-	if ( pevLookup == NULL )
-		return -1;
-	return EntityIndex( ENT( pevLookup ) );
-}
-
-int	CSaveRestoreBuffer :: EntityIndex( EOFFSET eoLookup )
-{
-	return EntityIndex( ENT( eoLookup ) );
-}
-
-
-int	CSaveRestoreBuffer :: EntityIndex( edict_t *pentLookup )
-{
-	if ( !m_pdata || pentLookup == NULL )
-		return -1;
-
-	int i;
-	ENTITYTABLE *pTable;
-
-	for ( i = 0; i < m_pdata->tableCount; i++ )
-	{
-		pTable = m_pdata->pTable + i;
-		if ( pTable->pent == pentLookup )
-			return i;
-	}
-	return -1;
-}
-
-
-edict_t *CSaveRestoreBuffer :: EntityFromIndex( int entityIndex )
-{
-	if ( !m_pdata || entityIndex < 0 )
-		return NULL;
-
-	int i;
-	ENTITYTABLE *pTable;
-
-	for ( i = 0; i < m_pdata->tableCount; i++ )
-	{
-		pTable = m_pdata->pTable + i;
-		if ( pTable->id == entityIndex )
-			return pTable->pent;
-	}
-	return NULL;
-}
-
-
-int	CSaveRestoreBuffer :: EntityFlagsSet( int entityIndex, int flags )
-{
-	if ( !m_pdata || entityIndex < 0 )
-		return 0;
-	if ( entityIndex > m_pdata->tableCount )
-		return 0;
-
-	m_pdata->pTable[ entityIndex ].flags |= flags;
-
-	return m_pdata->pTable[ entityIndex ].flags;
-}
-
-
-void CSaveRestoreBuffer :: BufferRewind( int size )
-{
-	if ( !m_pdata )
-		return;
-
-	if ( m_pdata->size < size )
-		size = m_pdata->size;
-
-	m_pdata->pCurrentData -= size;
-	m_pdata->size -= size;
-}
-
-#ifndef _WIN32
-extern "C" {
-unsigned _rotr ( unsigned val, int shift)
-{
-        register unsigned lobit;        /* non-zero means lo bit set */
-        register unsigned num = val;    /* number to rotate */
-
-        shift &= 0x1f;                  /* modulo 32 -- this will also make
-                                           negative shifts work */
-
-        while (shift--) {
-                lobit = num & 1;        /* get high bit */
-                num >>= 1;              /* shift right one bit */
-                if (lobit)
-                        num |= 0x80000000;  /* set hi bit if lo bit was set */
-        }
-
-        return num;
-}
-}
-#endif
-
-unsigned int CSaveRestoreBuffer :: HashString( const char *pszToken )
-{
-	unsigned int	hash = 0;
-
-	while ( *pszToken )
-		hash = _rotr( hash, 4 ) ^ *pszToken++;
-
-	return hash;
-}
-
-unsigned short CSaveRestoreBuffer :: TokenHash( const char *pszToken )
-{
-	unsigned short	hash = (unsigned short)(HashString( pszToken ) % (unsigned)m_pdata->tokenCount );
-	
-#if _DEBUG
-	static int tokensparsed = 0;
-	tokensparsed++;
-	if ( !m_pdata->tokenCount || !m_pdata->pTokens )
-		ALERT( at_error, "No token table array in TokenHash()!" );
-#endif
-
-	for ( int i=0; i<m_pdata->tokenCount; i++ )
-	{
-#if _DEBUG
-		static qboolean beentheredonethat = FALSE;
-		if ( i > 50 && !beentheredonethat )
-		{
-			beentheredonethat = TRUE;
-			ALERT( at_error, "CSaveRestoreBuffer :: TokenHash() is getting too full!" );
-		}
-#endif
-
-		int	index = hash + i;
-		if ( index >= m_pdata->tokenCount )
-			index -= m_pdata->tokenCount;
-
-		if ( !m_pdata->pTokens[index] || strcmp( pszToken, m_pdata->pTokens[index] ) == 0 )
-		{
-			m_pdata->pTokens[index] = (char *)pszToken;
-			return index;
-		}
-	}
-		
-	// Token hash table full!!! 
-	// [Consider doing overflow table(s) after the main table & limiting linear hash table search]
-	ALERT( at_error, "CSaveRestoreBuffer :: TokenHash() is COMPLETELY FULL!" );
-	return 0;
-}
-
-void CSave :: WriteData( const char *pname, int size, const char *pdata )
-{
-	BufferField( pname, size, pdata );
-}
-
-
-void CSave :: WriteShort( const char *pname, const short *data, int count )
-{
-	BufferField( pname, sizeof(short) * count, (const char *)data );
-}
-
-
-void CSave :: WriteInt( const char *pname, const int *data, int count )
-{
-	BufferField( pname, sizeof(int) * count, (const char *)data );
-}
-
-
-void CSave :: WriteFloat( const char *pname, const float *data, int count )
-{
-	BufferField( pname, sizeof(float) * count, (const char *)data );
-}
-
-
-void CSave :: WriteTime( const char *pname, const float *data, int count )
-{
-	int i;
-	Vector tmp, input;
-
-	BufferHeader( pname, sizeof(float) * count );
-	for ( i = 0; i < count; i++ )
-	{
-		float tmp = data[0];
-
-		// Always encode time as a delta from the current time so it can be re-based if loaded in a new level
-		// Times of 0 are never written to the file, so they will be restored as 0, not a relative time
-		if ( m_pdata )
-			tmp -= m_pdata->time;
-
-		BufferData( (const char *)&tmp, sizeof(float) );
-		data ++;
-	}
-}
-
-
-void CSave :: WriteString( const char *pname, const char *pdata )
-{
-#ifdef TOKENIZE
-	short	token = (short)TokenHash( pdata );
-	WriteShort( pname, &token, 1 );
-#else
-	BufferField( pname, strlen(pdata) + 1, pdata );
-#endif
-}
-
-
-void CSave :: WriteString( const char *pname, const int *stringId, int count )
-{
-	int i, size;
-
-#ifdef TOKENIZE
-	short	token = (short)TokenHash( STRING( *stringId ) );
-	WriteShort( pname, &token, 1 );
-#else
-#if 0
-	if ( count != 1 )
-		ALERT( at_error, "No string arrays!\n" );
-	WriteString( pname, (char *)STRING(*stringId) );
-#endif
-
-	size = 0;
-	for ( i = 0; i < count; i++ )
-		size += strlen( STRING( stringId[i] ) ) + 1;
-
-	BufferHeader( pname, size );
-	for ( i = 0; i < count; i++ )
-	{
-		const char *pString = STRING(stringId[i]);
-		BufferData( pString, strlen(pString)+1 );
-	}
-#endif
-}
-
-
-void CSave :: WriteVector( const char *pname, const Vector &value )
-{
-	WriteVector( pname, &value.x, 1 );
-}
-
-
-void CSave :: WriteVector( const char *pname, const float *value, int count )
-{
-	BufferHeader( pname, sizeof(float) * 3 * count );
-	BufferData( (const char *)value, sizeof(float) * 3 * count );
-}
-
-
-
-void CSave :: WritePositionVector( const char *pname, const Vector &value )
-{
-
-	if ( m_pdata && m_pdata->fUseLandmark )
-	{
-		Vector tmp = value - m_pdata->vecLandmarkOffset;
-		WriteVector( pname, tmp );
-	}
-
-	WriteVector( pname, value );
-}
-
-
-void CSave :: WritePositionVector( const char *pname, const float *value, int count )
-{
-	int i;
-	Vector tmp, input;
-
-	BufferHeader( pname, sizeof(float) * 3 * count );
-	for ( i = 0; i < count; i++ )
-	{
-		Vector tmp( value[0], value[1], value[2] );
-
-		if ( m_pdata && m_pdata->fUseLandmark )
-			tmp = tmp - m_pdata->vecLandmarkOffset;
-
-		BufferData( (const char *)&tmp.x, sizeof(float) * 3 );
-		value += 3;
-	}
-}
-
-
-void CSave :: WriteFunction( const char *pname, void **data, int count )
-{
-	const char *functionName;
-
-	functionName = NAME_FOR_FUNCTION( (uint32)*data );
-	if ( functionName )
-		BufferField( pname, strlen(functionName) + 1, functionName );
-	else
-		ALERT( at_error, "Invalid function pointer in entity!" );
-}
-
-
-void EntvarsKeyvalue( entvars_t *pev, KeyValueData *pkvd )
-{
-	int i;
-	TYPEDESCRIPTION		*pField;
-
-	for ( i = 0; i < ENTVARS_COUNT; i++ )
-	{
-		pField = &gEntvarsDescription[i];
-
-		if ( !stricmp( pField->fieldName, pkvd->szKeyName ) )
-		{
-			switch( pField->fieldType )
-			{
-			case FIELD_MODELNAME:
-			case FIELD_SOUNDNAME:
-			case FIELD_STRING:
-				(*(int *)((char *)pev + pField->fieldOffset)) = ALLOC_STRING( pkvd->szValue );
-				break;
-
-			case FIELD_TIME:
-			case FIELD_FLOAT:
-				(*(float *)((char *)pev + pField->fieldOffset)) = atof( pkvd->szValue );
-				break;
-
-			case FIELD_INTEGER:
-				(*(int *)((char *)pev + pField->fieldOffset)) = atoi( pkvd->szValue );
-				break;
-
-			case FIELD_POSITION_VECTOR:
-			case FIELD_VECTOR:
-				UTIL_StringToVector( (float *)((char *)pev + pField->fieldOffset), pkvd->szValue );
-				break;
-
-			default:
-			case FIELD_EVARS:
-			case FIELD_CLASSPTR:
-			case FIELD_EDICT:
-			case FIELD_ENTITY:
-			case FIELD_POINTER:
-				ALERT( at_error, "Bad field in entity!!\n" );
-				break;
-			}
-			pkvd->fHandled = TRUE;
-			return;
-		}
-	}
-}
-
-
-
-int CSave :: WriteEntVars( const char *pname, entvars_t *pev )
-{
-	return WriteFields( pname, pev, gEntvarsDescription, ENTVARS_COUNT );
-}
-
-
-
-int CSave :: WriteFields( const char *pname, void *pBaseData, TYPEDESCRIPTION *pFields, int fieldCount )
-{
-	int				i, j, actualCount, emptyCount;
-	TYPEDESCRIPTION	*pTest;
-	int				entityArray[MAX_ENTITYARRAY];
-
-	// Precalculate the number of empty fields
-	emptyCount = 0;
-	for ( i = 0; i < fieldCount; i++ )
-	{
-		void *pOutputData;
-		pOutputData = ((char *)pBaseData + pFields[i].fieldOffset );
-		if ( DataEmpty( (const char *)pOutputData, pFields[i].fieldSize * gSizes[pFields[i].fieldType] ) )
-			emptyCount++;
-	}
-
-	// Empty fields will not be written, write out the actual number of fields to be written
-	actualCount = fieldCount - emptyCount;
-	WriteInt( pname, &actualCount, 1 );
-
-	for ( i = 0; i < fieldCount; i++ )
-	{
-		void *pOutputData;
-		pTest = &pFields[ i ];
-		pOutputData = ((char *)pBaseData + pTest->fieldOffset );
-
-		// UNDONE: Must we do this twice?
-		if ( DataEmpty( (const char *)pOutputData, pTest->fieldSize * gSizes[pTest->fieldType] ) )
-			continue;
-
-		switch( pTest->fieldType )
-		{
-		case FIELD_FLOAT:
-			WriteFloat( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
-		break;
-		case FIELD_TIME:
-			WriteTime( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
-		break;
-		case FIELD_MODELNAME:
-		case FIELD_SOUNDNAME:
-		case FIELD_STRING:
-			WriteString( pTest->fieldName, (int *)pOutputData, pTest->fieldSize );
-		break;
-		case FIELD_CLASSPTR:
-		case FIELD_EVARS:
-		case FIELD_EDICT:
-		case FIELD_ENTITY:
-		case FIELD_EHANDLE:
-			if ( pTest->fieldSize > MAX_ENTITYARRAY )
-				ALERT( at_error, "Can't save more than %d entities in an array!!!\n", MAX_ENTITYARRAY );
-			for ( j = 0; j < pTest->fieldSize; j++ )
-			{
-				switch( pTest->fieldType )
-				{
-					case FIELD_EVARS:
-						entityArray[j] = EntityIndex( ((entvars_t **)pOutputData)[j] );
-					break;
-					case FIELD_CLASSPTR:
-						entityArray[j] = EntityIndex( ((CBaseEntity **)pOutputData)[j] );
-					break;
-					case FIELD_EDICT:
-						entityArray[j] = EntityIndex( ((edict_t **)pOutputData)[j] );
-					break;
-					case FIELD_ENTITY:
-						entityArray[j] = EntityIndex( ((EOFFSET *)pOutputData)[j] );
-					break;
-					case FIELD_EHANDLE:
-						entityArray[j] = EntityIndex( (CBaseEntity *)(((EHANDLE *)pOutputData)[j]) );
-					break;
-				}
-			}
-			WriteInt( pTest->fieldName, entityArray, pTest->fieldSize );
-		break;
-		case FIELD_POSITION_VECTOR:
-			WritePositionVector( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
-		break;
-		case FIELD_VECTOR:
-			WriteVector( pTest->fieldName, (float *)pOutputData, pTest->fieldSize );
-		break;
-
-		case FIELD_BOOLEAN:
-		case FIELD_INTEGER:
-			WriteInt( pTest->fieldName, (int *)pOutputData, pTest->fieldSize );
-		break;
-
-		case FIELD_SHORT:
-			WriteData( pTest->fieldName, 2 * pTest->fieldSize, ((char *)pOutputData) );
-		break;
-
-		case FIELD_CHARACTER:
-			WriteData( pTest->fieldName, pTest->fieldSize, ((char *)pOutputData) );
-		break;
-
-		// For now, just write the address out, we're not going to change memory while doing this yet!
-		case FIELD_POINTER:
-			WriteInt( pTest->fieldName, (int *)(char *)pOutputData, pTest->fieldSize );
-		break;
-
-		case FIELD_FUNCTION:
-			WriteFunction( pTest->fieldName, (void **)pOutputData, pTest->fieldSize );
-		break;
-		default:
-			ALERT( at_error, "Bad field type\n" );
-		}
-	}
-
-	return 1;
-}
-
-
-void CSave :: BufferString( char *pdata, int len )
-{
-	char c = 0;
-
-	BufferData( pdata, len );		// Write the string
-	BufferData( &c, 1 );			// Write a null terminator
-}
-
-
-int CSave :: DataEmpty( const char *pdata, int size )
-{
-	for ( int i = 0; i < size; i++ )
-	{
-		if ( pdata[i] )
-			return 0;
-	}
-	return 1;
-}
-
-
-void CSave :: BufferField( const char *pname, int size, const char *pdata )
-{
-	BufferHeader( pname, size );
-	BufferData( pdata, size );
-}
-
-
-void CSave :: BufferHeader( const char *pname, int size )
-{
-	short	hashvalue = TokenHash( pname );
-	if ( size > 1<<(sizeof(short)*8) )
-		ALERT( at_error, "CSave :: BufferHeader() size parameter exceeds 'short'!" );
-	BufferData( (const char *)&size, sizeof(short) );
-	BufferData( (const char *)&hashvalue, sizeof(short) );
-}
-
-
-void CSave :: BufferData( const char *pdata, int size )
-{
-	if ( !m_pdata )
-		return;
-
-	if ( m_pdata->size + size > m_pdata->bufferSize )
-	{
-		ALERT( at_error, "Save/Restore overflow!" );
-		m_pdata->size = m_pdata->bufferSize;
-		return;
-	}
-
-	memcpy( m_pdata->pCurrentData, pdata, size );
-	m_pdata->pCurrentData += size;
-	m_pdata->size += size;
-}
-
-
-
-// --------------------------------------------------------------
-//
-// CRestore
-//
-// --------------------------------------------------------------
-
-int CRestore::ReadField( void *pBaseData, TYPEDESCRIPTION *pFields, int fieldCount, int startField, int size, char *pName, void *pData )
-{
-	int i, j, stringCount, fieldNumber, entityIndex;
-	TYPEDESCRIPTION *pTest;
-	float	time, timeData;
-	Vector	position;
-	edict_t	*pent;
-	char	*pString;
-
-	time = 0;
-	position = Vector(0,0,0);
-
-	if ( m_pdata )
-	{
-		time = m_pdata->time;
-		if ( m_pdata->fUseLandmark )
-			position = m_pdata->vecLandmarkOffset;
-	}
-
-	for ( i = 0; i < fieldCount; i++ )
-	{
-		fieldNumber = (i+startField)%fieldCount;
-		pTest = &pFields[ fieldNumber ];
-		if ( !stricmp( pTest->fieldName, pName ) )
-		{
-			if ( !m_global || !(pTest->flags & FTYPEDESC_GLOBAL) )
-			{
-				for ( j = 0; j < pTest->fieldSize; j++ )
-				{
-					void *pOutputData = ((char *)pBaseData + pTest->fieldOffset + (j*gSizes[pTest->fieldType]) );
-					void *pInputData = (char *)pData + j * gSizes[pTest->fieldType];
-
-					switch( pTest->fieldType )
-					{
-					case FIELD_TIME:
-						timeData = *(float *)pInputData;
-						// Re-base time variables
-						timeData += time;
-						*((float *)pOutputData) = timeData;
-					break;
-					case FIELD_FLOAT:
-						*((float *)pOutputData) = *(float *)pInputData;
-					break;
-					case FIELD_MODELNAME:
-					case FIELD_SOUNDNAME:
-					case FIELD_STRING:
-						// Skip over j strings
-						pString = (char *)pData;
-						for ( stringCount = 0; stringCount < j; stringCount++ )
-						{
-							while (*pString)
-								pString++;
-							pString++;
-						}
-						pInputData = pString;
-						if ( strlen( (char *)pInputData ) == 0 )
-							*((int *)pOutputData) = 0;
-						else
-						{
-							int string;
-
-							string = ALLOC_STRING( (char *)pInputData );
-							
-							*((int *)pOutputData) = string;
-
-							if ( !FStringNull( string ) && m_precache )
-							{
-								if ( pTest->fieldType == FIELD_MODELNAME )
-									PRECACHE_MODEL( (char *)STRING( string ) );
-								else if ( pTest->fieldType == FIELD_SOUNDNAME )
-									PRECACHE_SOUND( (char *)STRING( string ) );
-							}
-						}
-					break;
-					case FIELD_EVARS:
-						entityIndex = *( int *)pInputData;
-						pent = EntityFromIndex( entityIndex );
-						if ( pent )
-							*((entvars_t **)pOutputData) = VARS(pent);
-						else
-							*((entvars_t **)pOutputData) = NULL;
-					break;
-					case FIELD_CLASSPTR:
-						entityIndex = *( int *)pInputData;
-						pent = EntityFromIndex( entityIndex );
-						if ( pent )
-							*((CBaseEntity **)pOutputData) = CBaseEntity::Instance(pent);
-						else
-							*((CBaseEntity **)pOutputData) = NULL;
-					break;
-					case FIELD_EDICT:
-						entityIndex = *( int *)pInputData;
-						pent = EntityFromIndex( entityIndex );
-						*((edict_t **)pOutputData) = pent;
-					break;
-					case FIELD_EHANDLE:
-						// Input and Output sizes are different!
-						pOutputData = (char *)pOutputData + j*(sizeof(EHANDLE) - gSizes[pTest->fieldType]);
-						entityIndex = *( int *)pInputData;
-						pent = EntityFromIndex( entityIndex );
-						if ( pent )
-							*((EHANDLE *)pOutputData) = CBaseEntity::Instance(pent);
-						else
-							*((EHANDLE *)pOutputData) = NULL;
-					break;
-					case FIELD_ENTITY:
-						entityIndex = *( int *)pInputData;
-						pent = EntityFromIndex( entityIndex );
-						if ( pent )
-							*((EOFFSET *)pOutputData) = OFFSET(pent);
-						else
-							*((EOFFSET *)pOutputData) = 0;
-					break;
-					case FIELD_VECTOR:
-						((float *)pOutputData)[0] = ((float *)pInputData)[0];
-						((float *)pOutputData)[1] = ((float *)pInputData)[1];
-						((float *)pOutputData)[2] = ((float *)pInputData)[2];
-					break;
-					case FIELD_POSITION_VECTOR:
-						((float *)pOutputData)[0] = ((float *)pInputData)[0] + position.x;
-						((float *)pOutputData)[1] = ((float *)pInputData)[1] + position.y;
-						((float *)pOutputData)[2] = ((float *)pInputData)[2] + position.z;
-					break;
-
-					case FIELD_BOOLEAN:
-					case FIELD_INTEGER:
-						*((int *)pOutputData) = *( int *)pInputData;
-					break;
-
-					case FIELD_SHORT:
-						*((short *)pOutputData) = *( short *)pInputData;
-					break;
-
-					case FIELD_CHARACTER:
-						*((char *)pOutputData) = *( char *)pInputData;
-					break;
-
-					case FIELD_POINTER:
-						*((int *)pOutputData) = *( int *)pInputData;
-					break;
-					case FIELD_FUNCTION:
-						if ( strlen( (char *)pInputData ) == 0 )
-							*((int *)pOutputData) = 0;
-						else
-							*((int *)pOutputData) = FUNCTION_FROM_NAME( (char *)pInputData );
-					break;
-
-					default:
-						ALERT( at_error, "Bad field type\n" );
-					}
-				}
-			}
-#if 0
-			else
-			{
-				ALERT( at_console, "Skipping global field %s\n", pName );
-			}
-#endif
-			return fieldNumber;
-		}
-	}
-
-	return -1;
-}
-
-
-int CRestore::ReadEntVars( const char *pname, entvars_t *pev )
-{
-	return ReadFields( pname, pev, gEntvarsDescription, ENTVARS_COUNT );
-}
-
-
-int CRestore::ReadFields( const char *pname, void *pBaseData, TYPEDESCRIPTION *pFields, int fieldCount )
-{
-	unsigned short	i, token;
-	int		lastField, fileCount;
-	HEADER	header;
-
-	i = ReadShort();
-	ASSERT( i == sizeof(int) );			// First entry should be an int
-
-	token = ReadShort();
-
-	// Check the struct name
-	if ( token != TokenHash(pname) )			// Field Set marker
-	{
-//		ALERT( at_error, "Expected %s found %s!\n", pname, BufferPointer() );
-		BufferRewind( 2*sizeof(short) );
-		return 0;
-	}
-
-	// Skip over the struct name
-	fileCount = ReadInt();						// Read field count
-
-	lastField = 0;								// Make searches faster, most data is read/written in the same order
-
-	// Clear out base data
-	for ( i = 0; i < fieldCount; i++ )
-	{
-		// Don't clear global fields
-		if ( !m_global || !(pFields[i].flags & FTYPEDESC_GLOBAL) )
-			memset( ((char *)pBaseData + pFields[i].fieldOffset), 0, pFields[i].fieldSize * gSizes[pFields[i].fieldType] );
-	}
-
-	for ( i = 0; i < fileCount; i++ )
-	{
-		BufferReadHeader( &header );
-		lastField = ReadField( pBaseData, pFields, fieldCount, lastField, header.size, m_pdata->pTokens[header.token], header.pData );
-		lastField++;
-	}
-	
-	return 1;
-}
-
-
-void CRestore::BufferReadHeader( HEADER *pheader )
-{
-	ASSERT( pheader!=NULL );
-	pheader->size = ReadShort();				// Read field size
-	pheader->token = ReadShort();				// Read field name token
-	pheader->pData = BufferPointer();			// Field Data is next
-	BufferSkipBytes( pheader->size );			// Advance to next field
-}
-
-
-short	CRestore::ReadShort( void )
-{
-	short tmp = 0;
-
-	BufferReadBytes( (char *)&tmp, sizeof(short) );
-
-	return tmp;
-}
-
-int	CRestore::ReadInt( void )
-{
-	int tmp = 0;
-
-	BufferReadBytes( (char *)&tmp, sizeof(int) );
-
-	return tmp;
-}
-
-int CRestore::ReadNamedInt( const char *pName )
-{
-	HEADER header;
-
-	BufferReadHeader( &header );
-	return ((int *)header.pData)[0];
-}
-
-char *CRestore::ReadNamedString( const char *pName )
-{
-	HEADER header;
-
-	BufferReadHeader( &header );
-#ifdef TOKENIZE
-	return (char *)(m_pdata->pTokens[*(short *)header.pData]);
-#else
-	return (char *)header.pData;
-#endif
-}
-
-
-char *CRestore::BufferPointer( void )
-{
-	if ( !m_pdata )
-		return NULL;
-
-	return m_pdata->pCurrentData;
-}
-
-void CRestore::BufferReadBytes( char *pOutput, int size )
-{
-	ASSERT( m_pdata !=NULL );
-
-	if ( !m_pdata || Empty() )
-		return;
-
-	if ( (m_pdata->size + size) > m_pdata->bufferSize )
-	{
-		ALERT( at_error, "Restore overflow!" );
-		m_pdata->size = m_pdata->bufferSize;
-		return;
-	}
-
-	if ( pOutput )
-		memcpy( pOutput, m_pdata->pCurrentData, size );
-	m_pdata->pCurrentData += size;
-	m_pdata->size += size;
-}
-
-
-void CRestore::BufferSkipBytes( int bytes )
-{
-	BufferReadBytes( NULL, bytes );
-}
-
-int CRestore::BufferSkipZString( void )
-{
-	char *pszSearch;
-	int	 len;
-
-	if ( !m_pdata )
-		return 0;
-
-	int maxLen = m_pdata->bufferSize - m_pdata->size;
-
-	len = 0;
-	pszSearch = m_pdata->pCurrentData;
-	while ( *pszSearch++ && len < maxLen )
-		len++;
-
-	len++;
-
-	BufferSkipBytes( len );
-
-	return len;
-}
-
-int	CRestore::BufferCheckZString( const char *string )
-{
-	if ( !m_pdata )
-		return 0;
-
-	int maxLen = m_pdata->bufferSize - m_pdata->size;
-	int len = strlen( string );
-	if ( len <= maxLen )
-	{
-		if ( !strncmp( string, m_pdata->pCurrentData, len ) )
-			return 1;
-	}
-	return 0;
-}
-

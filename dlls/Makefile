@@ -1,186 +1,215 @@
-#
-# Half-Life Full SDK 2.3 hl_i386.so Makefile for x86 Linux
-#
-# October 2002 by Leon Hartwig (hartwig@valvesoftware.com)
-#
+# X-Half-Life GAME DLL
+# Copyright (c) Xawari
+# XHL Linux port
+# Copyright (c) mittorn
+# NOTE: defines must be taken from project file
 
-DLLNAME=hl
-
-ARCH=i386
-
-#make sure this is the correct compiler for your system
 CC=gcc
+CXX=g++
 
-DLL_SRCDIR=.
-ENGINE_SRCDIR=../engine
-COMMON_SRCDIR=../common
-WPN_SHARED_SRCDIR=./wpn_shared
-PM_SHARED_SRCDIR=../pm_shared
-GAME_SHARED_SRCDIR=../game_shared
+PROJECTDEFINES = -fexceptions -std=gnu++98 -fsigned-char -fpermissive -Wextra -Wno-write-strings \
+    -DLINUX -D_LINUX -DSERVER_DLL -DNOSQB -DUSE_EXCEPTIONS -DNO_VOICEGAMEMGR -DUSE_WEAPONBITS -DOLD_DEATHMSG -DSV_NO_PITCH_CORRECTION -DSVDLL_NEWFUNCTIONS \
+    -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf -D_strtime=strtime -Wno-invalid-offsetof -Wno-conversion-null
 
-DLL_OBJDIR=$(DLL_SRCDIR)/obj
-WPN_SHARED_OBJDIR=$(WPN_SHARED_SRCDIR)/obj
-PM_SHARED_OBJDIR=$(PM_SHARED_SRCDIR)/obj
-GAME_SHARED_OBJDIR=$(GAME_SHARED_SRCDIR)/obj
+ifeq ($(DEBUG),1)
+BUILDCONFIGNAME = debug
+BUILDCONFIGFLAGS = -O0 -g -fno-omit-frame-pointer -D_DEBUG
+else
+BUILDCONFIGNAME = release
+BUILDCONFIGFLAGS = -O2 -frtti -DNDEBUG
+endif
 
-BASE_CFLAGS=	-Dstricmp=strcasecmp -D_strnicmp=strncasecmp -Dstrnicmp=strncasecmp \
-		-DCLIENT_WEAPONS
+TARGET = XDM.so
+TARGETDIR = $(BUILDCONFIGNAME)_linux
+TARGETPATH = $(TARGETDIR)/$(TARGET)
+INTERMEDIATE_PATH = $(TARGETDIR)/intermediate
 
-#safe optimization
-CFLAGS=$(BASE_CFLAGS) -w -m486 -O1
+SRCS :=
+SRCS += ../common/color.cpp
+SRCS += ../common/materials.cpp
+SRCS += ../common/shared_resources.cpp
+SRCS += ../common/util_common.cpp
+SRCS += ../common/util_vector.cpp
+SRCS += ../common/vector.cpp
+SRCS += ../game_shared/weapons/WeaponAcidLauncher.cpp
+SRCS += ../game_shared/weapons/WeaponBeamRifle.cpp
+SRCS += ../game_shared/weapons/WeaponBHG.cpp
+SRCS += ../game_shared/weapons/WeaponChemGun.cpp
+SRCS += ../game_shared/weapons/WeaponCrossbow.cpp
+SRCS += ../game_shared/weapons/WeaponCrowbar.cpp
+SRCS += ../game_shared/weapons/WeaponCustom.cpp
+SRCS += ../game_shared/weapons/WeaponDiskLauncher.cpp
+SRCS += ../game_shared/weapons/WeaponDisplacer.cpp
+SRCS += ../game_shared/weapons/WeaponEgon.cpp
+SRCS += ../game_shared/weapons/WeaponFlame.cpp
+SRCS += ../game_shared/weapons/WeaponGauss.cpp
+SRCS += ../game_shared/weapons/WeaponGlock.cpp
+SRCS += ../game_shared/weapons/WeaponGrenadeLauncher.cpp
+SRCS += ../game_shared/weapons/WeaponHandGrenade.cpp
+SRCS += ../game_shared/weapons/WeaponHornetGun.cpp
+SRCS += ../game_shared/weapons/WeaponMP5.cpp
+SRCS += ../game_shared/weapons/WeaponPlasma.cpp
+SRCS += ../game_shared/weapons/WeaponPython.cpp
+SRCS += ../game_shared/weapons/WeaponRPG.cpp
+SRCS += ../game_shared/weapons/weapons.cpp
+SRCS += ../game_shared/weapons/WeaponSatchel.cpp
+SRCS += ../game_shared/weapons/WeaponShotgun.cpp
+SRCS += ../game_shared/weapons/WeaponSniperRifle.cpp
+SRCS += ../game_shared/weapons/WeaponSqueak.cpp
+SRCS += ../game_shared/weapons/WeaponStrikeTarget.cpp
+SRCS += ../game_shared/weapons/WeaponSword.cpp
+SRCS += ../game_shared/weapons/WeaponTripmine.cpp
+SRCS += ../game_shared/voice_banmgr.cpp
+SRCS += ../game_shared/voice_gamemgr.cpp
+#SRCS += ../pm_shared/pm_debug.c
+#SRCS += ../pm_shared/pm_math.c
+SRCS += ../pm_shared/pm_shared.cpp
+SRCS += ../dlls/monsters/ai_basenpc_schedule.cpp
+SRCS += ../dlls/monsters/aflock.cpp
+SRCS += ../dlls/monsters/agrunt.cpp
+SRCS += ../dlls/monsters/apache.cpp
+SRCS += ../dlls/monsters/barnacle.cpp
+SRCS += ../dlls/monsters/barney.cpp
+SRCS += ../dlls/monsters/bigmomma.cpp
+SRCS += ../dlls/monsters/bloater.cpp
+SRCS += ../dlls/monsters/bullsquid.cpp
+SRCS += ../dlls/monsters/controller.cpp
+SRCS += ../dlls/monsters/flyingmonster.cpp
+SRCS += ../dlls/monsters/gargantua.cpp
+SRCS += ../dlls/monsters/genericmonster.cpp
+SRCS += ../dlls/monsters/gman.cpp
+SRCS += ../dlls/monsters/hassassin.cpp
+SRCS += ../dlls/monsters/headcrab.cpp
+SRCS += ../dlls/monsters/hgrunt.cpp
+SRCS += ../dlls/monsters/houndeye.cpp
+SRCS += ../dlls/monsters/ichthyosaur.cpp
+SRCS += ../dlls/monsters/islave.cpp
+SRCS += ../dlls/monsters/leech.cpp
+SRCS += ../dlls/monsters/massassin.cpp
+SRCS += ../dlls/monsters/monsters.cpp
+SRCS += ../dlls/monsters/monsterstate.cpp
+SRCS += ../dlls/monsters/nihilanth.cpp
+SRCS += ../dlls/monsters/osprey.cpp
+SRCS += ../dlls/monsters/pitdrone.cpp
+SRCS += ../dlls/monsters/playermonster.cpp
+SRCS += ../dlls/monsters/rat.cpp
+SRCS += ../dlls/monsters/roach.cpp
+SRCS += ../dlls/monsters/scientist.cpp
+SRCS += ../dlls/monsters/shocktrooper.cpp
+SRCS += ../dlls/monsters/squadmonster.cpp
+SRCS += ../dlls/monsters/talkmonster.cpp
+SRCS += ../dlls/monsters/tentacle.cpp
+SRCS += ../dlls/monsters/turret.cpp
+SRCS += ../dlls/monsters/voltigore.cpp
+SRCS += ../dlls/monsters/zombie.cpp
+SRCS += ../dlls/gamerules/coop_gamerules.cpp
+SRCS += ../dlls/gamerules/ctf_gamerules.cpp
+SRCS += ../dlls/gamerules/dom_gamerules.cpp
+SRCS += ../dlls/gamerules/gamerules.cpp
+SRCS += ../dlls/gamerules/lms_gamerules.cpp
+SRCS += ../dlls/gamerules/maprules.cpp
+SRCS += ../dlls/gamerules/multiplay_gamerules.cpp
+SRCS += ../dlls/gamerules/round_gamerules.cpp
+SRCS += ../dlls/gamerules/singleplay_gamerules.cpp
+SRCS += ../dlls/gamerules/teamplay_gamerules.cpp
+SRCS += ../dlls/animating.cpp
+SRCS += ../dlls/bmodels.cpp
+SRCS += ../dlls/buttons.cpp
+SRCS += ../dlls/doors.cpp
+SRCS += ../dlls/effects.cpp
+SRCS += ../dlls/effects_new.cpp
+SRCS += ../dlls/ent_alias.cpp
+SRCS += ../dlls/ent_functional.cpp
+SRCS += ../dlls/ent_locus.cpp
+SRCS += ../dlls/environment.cpp
+SRCS += ../dlls/explode.cpp
+SRCS += ../dlls/func_break.cpp
+SRCS += ../dlls/func_tank.cpp
+SRCS += ../dlls/gibs.cpp
+SRCS += ../dlls/h_cycler.cpp
+SRCS += ../dlls/items.cpp
+SRCS += ../dlls/lights.cpp
+SRCS += ../dlls/monstermaker.cpp
+SRCS += ../dlls/mortar.cpp
+SRCS += ../dlls/pathcorner.cpp
+SRCS += ../dlls/plats.cpp
+SRCS += ../dlls/scripted.cpp
+SRCS += ../dlls/sound.cpp
+SRCS += ../dlls/soundent.cpp
+SRCS += ../dlls/subs.cpp
+SRCS += ../dlls/triggers.cpp
+SRCS += ../dlls/triggers_new.cpp
+SRCS += ../dlls/wallcharger.cpp
+SRCS += ../dlls/weaponbox.cpp
+SRCS += ../dlls/xen.cpp
+SRCS += ../dlls/ammo.cpp
+SRCS += ../dlls/animation.cpp
+SRCS += ../dlls/cbase.cpp
+SRCS += ../dlls/client.cpp
+SRCS += ../dlls/combat.cpp
+SRCS += ../dlls/defaultai.cpp
+SRCS += ../dlls/entconfig.cpp
+SRCS += ../dlls/game.cpp
+SRCS += ../dlls/globals.cpp
+SRCS += ../dlls/h_ai.cpp
+SRCS += ../dlls/h_export.cpp
+SRCS += ../dlls/mapcycle.cpp
+SRCS += ../dlls/movewith.cpp
+SRCS += ../dlls/nodes.cpp
+SRCS += ../dlls/observer.cpp
+SRCS += ../dlls/plane.cpp
+SRCS += ../dlls/player.cpp
+SRCS += ../dlls/saverestore.cpp
+SRCS += ../dlls/skill.cpp
+SRCS += ../dlls/spectator.cpp
+SRCS += ../dlls/util.cpp
+SRCS += ../dlls/util_xhl.cpp
+SRCS += ../dlls/world.cpp
+SRCS += ../dlls/projectiles/agrenade.cpp
+SRCS += ../dlls/projectiles/argrenade.cpp
+SRCS += ../dlls/projectiles/blackball.cpp
+SRCS += ../dlls/projectiles/crossbowbolt.cpp
+SRCS += ../dlls/projectiles/customprojectile.cpp
+SRCS += ../dlls/projectiles/flamecloud.cpp
+SRCS += ../dlls/projectiles/ggrenade.cpp
+SRCS += ../dlls/projectiles/hornet.cpp
+SRCS += ../dlls/projectiles/lgrenade.cpp
+SRCS += ../dlls/projectiles/lightp.cpp
+SRCS += ../dlls/projectiles/mortartarget.cpp
+SRCS += ../dlls/projectiles/nucleardevice.cpp
+SRCS += ../dlls/projectiles/plasmaball.cpp
+SRCS += ../dlls/projectiles/projectile.cpp
+SRCS += ../dlls/projectiles/razordisk.cpp
+SRCS += ../dlls/projectiles/rpgrocket.cpp
+SRCS += ../dlls/projectiles/satchelcharge.cpp
+SRCS += ../dlls/projectiles/squeakgrenade.cpp
+SRCS += ../dlls/projectiles/teleporter.cpp
+SRCS += ../dlls/projectiles/tripminegrenade.cpp
 
-#full optimization
-#CFLAGS=$(BASE_CFLAGS) -w -O1 -m486 -ffast-math -funroll-loops \
-	-fomit-frame-pointer -fexpensive-optimizations \
-	-malign-loops=2 -malign-jumps=2 -malign-functions=2
 
-#use these when debugging 
-#CFLAGS=$(BASE_CFLAGS) -g
+INCLUDES = -I. -I../common -I../engine -I../engine/common -I../public -I../pm_shared \
+    -Igamerules -Iprojectiles -I../game_shared -I../game_shared/weapons
 
-INCLUDEDIRS=-I. -I$(ENGINE_SRCDIR) -I$(COMMON_SRCDIR) -I$(PM_SHARED_SRCDIR) -I$(GAME_SHARED_SRCDIR)
+OBJS = $(patsubst ../%.cpp,$(INTERMEDIATE_PATH)/%.o,$(SRCS)) $(patsubst ../%.c,$(INTERMEDIATE_PATH)/%.o,$(SRCS_C))
 
-LDFLAGS=
+DIRS = $(INTERMEDIATE_PATH) $(INTERMEDIATE_PATH)/common $(INTERMEDIATE_PATH)/dlls $(INTERMEDIATE_PATH)/dlls/gamerules $(INTERMEDIATE_PATH)/dlls/projectiles $(INTERMEDIATE_PATH)/game_shared/weapons $(INTERMEDIATE_PATH)/pm_shared $(INTERMEDIATE_PATH)/dlls/monsters
 
-SHLIBEXT=so
-SHLIBCFLAGS=-fPIC
-SHLIBLDFLAGS=-shared
+CFLAGS = -m32 -march=i686 -mtune=generic $(BUILDCONFIGFLAGS)
+LDFLAGS = -m32 -lstdc++ -static-libgcc
 
-DO_CC=$(CC) $(CFLAGS) $(SHLIBCFLAGS) $(INCLUDEDIRS) -o $@ -c $<
+$(TARGET) : $(OBJS)
+	$(CXX) $(LDFLAGS) $(OBJS) -o $(TARGETPATH) -shared -Wl,--no-undefined -fPIC -lm -ldl
 
-#############################################################################
-# SETUP AND BUILD
-# GAME
-#############################################################################
+$(OBJS) :| $(DIRS)
 
-$(DLL_OBJDIR)/%.o: $(DLL_SRCDIR)/%.cpp
-	$(DO_CC)
+$(DIRS):
+	mkdir -p $@
 
-$(WPN_SHARED_OBJDIR)/%.o: $(WPN_SHARED_SRCDIR)/%.cpp
-	$(DO_CC)
+$(INTERMEDIATE_PATH)/%.o : ../%.c
+	$(CC) $(CFLAGS) $(INCLUDES) $(PROJECTDEFINES) -fPIC -c $< -o $@
 
-$(GAME_SHARED_OBJDIR)/%.o: $(GAME_SHARED_SRCDIR)/%.cpp
-	$(DO_CC)
+$(INTERMEDIATE_PATH)/%.o : ../%.cpp
+	$(CXX) $(CFLAGS) $(INCLUDES) $(PROJECTDEFINES) -fPIC -c $< -o $@
 
-$(PM_SHARED_OBJDIR)/%.o: $(PM_SHARED_SRCDIR)/%.c
-	$(DO_CC)
-
-OBJ = \
-	$(DLL_OBJDIR)/aflock.o \
-	$(DLL_OBJDIR)/agrunt.o \
-	$(DLL_OBJDIR)/airtank.o \
-	$(DLL_OBJDIR)/animating.o \
-	$(DLL_OBJDIR)/animation.o \
-	$(DLL_OBJDIR)/apache.o \
-	$(DLL_OBJDIR)/barnacle.o \
-	$(DLL_OBJDIR)/barney.o \
-	$(DLL_OBJDIR)/bigmomma.o \
-	$(DLL_OBJDIR)/bloater.o \
-	$(DLL_OBJDIR)/bmodels.o \
-	$(DLL_OBJDIR)/bullsquid.o \
-	$(DLL_OBJDIR)/buttons.o \
-	$(DLL_OBJDIR)/cbase.o \
-	$(DLL_OBJDIR)/client.o \
-	$(DLL_OBJDIR)/combat.o \
-	$(DLL_OBJDIR)/controller.o \
-	$(DLL_OBJDIR)/crossbow.o \
-	$(DLL_OBJDIR)/crowbar.o \
-	$(DLL_OBJDIR)/defaultai.o \
-	$(DLL_OBJDIR)/doors.o \
-	$(DLL_OBJDIR)/effects.o \
-	$(DLL_OBJDIR)/egon.o \
-	$(DLL_OBJDIR)/explode.o \
-	$(DLL_OBJDIR)/flyingmonster.o \
-	$(DLL_OBJDIR)/func_break.o \
-	$(DLL_OBJDIR)/func_tank.o \
-	$(DLL_OBJDIR)/game.o \
-	$(DLL_OBJDIR)/gamerules.o \
-	$(DLL_OBJDIR)/gargantua.o \
-	$(DLL_OBJDIR)/gauss.o \
-	$(DLL_OBJDIR)/genericmonster.o \
-	$(DLL_OBJDIR)/ggrenade.o \
-	$(DLL_OBJDIR)/globals.o \
-	$(DLL_OBJDIR)/gman.o \
-	$(DLL_OBJDIR)/h_ai.o \
-	$(DLL_OBJDIR)/h_battery.o \
-	$(DLL_OBJDIR)/h_cine.o \
-	$(DLL_OBJDIR)/h_cycler.o \
-	$(DLL_OBJDIR)/h_export.o \
-	$(DLL_OBJDIR)/handgrenade.o \
-	$(DLL_OBJDIR)/hassassin.o \
-	$(DLL_OBJDIR)/headcrab.o \
-	$(DLL_OBJDIR)/healthkit.o \
-	$(DLL_OBJDIR)/hgrunt.o \
-	$(DLL_OBJDIR)/hornet.o \
-	$(DLL_OBJDIR)/hornetgun.o \
-	$(DLL_OBJDIR)/houndeye.o \
-	$(DLL_OBJDIR)/ichthyosaur.o \
-	$(DLL_OBJDIR)/islave.o \
-	$(DLL_OBJDIR)/items.o \
-	$(DLL_OBJDIR)/leech.o \
-	$(DLL_OBJDIR)/lights.o \
-	$(DLL_OBJDIR)/maprules.o \
-	$(DLL_OBJDIR)/monstermaker.o \
-	$(DLL_OBJDIR)/monsters.o \
-	$(DLL_OBJDIR)/monsterstate.o \
-	$(DLL_OBJDIR)/mortar.o \
-	$(DLL_OBJDIR)/mp5.o \
-	$(DLL_OBJDIR)/multiplay_gamerules.o \
-	$(DLL_OBJDIR)/nihilanth.o \
-	$(DLL_OBJDIR)/nodes.o \
-	$(DLL_OBJDIR)/osprey.o \
-	$(DLL_OBJDIR)/pathcorner.o \
-	$(DLL_OBJDIR)/plane.o \
-	$(DLL_OBJDIR)/plats.o \
-	$(DLL_OBJDIR)/player.o \
-	$(DLL_OBJDIR)/python.o \
-	$(DLL_OBJDIR)/rat.o \
-	$(DLL_OBJDIR)/roach.o \
-	$(DLL_OBJDIR)/rpg.o \
-	$(DLL_OBJDIR)/satchel.o \
-	$(DLL_OBJDIR)/schedule.o \
-	$(DLL_OBJDIR)/scientist.o \
-	$(DLL_OBJDIR)/scripted.o \
-	$(DLL_OBJDIR)/shotgun.o \
-	$(DLL_OBJDIR)/singleplay_gamerules.o \
-	$(DLL_OBJDIR)/skill.o \
-	$(DLL_OBJDIR)/sound.o \
-	$(DLL_OBJDIR)/soundent.o \
-	$(DLL_OBJDIR)/spectator.o \
-	$(DLL_OBJDIR)/squadmonster.o \
-	$(DLL_OBJDIR)/squeakgrenade.o \
-	$(DLL_OBJDIR)/subs.o \
-	$(DLL_OBJDIR)/talkmonster.o \
-	$(DLL_OBJDIR)/teamplay_gamerules.o \
-	$(DLL_OBJDIR)/tempmonster.o \
-	$(DLL_OBJDIR)/tentacle.o \
-	$(DLL_OBJDIR)/triggers.o \
-	$(DLL_OBJDIR)/tripmine.o \
-	$(DLL_OBJDIR)/turret.o \
-	$(DLL_OBJDIR)/util.o \
-	$(DLL_OBJDIR)/weapons.o \
-	$(DLL_OBJDIR)/world.o \
-	$(DLL_OBJDIR)/xen.o \
-	$(DLL_OBJDIR)/zombie.o \
-	$(WPN_SHARED_OBJDIR)/hl_wpn_glock.o \
-	$(GAME_SHARED_OBJDIR)/voice_gamemgr.o \
-	$(PM_SHARED_OBJDIR)/pm_debug.o \
-	$(PM_SHARED_OBJDIR)/pm_math.o \
-	$(PM_SHARED_OBJDIR)/pm_shared.o
-
-$(DLLNAME)_$(ARCH).$(SHLIBEXT) : neat $(OBJ)
-	$(CC) $(CFLAGS) $(SHLIBLDFLAGS) $(LDFLAGS) -o $@ $(OBJ)
-
-neat:
-	-mkdir $(DLL_OBJDIR)
-	-mkdir $(WPN_SHARED_OBJDIR)
-	-mkdir $(GAME_SHARED_OBJDIR)
-	-mkdir $(PM_SHARED_OBJDIR)
 clean:
-	-rm -f $(OBJ)
-	-rm -f $(DLLNAME)_$(ARCH).$(SHLIBEXT)
-spotless: clean
-	-rm -r $(DLL_OBJDIR)
-	-rm -r $(WPN_SHARED_OBJDIR)
-	-rm -r $(GAME_SHARED_OBJDIR)
-	-rm -r $(PM_SHARED_OBJDIR)
-
+	$(RM) $(OBJS) $(BUILDCONFIGNAME)_linux/XDM.so

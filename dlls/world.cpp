@@ -1,31 +1,6 @@
-/***
-*
-*	Copyright (c) 1996-2001, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-*   Use, distribution, and modification of this source code and/or resulting
-*   object code is restricted to non-commercial enhancements to products from
-*   Valve LLC.  All other use, distribution, or modification is prohibited
-*   without written permission from Valve LLC.
-*
-****/
-/*
-
-===== world.cpp ========================================================
-
-  precaches and defs for entities and other data that must always be available.
-
-*/
-
 #include "extdll.h"
 #include "util.h"
 #include "cbase.h"
-#include "nodes.h"
-#include "soundent.h"
-#include "client.h"
 #include "decals.h"
 #include "skill.h"
 #include "effects.h"
@@ -33,710 +8,564 @@
 #include "weapons.h"
 #include "gamerules.h"
 #include "teamplay_gamerules.h"
+#include "globals.h"
+#include "game.h"// XDM:
+#include "maprules.h"// spawnflags
+#include "client.h"// ClientPrecache
+#include "entconfig.h"
+#include "pm_materials.h"// Materials
+#include "func_break.h"
+#include "sound.h"
+#include "soundent.h"
+#include "nodes.h"
+#include "shared_resources.h"
+#include "shake.h"
 
-extern CGraph WorldGraph;
-extern CSoundEnt *pSoundEnt;
+// Half-Life-compatible world entity. Not much of an entity, but lots of initialization code here.
 
-extern CBaseEntity				*g_pLastSpawn;
-DLL_GLOBAL edict_t				*g_pBodyQueueHead;
-CGlobalState					gGlobalState;
-extern DLL_GLOBAL	int			gDisplayTitle;
+DLL_GLOBAL CWorld *g_pWorld = NULL;// XDM3038: maybe EHANDLE?
+DLL_GLOBAL char g_szMapName[MAX_MAPNAME];// XDM3038c: string_t will point here?
+extern const char *g_szStandardLightStyles[];
 
-extern void W_Precache(void);
+// XDM: old stuff moved to effects_new.cpp
+// XDM3037a: LinkUserMessages() is now in globals.cpp
 
-//
-// This must match the list in util.h
-//
-DLL_DECALLIST gDecals[] = {
-	{ "{shot1",	0 },		// DECAL_GUNSHOT1 
-	{ "{shot2",	0 },		// DECAL_GUNSHOT2
-	{ "{shot3",0 },			// DECAL_GUNSHOT3
-	{ "{shot4",	0 },		// DECAL_GUNSHOT4
-	{ "{shot5",	0 },		// DECAL_GUNSHOT5
-	{ "{lambda01", 0 },		// DECAL_LAMBDA1
-	{ "{lambda02", 0 },		// DECAL_LAMBDA2
-	{ "{lambda03", 0 },		// DECAL_LAMBDA3
-	{ "{lambda04", 0 },		// DECAL_LAMBDA4
-	{ "{lambda05", 0 },		// DECAL_LAMBDA5
-	{ "{lambda06", 0 },		// DECAL_LAMBDA6
-	{ "{scorch1", 0 },		// DECAL_SCORCH1
-	{ "{scorch2", 0 },		// DECAL_SCORCH2
-	{ "{blood1", 0 },		// DECAL_BLOOD1
-	{ "{blood2", 0 },		// DECAL_BLOOD2
-	{ "{blood3", 0 },		// DECAL_BLOOD3
-	{ "{blood4", 0 },		// DECAL_BLOOD4
-	{ "{blood5", 0 },		// DECAL_BLOOD5
-	{ "{blood6", 0 },		// DECAL_BLOOD6
-	{ "{yblood1", 0 },		// DECAL_YBLOOD1
-	{ "{yblood2", 0 },		// DECAL_YBLOOD2
-	{ "{yblood3", 0 },		// DECAL_YBLOOD3
-	{ "{yblood4", 0 },		// DECAL_YBLOOD4
-	{ "{yblood5", 0 },		// DECAL_YBLOOD5
-	{ "{yblood6", 0 },		// DECAL_YBLOOD6
-	{ "{break1", 0 },		// DECAL_GLASSBREAK1
-	{ "{break2", 0 },		// DECAL_GLASSBREAK2
-	{ "{break3", 0 },		// DECAL_GLASSBREAK3
-	{ "{bigshot1", 0 },		// DECAL_BIGSHOT1
-	{ "{bigshot2", 0 },		// DECAL_BIGSHOT2
-	{ "{bigshot3", 0 },		// DECAL_BIGSHOT3
-	{ "{bigshot4", 0 },		// DECAL_BIGSHOT4
-	{ "{bigshot5", 0 },		// DECAL_BIGSHOT5
-	{ "{spit1", 0 },		// DECAL_SPIT1
-	{ "{spit2", 0 },		// DECAL_SPIT2
-	{ "{bproof1", 0 },		// DECAL_BPROOF1
-	{ "{gargstomp", 0 },	// DECAL_GARGSTOMP1,	// Gargantua stomp crack
-	{ "{smscorch1", 0 },	// DECAL_SMALLSCORCH1,	// Small scorch mark
-	{ "{smscorch2", 0 },	// DECAL_SMALLSCORCH2,	// Small scorch mark
-	{ "{smscorch3", 0 },	// DECAL_SMALLSCORCH3,	// Small scorch mark
-	{ "{mommablob", 0 },	// DECAL_MOMMABIRTH		// BM Birth spray
-	{ "{mommablob", 0 },	// DECAL_MOMMASPLAT		// BM Mortar spray?? need decal
+TYPEDESCRIPTION	CWorld::m_SaveData[] =
+{
+	DEFINE_FIELD(CWorld, m_iRoomType, FIELD_INTEGER),
+	DEFINE_ARRAY(CWorld, m_rgiszAmmoTypes, FIELD_STRING, MAX_AMMO_SLOTS),
+	DEFINE_ARRAY(CWorld, m_rgAmmoMaxCarry, FIELD_UINT32, MAX_AMMO_SLOTS),
 };
 
-/*
-==============================================================================
+IMPLEMENT_SAVERESTORE(CWorld, CBaseEntity);
 
-BODY QUE
+LINK_ENTITY_TO_CLASS(worldspawn, CWorld);
 
-==============================================================================
-*/
-
-#define SF_DECAL_NOTINDEATHMATCH		2048
-
-class CDecal : public CBaseEntity
+//-----------------------------------------------------------------------------
+// Purpose: CWorld spawns first when map is being loaded.
+//-----------------------------------------------------------------------------
+void CWorld::Spawn(byte restore)
 {
-public:
-	void	Spawn( void );
-	void	KeyValue( KeyValueData *pkvd );
-	void	EXPORT StaticDecal( void );
-	void	EXPORT TriggerDecal( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-};
-
-LINK_ENTITY_TO_CLASS( infodecal, CDecal );
-
-// UNDONE:  These won't get sent to joining players in multi-player
-void CDecal :: Spawn( void )
-{
-	if ( pev->skin < 0 || (gpGlobals->deathmatch && FBitSet( pev->spawnflags, SF_DECAL_NOTINDEATHMATCH )) )
+	ASSERT(entindex() == 0);// XDM3035a: in case some moron creates another "worldspawn"
+	if (entindex() != 0)
 	{
-		REMOVE_ENTITY(ENT(pev));
+		SERVER_PRINT("ERROR: another world entity is being created!\n");
+		pev->flags = FL_KILLME;// DispatchSpawn() will return -1
 		return;
 	}
 
-	if ( FStringNull ( pev->targetname ) )
-	{
-		SetThink( &CDecal::StaticDecal );
-		// if there's no targetname, the decal will spray itself on as soon as the world is done spawning.
-		pev->nextthink = gpGlobals->time;
-	}
+	if (restore)// XDM3038c: set this global so every entity may know
+		SetBits(gpGlobals->serverflags, FSERVER_RESTORE);
 	else
+		ClearBits(gpGlobals->serverflags, FSERVER_RESTORE);
+
+	g_pWorld = this;// XDM3034: safer, Precache() gets called more often
+
+	// HACKFIX: restores case of badly entered map name
+	char szMapPath[MAX_PATH];
+	_snprintf(szMapPath, MAX_PATH, "maps/%s.bsp", STRING(gpGlobals->mapname));
+	szMapPath[MAX_PATH-1] = '\0';
+	if (!UTIL_FixFileName(szMapPath, MAX_PATH))
 	{
-		// if there IS a targetname, the decal sprays itself on when it is triggered.
-		SetThink ( &CDecal::SUB_DoNothing );
-		SetUse( &CDecal::TriggerDecal);
-	}
-}
-
-void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	// this is set up as a USE function for infodecals that have targetnames, so that the
-	// decal doesn't get applied until it is fired. (usually by a scripted sequence)
-	TraceResult trace;
-	int			entityIndex;
-
-	UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
-
-	MESSAGE_BEGIN( MSG_BROADCAST, SVC_TEMPENTITY);
-		WRITE_BYTE( TE_BSPDECAL );
-		WRITE_COORD( pev->origin.x );
-		WRITE_COORD( pev->origin.y );
-		WRITE_COORD( pev->origin.z );
-		WRITE_SHORT( (int)pev->skin );
-		entityIndex = (short)ENTINDEX(trace.pHit);
-		WRITE_SHORT( entityIndex );
-		if ( entityIndex )
-			WRITE_SHORT( (int)VARS(trace.pHit)->modelindex );
-	MESSAGE_END();
-
-	SetThink( &CDecal::SUB_Remove );
-	pev->nextthink = gpGlobals->time + 0.1;
-}
-
-
-void CDecal :: StaticDecal( void )
-{
-	TraceResult trace;
-	int			entityIndex, modelIndex;
-
-	UTIL_TraceLine( pev->origin - Vector(5,5,5), pev->origin + Vector(5,5,5),  ignore_monsters, ENT(pev), &trace );
-
-	entityIndex = (short)ENTINDEX(trace.pHit);
-	if ( entityIndex )
-		modelIndex = (int)VARS(trace.pHit)->modelindex;
-	else
-		modelIndex = 0;
-
-	g_engfuncs.pfnStaticDecal( pev->origin, (int)pev->skin, entityIndex, modelIndex );
-
-	SUB_Remove();
-}
-
-
-void CDecal :: KeyValue( KeyValueData *pkvd )
-{
-	if (FStrEq(pkvd->szKeyName, "texture"))
-	{
-		pev->skin = DECAL_INDEX( pkvd->szValue );
-		
-		// Found
-		if ( pev->skin >= 0 )
-			return;
-		ALERT( at_console, "Can't find decal %s\n", pkvd->szValue );
-	}
-	else
-		CBaseEntity::KeyValue( pkvd );
-}
-
-
-// Body queue class here.... It's really just CBaseEntity
-class CCorpse : public CBaseEntity
-{
-	virtual int ObjectCaps( void ) { return FCAP_DONT_SAVE; }	
-};
-
-LINK_ENTITY_TO_CLASS( bodyque, CCorpse );
-
-static void InitBodyQue(void)
-{
-	string_t	istrClassname = MAKE_STRING("bodyque");
-
-	g_pBodyQueueHead = CREATE_NAMED_ENTITY( istrClassname );
-	entvars_t *pev = VARS(g_pBodyQueueHead);
-	
-	// Reserve 3 more slots for dead bodies
-	for ( int i = 0; i < 3; i++ )
-	{
-		pev->owner = CREATE_NAMED_ENTITY( istrClassname );
-		pev = VARS(pev->owner);
-	}
-	
-	pev->owner = g_pBodyQueueHead;
-}
-
-
-//
-// make a body que entry for the given ent so the ent can be respawned elsewhere
-//
-// GLOBALS ASSUMED SET:  g_eoBodyQueueHead
-//
-void CopyToBodyQue(entvars_t *pev) 
-{
-	if (pev->effects & EF_NODRAW)
+		SERVER_PRINTF("==== ERROR: UTIL_FixFileName(\"%s\") FAILED!!! ====\n", szMapPath);
+		//pev->flags = FL_KILLME;// although DispatchSpawn() properly returns -1, engine does not expect it.
+		UTIL_FAIL();
 		return;
-
-	entvars_t *pevHead	= VARS(g_pBodyQueueHead);
-
-	pevHead->angles		= pev->angles;
-	pevHead->model		= pev->model;
-	pevHead->modelindex	= pev->modelindex;
-	pevHead->frame		= pev->frame;
-	pevHead->colormap	= pev->colormap;
-	pevHead->movetype	= MOVETYPE_TOSS;
-	pevHead->velocity	= pev->velocity;
-	pevHead->flags		= 0;
-	pevHead->deadflag	= pev->deadflag;
-	pevHead->renderfx	= kRenderFxDeadPlayer;
-	pevHead->renderamt	= ENTINDEX( ENT( pev ) );
-
-	pevHead->effects    = pev->effects | EF_NOINTERP;
-	//pevHead->goalstarttime = pev->goalstarttime;
-	//pevHead->goalframe	= pev->goalframe;
-	//pevHead->goalendtime = pev->goalendtime ;
-	
-	pevHead->sequence = pev->sequence;
-	pevHead->animtime = pev->animtime;
-
-	UTIL_SetOrigin(pevHead, pev->origin);
-	UTIL_SetSize(pevHead, pev->mins, pev->maxs);
-	g_pBodyQueueHead = pevHead->owner;
-}
-
-
-CGlobalState::CGlobalState( void )
-{
-	Reset();
-}
-
-void CGlobalState::Reset( void )
-{
-	m_pList = NULL; 
-	m_listCount = 0;
-}
-
-globalentity_t *CGlobalState :: Find( string_t globalname )
-{
-	if ( !globalname )
-		return NULL;
-
-	globalentity_t *pTest;
-	const char *pEntityName = STRING(globalname);
-
-	
-	pTest = m_pList;
-	while ( pTest )
+	}
+	// FAIL on subfolders! UTIL_StripFileName(szMapPath, g_szMapName, MAX_MAPNAME); We must extract 
+	//if (strcmp(STRING(gpGlobals->mapname), g_szMapName) != 0)
+	if (strstr(szMapPath, STRING(gpGlobals->mapname)) == NULL)
 	{
-		if ( FStrEq( pEntityName, pTest->name ) )
-			break;
-	
-		pTest = pTest->pNext;
+		//gpGlobals->mapname = MAKE_STRING(g_szMapName);// engine does not deallocate this, so it's OK
+		SERVER_PRINTF("==== ERROR: map name has bad case! Map: \"%s\" ====\n", szMapPath);// g_szMapName);
+		/* does not have a chance to be sent MESSAGE_BEGIN(MSG_ALL, svc_stufftext, NULL, NULL);
+			WRITE_STRING("Map name error\n");
+			WRITE_STRING(szMapPath);
+		MESSAGE_END();*/
+		UTIL_FAIL();
+		//CHANGE_LEVEL(g_szMapName, NULL);
+		return;
 	}
 
-	return pTest;
-}
+	pev->angles.Clear();// XDM3035a: or the world's gonna...
+#if defined(MOVEWITH)
+	m_pAssistLink = NULL;
+#endif
+	m_pFirstAlias = NULL;
 
+	size_t i = 0;
+	for (i=0; i<=MAX_TEAMS; ++i)// XDM3038a: MAX_TEAMS+1
+		g_pLastSpawn[i] = NULL;
 
-// This is available all the time now on impulse 104, remove later
-//#ifdef _DEBUG
-void CGlobalState :: DumpGlobals( void )
-{
-	static char *estates[] = { "Off", "On", "Dead" };
-	globalentity_t *pTest;
+	g_iWeaponBoxCount = 0;// XDM3035
+	m_iNumSecrets = 0;// XDM3038c
+	gpGlobals->found_secrets = 0;// XDM3038c
+	for (i=0; i<=MAX_CLIENTS; ++i)//gpGlobals->maxClients; ++i)// update entire array
+		g_ClientShouldInitialize[i] = 1;// XDM3037: world spawns before connecting any clients
 
-	ALERT( at_console, "-- Globals --\n" );
-	pTest = m_pList;
-	while ( pTest )
+	Precache();
+
+	// XDM: from CBasePlayer::Precache()
+	if (sv_nodegraphdisable.value <= 0.0f)// XDM3035a
 	{
-		ALERT( at_console, "%s: %s (%s)\n", pTest->name, pTest->levelName, estates[pTest->state] );
-		pTest = pTest->pNext;
+		if (WorldGraph.m_fGraphPresent && !WorldGraph.m_fGraphPointersSet)
+		{
+			if (!WorldGraph.FSetGraphPointers())
+				conprintf(1, "** Graph pointers were not set!\n");
+			else
+				conprintf(1, "** Graph Pointers Set!\n");
+		}
 	}
 }
-//#endif
 
-
-void CGlobalState :: EntityAdd( string_t globalname, string_t mapName, GLOBALESTATE state )
+//-----------------------------------------------------------------------------
+// Purpose: Precache all common game resources here
+//-----------------------------------------------------------------------------
+void CWorld::Precache(void)
 {
-	ASSERT( !Find(globalname) );
-
-	globalentity_t *pNewEntity = (globalentity_t *)calloc( sizeof( globalentity_t ), 1 );
-	ASSERT( pNewEntity != NULL );
-	pNewEntity->pNext = m_pList;
-	m_pList = pNewEntity;
-	strcpy( pNewEntity->name, STRING( globalname ) );
-	strcpy( pNewEntity->levelName, STRING(mapName) );
-	pNewEntity->state = state;
-	m_listCount++;
-}
-
-
-void CGlobalState :: EntitySetState( string_t globalname, GLOBALESTATE state )
-{
-	globalentity_t *pEnt = Find( globalname );
-
-	if ( pEnt )
-		pEnt->state = state;
-}
-
-
-const globalentity_t *CGlobalState :: EntityFromTable( string_t globalname )
-{
-	globalentity_t *pEnt = Find( globalname );
-
-	return pEnt;
-}
-
-
-GLOBALESTATE CGlobalState :: EntityGetState( string_t globalname )
-{
-	globalentity_t *pEnt = Find( globalname );
-	if ( pEnt )
-		return pEnt->state;
-
-	return GLOBAL_OFF;
-}
-
-
-// Global Savedata for Delay
-TYPEDESCRIPTION	CGlobalState::m_SaveData[] = 
-{
-	DEFINE_FIELD( CGlobalState, m_listCount, FIELD_INTEGER ),
-};
-
-// Global Savedata for Delay
-TYPEDESCRIPTION	gGlobalEntitySaveData[] = 
-{
-	DEFINE_ARRAY( globalentity_t, name, FIELD_CHARACTER, 64 ),
-	DEFINE_ARRAY( globalentity_t, levelName, FIELD_CHARACTER, 32 ),
-	DEFINE_FIELD( globalentity_t, state, FIELD_INTEGER ),
-};
-
-
-int CGlobalState::Save( CSave &save )
-{
-	int i;
-	globalentity_t *pEntity;
-
-	if ( !save.WriteFields( "GLOBAL", this, m_SaveData, ARRAYSIZE(m_SaveData) ) )
-		return 0;
-	
-	pEntity = m_pList;
-	for ( i = 0; i < m_listCount && pEntity; i++ )
-	{
-		if ( !save.WriteFields( "GENT", pEntity, gGlobalEntitySaveData, ARRAYSIZE(gGlobalEntitySaveData) ) )
-			return 0;
-
-		pEntity = pEntity->pNext;
-	}
-	
-	return 1;
-}
-
-int CGlobalState::Restore( CRestore &restore )
-{
-	int i, listCount;
-	globalentity_t tmpEntity;
-
-
-	ClearStates();
-	if ( !restore.ReadFields( "GLOBAL", this, m_SaveData, ARRAYSIZE(m_SaveData) ) )
-		return 0;
-	
-	listCount = m_listCount;	// Get new list count
-	m_listCount = 0;				// Clear loaded data
-
-	for ( i = 0; i < listCount; i++ )
-	{
-		if ( !restore.ReadFields( "GENT", &tmpEntity, gGlobalEntitySaveData, ARRAYSIZE(gGlobalEntitySaveData) ) )
-			return 0;
-		EntityAdd( MAKE_STRING(tmpEntity.name), MAKE_STRING(tmpEntity.levelName), tmpEntity.state );
-	}
-	return 1;
-}
-
-void CGlobalState::EntityUpdate( string_t globalname, string_t mapname )
-{
-	globalentity_t *pEnt = Find( globalname );
-
-	if ( pEnt )
-		strcpy( pEnt->levelName, STRING(mapname) );
-}
-
-
-void CGlobalState::ClearStates( void )
-{
-	globalentity_t *pFree = m_pList;
-	while ( pFree )
-	{
-		globalentity_t *pNext = pFree->pNext;
-		free( pFree );
-		pFree = pNext;
-	}
-	Reset();
-}
-
-
-void SaveGlobalState( SAVERESTOREDATA *pSaveData )
-{
-	CSave saveHelper( pSaveData );
-	gGlobalState.Save( saveHelper );
-}
-
-
-void RestoreGlobalState( SAVERESTOREDATA *pSaveData )
-{
-	CRestore restoreHelper( pSaveData );
-	gGlobalState.Restore( restoreHelper );
-}
-
-
-void ResetGlobalState( void )
-{
-	gGlobalState.ClearStates();
-	gInitHUD = TRUE;	// Init the HUD on a new game / load game
-}
-
-// moved CWorld class definition to cbase.h
-//=======================
-// CWorld
-//
-// This spawns first when each level begins.
-//=======================
-
-LINK_ENTITY_TO_CLASS( worldspawn, CWorld );
-
-#define SF_WORLD_DARK		0x0001		// Fade from black at startup
-#define SF_WORLD_TITLE		0x0002		// Display game title at startup
-#define SF_WORLD_FORCETEAM	0x0004		// Force teams
-
-extern DLL_GLOBAL BOOL		g_fGameOver;
-float g_flWeaponCheat; 
-
-void CWorld :: Spawn( void )
-{
-	g_fGameOver = FALSE;
-	Precache( );
-	g_flWeaponCheat = CVAR_GET_FLOAT( "sv_cheats" );  // Is the impulse 101 command allowed?
-}
-
-void CWorld :: Precache( void )
-{
-	g_pLastSpawn = NULL;
-	
 #if 1
-	CVAR_SET_STRING("sv_gravity", "800"); // 67ft/sec
+	CVAR_SET_STRING("sv_gravity", UTIL_dtos1(DEFAULT_GRAVITY));//"800"); // 67ft/sec
 	CVAR_SET_STRING("sv_stepsize", "18");
 #else
 	CVAR_SET_STRING("sv_gravity", "384"); // 32ft/sec
 	CVAR_SET_STRING("sv_stepsize", "24");
 #endif
 
-	CVAR_SET_STRING("room_type", "0");// clear DSP
+	//CVAR_SET_STRING("room_type", "0");// clear DSP
+	CVAR_SET_FLOAT("room_type", m_iRoomType);// XDM3038c
 
-	// Set up game rules
+	CVAR_SET_STRING("sv_maxvelocity", "65535");// XDM
+	CVAR_SET_STRING("tracerspeed", "65535");
+
+	//g_Language = (int)CVAR_GET_FLOAT("sv_language");
+
+	// Make sure any necessary user messages have been registered
+	LinkUserMessages();
+
+#if defined(_DEBUG_INFILOOPS)
+	sv_dbg_maxcollisionloops.value = gpGlobals->maxEntities+1;// XDM3038a
+#endif
+	mp_maprules.value = 0.0f;
+	mp_maxteams.value = 0.0f;// XDM3038a
+	CVAR_DIRECT_SET(&mp_maprules, "0");
+	CVAR_DIRECT_SET(&mp_maxteams, "0");
+
+	if (sv_generategamecfg.value > 0.0f)
+		CONFIG_GenerateFromTemplate("settings.scr", "game.cfg", false);
+
+	SERVER_COMMAND("exec game.cfg\n");
+	SERVER_EXECUTE();
+
+	ENTCONFIG_ExecMapPreConfig();// XDM3035b: give user a chance to pre-define some variables for specific map
+
+	// Decide which game type to use. May be affected by previously executed configs.
+	int iNewGameType = DetermineGameType();
+
+	// Set up game rules after executing all configs
 	if (g_pGameRules)
 	{
-		delete g_pGameRules;
+		if (!g_pGameRules->FPersistBetweenMaps() || g_pGameRules->GetGameType() != iNewGameType)
+		{
+			SERVER_PRINT("Destroying old game rules\n");// XDM3036: don't keep even persistent rules if new map defines different game type
+			delete g_pGameRules;
+			g_pGameRules = NULL;
+		}
 	}
 
-	g_pGameRules = InstallGameRules( );
-
-	//!!!UNDONE why is there so much Spawn code in the Precache function? I'll just keep it here 
-
-	///!!!LATER - do we want a sound ent in deathmatch? (sjb)
-	//pSoundEnt = CBaseEntity::Create( "soundent", g_vecZero, g_vecZero, edict() );
-	pSoundEnt = GetClassPtr( ( CSoundEnt *)NULL );
-	pSoundEnt->Spawn();
-
-	if ( !pSoundEnt )
+	if (pev->gravity == 0.0f)// XDM3035c: prevent default editor values from corrupting the game
+		pev->gravity = 1.0f;
+	else if (pev->gravity > 10.0f)// XDM3038: HACK to accept some bogus maps (assuming cvar-like scale)
 	{
-		ALERT ( at_console, "**COULD NOT CREATE SOUNDENT**\n" );
+		SERVER_PRINTF("Warning: absolute gravity value (%g) detected in world! Converting to relative.\n", pev->gravity);
+		pev->gravity /= DEFAULT_GRAVITY;// mapper probably used standard HL scale, revert to relative!
 	}
 
-	InitBodyQue();
-	
-// init sentence group playback stuff from sentences.txt.
-// ok to call this multiple times, calls after first are ignored.
+	if (pev->friction == 0.0f)
+		pev->friction = 1.0f;
+
+	if (g_pGameRules == NULL)
+		g_pGameRules = InstallGameRules(iNewGameType);
+
+	if (g_pGameRules)
+		g_pGameRules->Initialize();// XDM: this applies to both new and persistent rules
+	else
+		SERVER_PRINT("Game rules: Initialization failed!\n");
+
+	if (pSoundEnt)// XDM3037
+		pSoundEnt->Initialize();
 
 	SENTENCEG_Init();
 
-// init texture type array from materials.txt
+	SERVER_PRINT("Precaching common resources:\n");// XDM
 
-	TEXTURETYPE_Init();
+	// the area based ambient sounds MUST be the first precache_sounds
+	// sounds used from C physics code
+	PRECACHE_SOUND("common/null.wav");// clears sound channels
+	PRECACHE_SOUND("common/bodyhit1.wav");// XDM3037
+	PRECACHE_SOUND("common/bodysplat.wav");// XDM
+	PRECACHE_SOUND("common/watersplash.wav");
+	/*PRECACHE_SOUND("common/npc_step1.wav");// XDM3038c: moved to CBaseMonster::Precache()
+	PRECACHE_SOUND("common/npc_step2.wav");
+	PRECACHE_SOUND("common/npc_step3.wav");
+	PRECACHE_SOUND("common/npc_step4.wav");*/
 
+	SERVER_PRINT("Precaching materials...\n");
+	// material/texture hit sounds
+	MaterialSoundPrecache(matGlass);
+	MaterialSoundPrecache(matWood);
+	MaterialSoundPrecache(matMetal);
+	MaterialSoundPrecache(matFlesh);
+	MaterialSoundPrecache(matCinderBlock);
+	MaterialSoundPrecache(matCeilingTile);
+	//MaterialSoundPrecache(matComputer);			// same as matGlass
+	//MaterialSoundPrecache(matUnbreakableGlass);	// same as matGlass
+	//MaterialSoundPrecache(matRocks);				// same as matCinderBlock
 
-// the area based ambient sounds MUST be the first precache_sounds
+	size_t i = 0;
+	size_t c = NUM_BODYDROP_SOUNDS;//sizeof(gSoundsDropBody);// does not work!!!!
+	for (i = 0; i < c; ++i)
+		PRECACHE_SOUND((char *)gSoundsDropBody[i]);
 
-// player precaches     
-	W_Precache ();									// get weapon precaches
+	c = NUM_RICOCHET_SOUNDS;//ARRAYSIZE(gSoundsRicochet);
+	for (i = 0; i < c; ++i)
+		PRECACHE_SOUND((char *)gSoundsRicochet[i]);
 
-	ClientPrecache();
+	c = NUM_SPARK_SOUNDS;//ARRAYSIZE(gSoundsSparks);
+	for (i = 0; i < c; ++i)
+		PRECACHE_SOUND((char *)gSoundsSparks[i]);
 
-// sounds used from C physics code
-	PRECACHE_SOUND("common/null.wav");				// clears sound channels
+	// XDM3037: glass sounds for frozen gibbage
+	c = NUM_BREAK_SOUNDS;
+	for (i = 0; i < c; ++i)
+		PRECACHE_SOUND((char *)gBreakSounds[matGlass][i]);
 
-	PRECACHE_SOUND( "items/suitchargeok1.wav" );//!!! temporary sound for respawning weapons.
-	PRECACHE_SOUND( "items/gunpickup2.wav" );// player picks up a gun.
+	/* no! too many unneeded resources!
+	c = NUM_MATERIALS;
+	for(i = 0; i < c; ++i)
+		UTIL_PrecacheMaterial(&gMaterials[i]);*/
 
-	PRECACHE_SOUND( "common/bodydrop3.wav" );// dead bodies hitting the ground (animation events)
-	PRECACHE_SOUND( "common/bodydrop4.wav" );
-	
-	g_Language = (int)CVAR_GET_FLOAT( "sv_language" );
-	if ( g_Language == LANGUAGE_GERMAN )
+	ClientPrecache();// Precache common resources used by players
+
+	PrecacheSharedResources();
+
+	conprintf(1, "Restoring saved ammo types...\n");
+	for (i = 0; i < MAX_AMMO_SLOTS; ++i)// register ammo types as they were in previous game so indexes are preserved
 	{
-		PRECACHE_MODEL( "models/germangibs.mdl" );
+		if (!FStringNull(m_rgiszAmmoTypes[i]))
+			AddAmmoToRegistry(STRING(m_rgiszAmmoTypes[i]), m_rgAmmoMaxCarry[i]);
 	}
-	else
+
+	W_Precache();// precache weapon and ammo resources
+
+	conprintf(1, "Saving ammo types...\n");
+	for (i = 0; i < MAX_AMMO_SLOTS; ++i)// now lists are merged, save and replace everything
 	{
-		PRECACHE_MODEL( "models/hgibs.mdl" );
-		PRECACHE_MODEL( "models/agibs.mdl" );
+		if (g_AmmoInfoArray[i].name[0] == '\0')
+			m_rgiszAmmoTypes[i] = iStringNull;
+		else
+			m_rgiszAmmoTypes[i] = MAKE_STRING(g_AmmoInfoArray[i].name);
+
+		m_rgAmmoMaxCarry[i] = g_AmmoInfoArray[i].iMaxCarry;
 	}
+	// TODO: while(fgets("scripts/sv_entprecache.lst")) { UTIL_PrecacheOther(str); }
 
-	PRECACHE_SOUND ("weapons/ric1.wav");
-	PRECACHE_SOUND ("weapons/ric2.wav");
-	PRECACHE_SOUND ("weapons/ric3.wav");
-	PRECACHE_SOUND ("weapons/ric4.wav");
-	PRECACHE_SOUND ("weapons/ric5.wav");
-//
-// Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
-//
+	PrecacheEvents();// XDM3038c
 
-	// 0 normal
-	LIGHT_STYLE(0, "m");
-	
-	// 1 FLICKER (first variety)
-	LIGHT_STYLE(1, "mmnmmommommnonmmonqnmmo");
-	
-	// 2 SLOW STRONG PULSE
-	LIGHT_STYLE(2, "abcdefghijklmnopqrstuvwxyzyxwvutsrqponmlkjihgfedcba");
-	
-	// 3 CANDLE (first variety)
-	LIGHT_STYLE(3, "mmmmmaaaaammmmmaaaaaabcdefgabcdefg");
-	
-	// 4 FAST STROBE
-	LIGHT_STYLE(4, "mamamamamama");
-	
-	// 5 GENTLE PULSE 1
-	LIGHT_STYLE(5,"jklmnopqrstuvwxyzyxwvutsrqponmlkj");
-	
-	// 6 FLICKER (second variety)
-	LIGHT_STYLE(6, "nmonqnmomnmomomno");
-	
-	// 7 CANDLE (second variety)
-	LIGHT_STYLE(7, "mmmaaaabcdefgmmmmaaaammmaamm");
-	
-	// 8 CANDLE (third variety)
-	LIGHT_STYLE(8, "mmmaaammmaaammmabcdefaaaammmmabcdefmmmaaaa");
-	
-	// 9 SLOW STROBE (fourth variety)
-	LIGHT_STYLE(9, "aaaaaaaazzzzzzzz");
-	
-	// 10 FLUORESCENT FLICKER
-	LIGHT_STYLE(10, "mmamammmmammamamaaamammma");
+	SERVER_PRINT("Loading light styles...\n");// XDM
 
-	// 11 SLOW PULSE NOT FADE TO BLACK
-	LIGHT_STYLE(11, "abcdefghijklmnopqrrqponmlkjihgfedcba");
-	
-	// 12 UNDERWATER LIGHT MUTATION
-	// this light only distorts the lightmap - no contribution
-	// is made to the brightness of affected surfaces
-	LIGHT_STYLE(12, "mmnnmmnnnmmnn");
-	
+	// Setup light animation tables. 'a' is total darkness, 'z' is maxbright.
+	for (i = 0; g_szStandardLightStyles[i]; ++i)
+		LIGHT_STYLE(i, (char *)g_szStandardLightStyles[i]);
+
 	// styles 32-62 are assigned by the light program for switchable lights
-
 	// 63 testing
 	LIGHT_STYLE(63, "a");
 
-	for ( int i = 0; i < ARRAYSIZE(gDecals); i++ )
-		gDecals[i].index = DECAL_INDEX( gDecals[i].name );
+	SERVER_PRINT("Done precaching.\n");// XDM
 
-// init the WorldGraph.
-	WorldGraph.InitGraph();
+	// We need to have server cvars set (from server cfg) at this point!
+	ENTCONFIG_Init();// XDM: load custom entities form <mapname>.ent file
 
-// make sure the .NOD file is newer than the .BSP file.
-	if ( !WorldGraph.CheckNODFile ( ( char * )STRING( gpGlobals->mapname ) ) )
-	{// NOD file is not present, or is older than the BSP file.
-		WorldGraph.AllocNodes ();
-	}
-	else
-	{// Load the node graph for this level
-		if ( !WorldGraph.FLoadGraph ( (char *)STRING( gpGlobals->mapname ) ) )
-		{// couldn't load, so alloc and prepare to build a graph.
-			ALERT ( at_console, "*Error opening .NOD file\n" );
-			WorldGraph.AllocNodes ();
-		}
-		else
+	// Init the WorldGraph for monster navigation
+	if (sv_nodegraphdisable.value <= 0.0f)// XDM3035a
+	{
+		WorldGraph.InitGraph();
+		if (g_pGameRules && g_pGameRules->FAllowMonsters())// XDM3035
 		{
-			ALERT ( at_console, "\n*Graph Loaded!\n" );
+			if (WorldGraph.CheckNODFile(STRINGV(gpGlobals->mapname)))// make sure the .NOD file is newer than the .BSP file.
+			{
+				if (!WorldGraph.FLoadGraph(STRINGV(gpGlobals->mapname)))// Load the node graph for this level
+				{
+					//conprintf(1, "*Error opening .NOD file\n");
+					WorldGraph.AllocNodes();// couldn't load, so alloc and prepare to build a graph.
+				}
+				else
+					conprintf(1, "\n*Graph Loaded!\n");
+			}
+			else
+				WorldGraph.AllocNodes();// NOD file is not present, or is older than the BSP file.
 		}
 	}
 
-	if ( pev->speed > 0 )
-		CVAR_SET_FLOAT( "sv_zmax", pev->speed );
+	if (m_iMaxVisibleRange > 0)
+		CVAR_SET_FLOAT("sv_zmax", m_iMaxVisibleRange);// copied to movevars
 	else
-		CVAR_SET_FLOAT( "sv_zmax", 4096 );
+		CVAR_SET_FLOAT("sv_zmax", 4096);
 
-	if ( pev->netname )
+	/* XDM3038c: v_dark is bad if (FBitSet(pev->spawnflags, SF_WORLD_DARK))// this stuff works only in single
 	{
-		ALERT( at_aiconsole, "Chapter title: %s\n", STRING(pev->netname) );
-		CBaseEntity *pEntity = CBaseEntity::Create( "env_message", g_vecZero, g_vecZero, NULL );
-		if ( pEntity )
-		{
-			pEntity->SetThink( &CBaseEntity::SUB_CallUseToggle );
-			pEntity->pev->message = pev->netname;
-			pev->netname = 0;
-			pEntity->pev->nextthink = gpGlobals->time + 0.3;
-			pEntity->pev->spawnflags = SF_MESSAGE_ONCE;
-		}
-	}
-
-	if ( pev->spawnflags & SF_WORLD_DARK )
-		CVAR_SET_FLOAT( "v_dark", 1.0 );
-	else
-		CVAR_SET_FLOAT( "v_dark", 0.0 );
-
-	if ( pev->spawnflags & SF_WORLD_TITLE )
-		gDisplayTitle = TRUE;		// display the game title if this key is set
-	else
-		gDisplayTitle = FALSE;
-
-	if ( pev->spawnflags & SF_WORLD_FORCETEAM )
-	{
-		CVAR_SET_FLOAT( "mp_defaultteam", 1 );
+		ClearBits(pev->spawnflags, SF_WORLD_DARK);// XDM3038c: clear so it won't work on restore
+		CVAR_SET_FLOAT("v_dark", 1.0);
 	}
 	else
-	{
-		CVAR_SET_FLOAT( "mp_defaultteam", 0 );
-	}
+		CVAR_SET_FLOAT("v_dark", 0.0);*/
 }
 
-
-//
-// Just to ignore the "wad" field.
-//
-void CWorld :: KeyValue( KeyValueData *pkvd )
+// Better not override entvars here
+void CWorld::KeyValue(KeyValueData *pkvd)
 {
-	if ( FStrEq(pkvd->szKeyName, "skyname") )
+	if (FStrEq(pkvd->szKeyName, "skyname"))
 	{
-		// Sent over net now.
-		CVAR_SET_STRING( "sv_skyname", pkvd->szValue );
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "sounds") )
-	{
-		gpGlobals->cdAudioTrack = atoi(pkvd->szValue);
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "WaveHeight") )
-	{
-		// Sent over net now.
-		pev->scale = atof(pkvd->szValue) * (1.0/8.0);
-		pkvd->fHandled = TRUE;
-		CVAR_SET_FLOAT( "sv_wateramp", pev->scale );
-	}
-	else if ( FStrEq(pkvd->szKeyName, "MaxRange") )
-	{
-		pev->speed = atof(pkvd->szValue);
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "chaptertitle") )
-	{
-		pev->netname = ALLOC_STRING(pkvd->szValue);
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "startdark") )
-	{
-		// UNDONE: This is a gross hack!!! The CVAR is NOT sent over the client/sever link
-		// but it will work for single player
-		int flag = atoi(pkvd->szValue);
-		pkvd->fHandled = TRUE;
-		if ( flag )
-			pev->spawnflags |= SF_WORLD_DARK;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "newunit") )
-	{
-		// Single player only.  Clear save directory if set
-		if ( atoi(pkvd->szValue) )
-			CVAR_SET_FLOAT( "sv_newunit", 1 );
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "gametitle") )
-	{
-		if ( atoi(pkvd->szValue) )
-			pev->spawnflags |= SF_WORLD_TITLE;
-
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "mapteams") )
-	{
-		pev->team = ALLOC_STRING( pkvd->szValue );
-		pkvd->fHandled = TRUE;
-	}
-	else if ( FStrEq(pkvd->szKeyName, "defaultteam") )
-	{
-		if ( atoi(pkvd->szValue) )
+		CVAR_SET_STRING("sv_skyname", pkvd->szValue);// Sent over net now.
+		if (StringInList(pkvd->szValue, "scripts/sky_no_airstrike.txt"))
 		{
-			pev->spawnflags |= SF_WORLD_FORCETEAM;
+			SetBits(pev->spawnflags, SF_WORLD_NOAIRSTRIKE);
+			SERVER_PRINTF("Map skyname \"%s\" blacklisted for airstrikes.\n", pkvd->szValue);
 		}
 		pkvd->fHandled = TRUE;
 	}
+	else if (FStrEq(pkvd->szKeyName, "sounds"))
+	{
+		// HACK: DO NOT USE GLOBALS! Engine chokes on it! gpGlobals->cdAudioTrack = atoi(pkvd->szValue);
+		m_iAudioTrack = atoi(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "WaveHeight"))
+	{
+		pev->scale = atof(pkvd->szValue) * (1.0/8.0);// engine reads this
+		CVAR_SET_FLOAT("sv_wateramp", pev->scale);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "MaxRange"))
+	{
+		m_iMaxVisibleRange = atof(pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "chaptertitle"))
+	{
+		pev->netname = ALLOC_STRING(pkvd->szValue);// may be used by the engine?
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "startdark"))
+	{
+		pkvd->fHandled = TRUE;
+		if (atoi(pkvd->szValue) > 0)
+			SetBits(pev->spawnflags, SF_WORLD_DARK);
+	}
+	else if (FStrEq(pkvd->szKeyName, "newunit"))// Single player only. Clear save directory if set
+	{
+		if (atoi(pkvd->szValue) > 0)
+		{
+			SetBits(pev->spawnflags, SF_WORLD_NEWUNIT);// XDM3038c
+			CVAR_SET_FLOAT("sv_newunit", 1);
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "gametitle"))
+	{
+		if (atoi(pkvd->szValue))
+			SetBits(pev->spawnflags, SF_WORLD_TITLE);
+
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "gameprefix"))// XDM3038a: string, because indexes are unstable
+	{
+		if (pkvd->szValue && *pkvd->szValue)
+			m_iszGamePrefix = ALLOC_STRING(pkvd->szValue);
+		else
+			m_iszGamePrefix = iStringNull;
+
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "mapteams"))// XDM3037: unused
+	{
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "maxteams"))// XDM3037
+	{
+		m_iMaxMapTeams = atoi(pkvd->szValue);// XDM3035c: no problems with save/restore
+		pkvd->fHandled = TRUE;
+	}
+	else if (strncmp(pkvd->szKeyName, "teamstartdelay", 14) == 0)// XDM3038a: up to 5 values
+	{
+		TEAM_ID team = atoi(pkvd->szKeyName + 14);
+		if (team >= 0 && team <= MAX_TEAMS)
+		{
+			m_iTeamDelay[team] = atoi(pkvd->szValue);
+			pkvd->fHandled = TRUE;
+		}
+	}
+	else if (FStrEq(pkvd->szKeyName, "defaultteam"))
+	{
+		if (atoi(pkvd->szValue) > 0)
+			SetBits(pev->spawnflags, SF_WORLD_FORCETEAM);
+
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "roomtype"))// XDM
+	{
+		m_iRoomType = atoi(pkvd->szValue);// XDM3038c: save/restore?
+		if (g_ServerActive)
+			CVAR_SET_FLOAT("room_type", m_iRoomType);// XDM3038c: apply immediately
+
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "startsuit"))
+	{
+		if (atoi(pkvd->szValue) > 0)
+			SetBits(pev->spawnflags, SF_WORLD_STARTSUIT);
+
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "nomonsters"))
+	{
+		if (atoi(pkvd->szValue) > 0)
+		{
+			SetBits(pev->spawnflags, SF_WORLD_NOMONSTERS);
+			conprintf(1, "World policy: explicitly DENY monsters.\n");
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "monstersrespawnpolicy"))
+	{
+		int iPolicy = atoi(pkvd->szValue);
+		if (iPolicy == POLICY_ALLOW)
+		{
+			CVAR_DIRECT_SET(&mp_monstersrespawn, "1");
+			conprintf(1, "World policy: explicitly ALLOW monsters to respawn.\n");
+		}
+		else if (iPolicy == POLICY_DENY)
+		{
+			CVAR_DIRECT_SET(&mp_monstersrespawn, "0");
+			conprintf(1, "World policy: explicitly DENY monsters to respawn.\n");
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "airstrikepolicy"))// XDM3038a
+	{
+		int iPolicy = atoi(pkvd->szValue);
+		if (iPolicy == POLICY_ALLOW)
+		{
+			ClearBits(pev->spawnflags, SF_WORLD_NOAIRSTRIKE);
+			conprintf(1, "World policy: explicitly ALLOW airstrikes.\n");
+		}
+		else if (iPolicy == POLICY_DENY)
+		{
+			SetBits(pev->spawnflags, SF_WORLD_NOAIRSTRIKE);
+			conprintf(1, "World policy: explicitly DENY airstrikes.\n");
+		}
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "compiler"))
+	{
+		conprintf(2, "Info: map was compiled using %s\n", pkvd->szValue);
+		pkvd->fHandled = TRUE;
+	}
+	else if (FStrEq(pkvd->szKeyName, "wad"))
+		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "worldtype"))
+		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "mapversion"))
+		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "version"))
+		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "light"))
+		pkvd->fHandled = TRUE;
+	else if (FStrEq(pkvd->szKeyName, "copyright"))
+		pkvd->fHandled = TRUE;
 	else
-		CBaseEntity::KeyValue( pkvd );
+		CBaseEntity::KeyValue(pkvd);
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: A really nice way to send global data to all players
+// Note   : UNDONE!!!! What if a player is asking for data more than one time?!
+// Input  : *pClient - 
+//			msgtype - 
+//			sendcase - 
+// Output : int - number of messages sent
+//-----------------------------------------------------------------------------
+int CWorld::SendClientData(CBasePlayer *pClient, int msgtype, short sendcase)
+{
+	int sent = 0;
+	if (msgtype == MSG_ONE && pClient)// a single client asking for update
+	{
+		if (sendcase != SCD_CLIENTRESTORE)// don't show titles upon restoring a game
+		{
+			if (!FStringNull(pev->netname))// XDM3037: map chapter title
+			{
+				ClientPrint(pClient->pev, HUD_PRINTHUD, STRING(pev->netname));
+				++sent;
+			}
+			if (FBitSet(pev->spawnflags, SF_WORLD_TITLE) || (IsMultiplayer() && mp_showgametitle.value > 0.0f))
+			{
+				MESSAGE_BEGIN(MSG_ONE, gmsgShowGameTitle, NULL, pClient->edict());
+					WRITE_BYTE(0);
+					//WRITE_STRING(STRING(m_iszTitleSprite));// not needed if we have custom HUD text file
+				MESSAGE_END();
+				++sent;
+			}
+			if (FBitSet(pev->spawnflags, SF_WORLD_DARK)/* && IsMultiplayer()*/)// only in multiplayer, where v_dark does not work
+			{
+				UTIL_ScreenFade(pClient, g_vecZero, 1.5f, IsMultiplayer()?(mp_respawntime.value + 1.0f):3.0f, 255, FFADE_IN | FFADE_MODULATE);
+				++sent;
+			}
+			if (!FStringNull(pev->noise))// map audio track, NOT when restoring!
+			{
+				pClient->PlayAudioTrack(STRING(pev->noise), MPSVCMD_PLAYFILELOOP, 0);// XDM3038c: LOOP
+				++sent;
+			}
+			else if (m_iAudioTrack > 1)//(gpGlobals->cdAudioTrack > 1)
+			{
+				char buffer[32];
+				_snprintf(buffer, 32, "%d", m_iAudioTrack);//gpGlobals->cdAudioTrack);// XDM3038a: better
+				pClient->PlayAudioTrack(buffer, MPSVCMD_PLAYTRACK, 0);
+				++sent;
+			}
+		}
+	}
+	return sent;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: Called before destructor
+//-----------------------------------------------------------------------------
+void CWorld::OnFreePrivateData(void)
+{
+	ClearBits(gpGlobals->serverflags, FSERVER_RESTORE);// XDM3037
+	if (IsMultiplayer())// Fix all temporary users in mp
+	{
+		CBaseEntity *pEntity = NULL;
+		while ((pEntity = UTIL_FindEntityByClassname(pEntity, "DelayedUse")) != NULL)
+		{
+			pEntity->m_pGoalEnt = NULL;
+			//UTIL_Remove(pEntity);
+		}
+	}
+	//memset(g_ClientShouldInitialize, 0, sizeof(
+	int i;
+	// SHL, G-Cont
+	CBaseEntity *pEntity = NULL;
+	for (i=1; i <= gpGlobals->maxEntities; ++i)
+	{
+		edict_t *pEntityEdict = INDEXENT(i);
+		if (UTIL_IsValidEntity(pEntityEdict) && !FStringNull(pEntityEdict->v.globalname))
+		{
+			pEntity = CBaseEntity::Instance(pEntityEdict);
+			if (pEntity)
+				pEntity->PrepareForTransfer();
+		}
+	}
+	CBaseEntity::OnFreePrivateData();// XDM3038c
+	//should we?	g_pWorld = NULL;
 }

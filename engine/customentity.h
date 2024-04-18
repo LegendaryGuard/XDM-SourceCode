@@ -22,17 +22,31 @@
 #define BEAMENT_ATTACHMENT(x)	(((x)>>12)&0xF)
 
 // Beam types, encoded as a byte
-enum 
+enum beam_types_e
 {
 	BEAM_POINTS = 0,
 	BEAM_ENTPOINT,
 	BEAM_ENTS,
-	BEAM_HOSE,
+	BEAM_HOSE
 };
 
 #define BEAM_FSINE		0x10
 #define BEAM_FSOLID		0x20
 #define BEAM_FSHADEIN	0x40
 #define BEAM_FSHADEOUT	0x80
+
+// XDM3037a
+enum beam_effects_e
+{
+	BEAMFX_NONE = 0,
+	BEAMFX_GLUON1,
+	BEAMFX_GLUON2,
+	BEAMFX_PLASMA1,
+	BEAMFX_PLASMA2
+};
+
+
+#define BEAM_FSPARKS_START	0x01
+#define BEAM_FSPARKS_END	0x02
 
 #endif	//CUSTOMENTITY_H

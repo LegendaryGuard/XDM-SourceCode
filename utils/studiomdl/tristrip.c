@@ -1,57 +1,37 @@
-/***
-*
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
-*	
-*	This product contains software technology licensed from Id 
-*	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
-*	All Rights Reserved.
-*
-****/
-
 // tristrip - convert triangle list into tristrips and fans
-
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4237 )
 #pragma warning( disable : 4305 )
 
-
+#include "../../public/archtypes.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-
-#include "archtypes.h"
 #include "cmdlib.h"
+#include "mathlib.h"
+#include "../../engine/studio.h"
+#include "studiomdl.h"
 #include "lbmlib.h"
 #include "scriplib.h"
-#include "mathlib.h"
-#include "..\..\engine\studio.h"
-#include "studiomdl.h"
 
 int		used[MAXSTUDIOTRIANGLES];
-
 // the command list holds counts and s/t values that are valid for
 // every frame
 short	commands[MAXSTUDIOTRIANGLES * 13];
 int		numcommands;
-
 // all frames will have their vertexes rearranged and expanded
 // so they are in the order expected by the command list
-
 int		allverts, alltris;
-
 int		stripverts[MAXSTUDIOTRIANGLES+2];
 int		striptris[MAXSTUDIOTRIANGLES+2];
 int		stripcount;
-
 int		neighbortri[MAXSTUDIOTRIANGLES][3];
 int		neighboredge[MAXSTUDIOTRIANGLES][3];
-
 
 s_trianglevert_t (*triangles)[3];
 s_mesh_t *pmesh;
 
-
-void	FindNeighbor (int starttri, int startv)
+void FindNeighbor (int starttri, int startv)
 {
 	s_trianglevert_t			m1, m2;
 	int			j;
@@ -89,12 +69,6 @@ void	FindNeighbor (int starttri, int startv)
 	}
 }
 
-
-/*
-================
-StripLength
-================
-*/
 int	StripLength (int starttri, int startv)
 {
 	int			j;
@@ -146,11 +120,6 @@ done:
 	return stripcount;
 }
 
-/*
-===========
-FanLength
-===========
-*/
 int	FanLength (int starttri, int startv)
 {
 	int		j;
@@ -195,22 +164,14 @@ done:
 	return stripcount;
 }
 
-
-/*
-================
-BuildTris
-
-Generate a list of trifans or strips
-for the model, which holds for all frames
-================
-*/
+//Generate a list of trifans or strips for the model, which holds for all frames
 int	numcommandnodes;
 
 int BuildTris (s_trianglevert_t (*x)[3], s_mesh_t *y, byte **ppdata )
 {
 	int		i, j, k, m;
 	int		startv;
-	int		len, bestlen, besttype;
+	int		len, bestlen, besttype = 0;
 	int		bestverts[MAXSTUDIOTRIANGLES];
 	int		besttris[MAXSTUDIOTRIANGLES];
 	int		peak[MAXSTUDIOTRIANGLES];

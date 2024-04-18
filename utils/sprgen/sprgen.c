@@ -1,6 +1,6 @@
 /***
 *
-*	Copyright (c) 1996-2002, Valve LLC. All rights reserved.
+*	Copyright (c) 1998, Valve LLC. All rights reserved.
 *	
 *	This product contains software technology licensed from Id 
 *	Software, Inc. ("Id Technology").  Id Technology (c) 1996 Id Software, Inc. 
@@ -22,8 +22,8 @@
 
 #include "spritegn.h"
 
-#define MAX_BUFFER_SIZE		0x100000
-#define MAX_FRAMES			1000
+#define MAX_BUFFER_SIZE		0xF00000
+#define MAX_FRAMES			1024
 
 dsprite_t		sprite;
 byte			*byteimage, *lbmpalette;
@@ -535,7 +535,7 @@ void FinishSprite (void)
 		Error ("Didn't name sprite file");
 		
 	if ((plump - lumpbuffer) > MAX_BUFFER_SIZE)
-		Error ("Sprite package too big; increase MAX_BUFFER_SIZE");
+		Error ("Sprite package too big (%d); increase MAX_BUFFER_SIZE (%d)", plump - lumpbuffer, MAX_BUFFER_SIZE);
 
 	spriteouthandle = SafeOpenWrite (spriteoutname);
 	printf ("saving in %s\n", spriteoutname);
